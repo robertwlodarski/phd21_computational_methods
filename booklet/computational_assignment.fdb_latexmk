@@ -1,12 +1,12 @@
 # Fdb version 4
-["biber computational_assignment"] 0 "computational_assignment.bcf" "computational_assignment.bbl" "computational_assignment" 1760979362.33063 -1
+["biber computational_assignment"] 0 "computational_assignment.bcf" "computational_assignment.bbl" "computational_assignment" 1760980478.58009 -1
   "bibliography.bib" 1760967315 4407 3483ba3d608e5adc484712453746439a ""
-  "computational_assignment.bcf" 1760979362 108610 eca82b43ec90e59f7a1b52e42db9cb81 "pdflatex"
+  "computational_assignment.bcf" 1760980478 108610 eca82b43ec90e59f7a1b52e42db9cb81 "pdflatex"
   (generated)
   "computational_assignment.bbl"
   "computational_assignment.blg"
   (rewritten before read)
-["pdflatex"] 1760979360.90627 "c:/Users/rjw240/Documents/Computational methods/phd21_computational_methods/booklet/computational_assignment.tex" "computational_assignment.pdf" "computational_assignment" 1760979362.33138 0
+["pdflatex"] 1760980477.14843 "c:/Users/rjw240/Documents/Computational methods/phd21_computational_methods/booklet/computational_assignment.tex" "computational_assignment.pdf" "computational_assignment" 1760980478.58094 0
   "C:/Users/rjw240/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1760956032 104882 21718b0db02983680cdd8987593b5315 ""
   "C:/Users/rjw240/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1760955837 13322107 f0da63653228ec8a0724052f82472c25 ""
   "C:/Users/rjw240/AppData/Local/Programs/MiKTeX/fonts/tfm/jknappen/ec/ectt1000.tfm" 993062340 1348 d70ddf2d5d512b838e50a335e385e919 ""
@@ -220,14 +220,14 @@
   "C:/Users/rjw240/AppData/Local/Programs/MiKTeX/tex/latex/varwidth/varwidth.sty" 1238469540 10894 d359a13923460b2a73d4312d613554c8 ""
   "C:/Users/rjw240/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1729265222 55384 b454dec21c2d9f45ec0b793f0995b992 ""
   "C:/Users/rjw240/AppData/Local/Programs/MiKTeX/tex/latex/xkeyval/xkeyval.sty" 1656236919 4937 4ce600ce9bd4ec84d0250eb6892fcf4f ""
-  "_subfiles/assignment_1.tex" 1760979360 8908 335859a5fe1b98e1232df642fbccc1ff ""
+  "_subfiles/assignment_1.tex" 1760980474 8916 398a61e72918d05b84e99257f061bf54 ""
   "c:/Users/rjw240/Documents/Computational methods/phd21_computational_methods/booklet/computational_assignment.tex" 1760969517 6137 7b6852cb6679d8f66ea3c8ac75dcad9e ""
-  "computational_assignment.aux" 1760979362 827 a28d306f25ba58fcbd5c4599ea900403 "pdflatex"
+  "computational_assignment.aux" 1760980478 875 6ed088cd2fff0db1a14870e77da729e2 "pdflatex"
   "computational_assignment.bbl" 1760967382 486 76d65a242ec496c9b4361af646ff12cb "biber computational_assignment"
-  "computational_assignment.out" 1760979362 106 1dce97b7a39d5d544deaf05d343a69a5 "pdflatex"
-  "computational_assignment.run.xml" 1760979362 2492 1f3e11e855e4b0e1271e3164e2bf9965 "pdflatex"
+  "computational_assignment.out" 1760980478 106 1dce97b7a39d5d544deaf05d343a69a5 "pdflatex"
+  "computational_assignment.run.xml" 1760980478 2492 1f3e11e855e4b0e1271e3164e2bf9965 "pdflatex"
   "computational_assignment.tex" 1760969517 6137 7b6852cb6679d8f66ea3c8ac75dcad9e ""
-  "computational_assignment.toc" 1760979362 68 daa66b02f797e70df4ef26b0083f9045 "pdflatex"
+  "computational_assignment.toc" 1760980478 68 daa66b02f797e70df4ef26b0083f9045 "pdflatex"
   (generated)
   "computational_assignment.aux"
   "computational_assignment.bcf"
