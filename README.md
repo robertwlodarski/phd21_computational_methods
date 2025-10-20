@@ -1,2 +1,6 @@
-# phd21_computational_methods
+# PhD21 Computational methods: Assignments
+
+# Content
+
+The repository contains a few folders. 
 
