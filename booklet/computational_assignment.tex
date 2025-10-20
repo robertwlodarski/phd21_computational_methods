@@ -1,0 +1,155 @@
+\documentclass[11pt]{article}
+
+%----------------------------------------------------------------
+% 1. DOCUMENT SETUP & TYPOGRAPHY
+%----------------------------------------------------------------
+%\usepackage[TS1, T1]{fontenc}               % Font encoding for output
+%\usepackage[adobe-utopia]{mathdesign}       % Adobe Utopia font
+\usepackage{microtype}                      % Improves typography (line breaking, spacing)
+\usepackage{setspace}                       % For line spacing control (e.g., \doublespacing)
+\usepackage{soul}                           % For strikethrough and underlining (\ul)
+\usepackage{dirtytalk}                      % For inline quotations
+\usepackage{titling}                        % Control over \maketitle
+\usepackage{epigraph}                       % For epigraphs
+
+%----------------------------------------------------------------
+% 2. PAGE LAYOUT & LINKS
+%----------------------------------------------------------------
+\usepackage{geometry}                       % For page margins and layout
+\usepackage{pdflscape}                      % For landscape pages
+\usepackage[dvipsnames]{xcolor}             % Color support
+\usepackage[colorlinks=true]{hyperref}      % PDF hyperlinks (should be loaded late)
+
+%----------------------------------------------------------------
+% 3. MATHS & THEOREMS
+%----------------------------------------------------------------
+\usepackage{amsmath}                        % Core maths tools
+
+% Theorem-like environments
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{assumption}{Assumption}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{conjecture}{Conjecture}[section]
+\newenvironment{proof}[1][Proof]{\noindent\textbf{#1.} }{\ \rule{0.5em}{0.5em}}
+
+% Custom math operators
+\DeclareMathOperator{\E}{\mathbb{E}}
+\DeclareMathOperator{\R}{\mathbb{R}}
+\DeclareMathOperator{\plim}{\mbox{plim}}
+\DeclareMathOperator{\todis}{\xrightarrow{d}}
+\DeclareMathOperator{\normal}{\mathcal{N}}
+\DeclareMathOperator{\var}{\mbox{var}}
+\DeclareMathOperator{\prob}{\mathbb{P}}
+
+%----------------------------------------------------------------
+% 4. TABLES, FIGURES & GRAPHICS
+%----------------------------------------------------------------
+\usepackage{graphicx}                       % For including images
+\usepackage{caption, subcaption}            % Enhanced captions for figures and tables
+\usepackage{booktabs}                       % High-quality table rules (\toprule, \midrule, \bottomrule)
+\usepackage{dcolumn}                        % Align table columns on a decimal point
+\usepackage{longtable, threeparttable, threeparttablex} % For long tables and tables with notes
+\usepackage{multirow, adjustbox}            % For multi-row cells and adjusting box content
+\usepackage{rotating}                       % For rotating elements (e.g., sidewaystable)
+\usepackage{tikz}                           % For drawing graphics
+\usetikzlibrary{positioning}
+
+%----------------------------------------------------------------
+% 5. LISTS
+%----------------------------------------------------------------
+\usepackage{enumitem}                       % Advanced control over lists
+
+%----------------------------------------------------------------
+% 6. BIBLIOGRAPHY (Author-Year Style)
+%----------------------------------------------------------------
+\usepackage[
+    backend=biber,      % Use the Biber engine
+    style=authoryear,   % Set main style to author-year
+    citestyle=authoryear-comp, % Compress citations (e.g., Author 2020, 2021)
+    natbib=true,        % Allow use of natbib commands like \citet and \citep
+    maxcitenames=2,     % Max authors to show in citation before "et al."
+    maxbibnames=99,     % Max authors to show in the bibliography
+    uniquelist=false    % Prevents adding initials to distinguish authors
+]{biblatex}
+\addbibresource{bibliography.bib}           % Specify your .bib file
+
+%----------------------------------------------------------------
+% 7. GLOBAL CONFIGURATIONS & SETTINGS
+%----------------------------------------------------------------
+% Page layout & colours
+\geometry{left=0.5in, right=0.5in, top=0.75in, bottom=0.75in}
+\definecolor{maroon}{rgb}{0.5, 0.0, 0.0}
+\hypersetup{
+    urlcolor   = maroon,
+    linkcolor  = maroon,
+    citecolor  = maroon 
+}
+
+% Typesetting adjustments
+\setlength{\parindent}{0pt}
+\interfootnotelinepenalty=10000        
+\setlist[itemize]{noitemsep}
+\numberwithin{equation}{section}
+
+\begin{document}
+%----------------------------------------------------------------
+%% Title
+%----------------------------------------------------------------
+\title{\Large \bfseries \vspace{-5mm} PHD21 Computational methods: Assignments \vspace{-5mm}}
+\author{Rob Włodarski}
+\date{}
+\maketitle
+
+\tableofcontents
+\newpage
+
+
+\section{Assignment 1}
+\input{_subfiles/assignment_1.tex}
+
+
+%------------------------------------------------------------------------
+%Useful Snippets.
+%------------------------------------------------------------------------
+%\section{Own Snippets (Comment Out)}
+%\vspace{3mm}
+%
+%% 1. Code Listing. 
+%\begin{lstlisting}[frame=single,language=Matlab]
+%	An example of Matlab code listing.      
+%\end{lstlisting}
+%
+%% 2. Highlighting.
+%\colorbox{maroon!10}{An example of highlighted text.}	
+%
+%%3. Two Figures Next to Each Other.
+%\begin{figure}[hbt]
+%\centering
+%\begin{subfigure}{.5\textwidth}
+%  \centering
+%  \includegraphics[width=\linewidth]{}
+%  \caption{A}
+%\end{subfigure}%
+%\begin{subfigure}{.5\textwidth}
+%  \centering
+%  \includegraphics[width=\linewidth]{}
+%  \caption{B}
+%\end{subfigure}
+%\caption{Two Figures Next to Each Other}
+%\label{two_figures}
+%\end{figure}	
+
+%------------------------------------------------------------------------
+%Bibliography.
+%------------------------------------------------------------------------
+
+%\newpage
+%
+%\bibliographystyle{apalike}
+%\bibliography{bibliography}
+
+
+\printbibliography
+\end{document}
