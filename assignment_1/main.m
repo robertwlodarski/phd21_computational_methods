@@ -5,3 +5,12 @@
 %% 1. Prepare the environment
 clear; 
 close all;
+
+% Add extra paths
+addpath _functions\
+addpath _scripts\
+
+%% 2. Solve the model
+
+% Load parameters
+parameters;

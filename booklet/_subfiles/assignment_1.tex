@@ -93,7 +93,7 @@ This effectively implies that:
 
 \colorbox{Gray!25}{\textbf{\textit{\underline{Step 2}}}: Extensive margin labour supply decision.}
 Household $\left(a,z\right)$ enters the labour market when:
-\begin{equation}
+\begin{equation}\label{a1_participation_decision}
     \mathbf{I}_n(a,z)=
     \begin{cases}
         1 & \text{if} \quad W(a,z)\geq N(a,z) \\
@@ -168,3 +168,37 @@ Given that we have only one wealth level in the economy, $a=1$, the aggregate la
     L^s = \int_{z^\star} n(z) \,  \mathrm{d}\Phi(z),
 \end{equation}
 where I set $\Phi(z)\equiv \Phi(z,1)$ for expositional clarity. 
+\newpage
+
+\colorbox{Gray!25}{\textbf{\textit{\underline{Step 4}}}: Equilibrium algorithm.}
+I set out the \textcolor{BurntOrange}{\textbf{algorithm used to compute the equilibrium}} given a set of parameters. 
+\begin{enumerate}
+    \item Guess $\left(w_0,T_0 \right)$.
+    \item Compute individual decisions. 
+    \begin{itemize}
+        \item \texttt{fnIntensiveLabourSupply} computes the \textcolor{BurntOrange}{\textbf{intensive labour supply for a working household}}. 
+        The following equations flesh out the approach leveraging concavity of Equation \eqref{a1_euler}.
+        Start at the initial consumption guess, $c_0$. The code follows the logic fleshed out by the equations below:
+        \begin{subequations}
+            \begin{align}
+                & RHS\left(c \right)\equiv z w(1-\tau) \left( \frac{z w(1-\tau)}{\eta c}\right)^\chi +a(1+r(1-\tau))+T \\
+                & LHS\left(c \right) \equiv (1+\beta) c \implies \\
+                & c_1 = \frac{RHS\left(c_0 \right)}{1+\beta}
+            \end{align}
+            and 
+            \begin{align}
+                & \epsilon_n \equiv c_{n} - c_{n-1} \implies \\
+                &\epsilon_1 = c_1 - c_0. 
+            \end{align}
+            If it's above the tolerance level, then repeat until it works:
+            \begin{align}
+                & c_n = \frac{RHS\left(c_{n-1} \right)}{1+\beta} \implies \\
+                & \epsilon_n =c_{n} - c_{n-1}.
+            \end{align}
+        \end{subequations}
+        This approach computes the indiviually optimal values of consumption and labour market participation, $\left(c_w, n_w \right)$, provided the household chooses to work.\vspace{3mm}
+
+        \item \texttt{fnExtensiveLabourSupply} determines if household $(a,z)$ chooses to work based on Equation \eqref{a1_participation_decision}.  
+    \end{itemize}
+    \item Aggregate all labour supply decisions (\texttt{fnAggregateLabourSupply}) and compare them with the aggregate labour demand.  
+\end{enumerate}
