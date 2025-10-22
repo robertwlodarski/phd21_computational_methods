@@ -1,34 +1,33 @@
 function [c,n]      = fnIntensiveLabourSupply(w,T,pz,pTau,pEta,pChi,pBeta,pa,pr,pMaxIter,pStepSize)
-    c_init          = 1.0;          % Initial guess of c
-    c_temp          = c_init;       % Initialise c_temp
-    conv            = false;
-    iter            = 0;
+    iConsumption    = 1.0;       % Initialise consumpton
+    iConvergence    = false;
+    iIteration      = 0;
 
     % Start iterations 
-    while iter < pMaxIter
-        RHS         = fnIntensiveLabourSupplyRHS(w,c_temp,T,pz,pTau,pEta,pChi,pa,pr);
+    while iIteration < pMaxIter
+        iRHS        = fnIntensiveLabourSupplyRHS(w,iConsumption,T,pz,pTau,pEta,pChi,pa,pr);
         % Reduce c_temp if the RHS value is too large
-        if RHS < 0
-            c_temp  = 0.5 * c_temp;
+        if iRHS < 0
+            iConsumption  = 0.5 * iConsumption;
             continue
         end 
-        c_new       = RHS / (1+pBeta);
-        err         = abs(c_new-c_temp);
+        iConsumptionNext    = iRHS / (1+pBeta);
+        iError                 = abs(iConsumptionNext-iConsumption);
         % Stop if the error is small
-        if err < 1e-5
-            conv    = true;
+        if iError < 1e-5
+            iConvergence    = true;
             break
         else 
             % Update the iteration
-            c_temp  = pStepSize * c_new + (1 - pStepSize) * c_temp;  
+            iConsumption  = pStepSize * iConsumptionNext + (1 - pStepSize) * iConsumption;  
         end 
-        iter        = iter + 1;
+        iIteration        = iIteration + 1;
     end
     % Print out error
-    if ~conv
+    if ~iConvergence
         error("Euler equation did not converge.")
     end 
     % Save the final values
-    c               = c_temp;
+    c               = iConsumption;
     n               = ((pz * w * (1 - pTau))/( c * pEta))^pChi;
 end 

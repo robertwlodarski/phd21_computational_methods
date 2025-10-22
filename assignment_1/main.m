@@ -14,3 +14,6 @@ addpath _scripts\
 
 % Load parameters
 parameters;
+
+% Calibrate the model (stanard)
+calibrate;
