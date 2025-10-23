@@ -131,6 +131,22 @@ We abstract from the capital markets, which makes the representative firm's prob
     \end{align}
 \end{subequations}
 
+\begin{figure}[hbt]
+\centering
+\caption{Household block of the model.}
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \caption{Euler equation \& consumption decision.}
+  \includegraphics[width=\linewidth]{_figures/consumption_plot.png}
+\end{subfigure}%
+\begin{subfigure}{.5\textwidth}
+  \centering
+    \caption{Excess labour supply on the aggregate level.}
+    \label{fig:a1_bisection}
+  \includegraphics[width=\linewidth]{_figures/excess_supply_bisection.png}
+\end{subfigure}
+\end{figure}	
+
 %=================================================================================
 \subsection*{Question 5}
 
@@ -151,8 +167,9 @@ $\boldsymbol{\Xi}$ represents the original vector of parameters:
 \end{equation}
 Given the pre-specified parameters, the unknown ones are:
 \begin{equation}
-    \hat{\boldsymbol{\Xi}}= \left(\eta, b, \sigma_z, \right)^T.
+    \hat{\boldsymbol{\Xi}}= \left(\eta, b, \sigma_z, \chi \right)^T.
 \end{equation}
+In my further work, I already use the calibrated parameters (see question 8).\\
 
 \colorbox{BurntOrange!25}{\textbf{\textit{\underline{Step 2}}}: Equilibrium.}
 Given the distribution of labour productivity, $\Phi$, a set of functions $\left\{n,c,a',z^\star,L,w,T \right\}$ is a \textcolor{BurntOrange}{\textbf{stationary competitive equilibrium}} if
@@ -200,20 +217,36 @@ I set out the \textcolor{BurntOrange}{\textbf{algorithm used to compute the equi
         As illustrated in Figure \ref{fig:a1_bisection}, the method is based on creating a grid for different wage values, finding the negative value closest to $0$, $w_{\text{lower}}$, and taking the weighted average of $w_{\text{lower}}$ and $w_{\text{upper}}$ (the next value in the grid).
         \textbf{Note}: I use the \say{naive} approach in my code, as bisection seems to produce a 
     \end{itemize}   
+    \item If the error is too large, update $\left(w_n, T_n \right)$ and iterate until convergence.
 \end{enumerate}
 
-\begin{figure}[hbt]
-\centering
-\caption{Household block of the model.}
-\begin{subfigure}{.5\textwidth}
-  \centering
-  \caption{Euler equation \& consumption decision.}
-  \includegraphics[width=\linewidth]{_figures/consumption_plot.png}
-\end{subfigure}%
-\begin{subfigure}{.5\textwidth}
-  \centering
-    \caption{Excess labour supply on the aggregate level.}
-    \label{fig:a1_bisection}
-  \includegraphics[width=\linewidth]{_figures/excess_supply_bisection.png}
-\end{subfigure}
-\end{figure}	
+%=================================================================================
+\subsection*{Question 6}
+
+\colorbox{BurntOrange!25}{ \parbox{\textwidth}{
+    \textbf{\textit{\underline{Question}}}:
+\textit{
+Visualize the aggregate supply and demand curves in the labor market.
+}}}\\
+
+
+%=================================================================================
+\subsection*{Question 7}
+
+\colorbox{BurntOrange!25}{ \parbox{\textwidth}{
+    \textbf{\textit{\underline{Question}}}:
+\textit{
+Visualize the comparative statics of the wage with respect to the change in $A$.
+}}}\\
+
+%=================================================================================
+\subsection*{Question 8}
+
+\colorbox{BurntOrange!25}{ \parbox{\textwidth}{
+    \textbf{\textit{\underline{Question}}}:
+\textit{
+Estimate parameters $(\eta,b,\chi,\sigma_z)$ to match the following hypothetical moments in general equilibrium:
+\begin{itemize}
+    \item 
+\end{itemize}
+}}}\\
