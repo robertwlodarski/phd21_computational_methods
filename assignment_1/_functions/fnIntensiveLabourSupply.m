@@ -5,14 +5,14 @@ function [c,n]      = fnIntensiveLabourSupply(w,T,pz,pTau,pEta,pChi,pBeta,pa,pr,
 
     % Start iterations 
     while iIteration < pMaxIter
-        iRHS        = fnIntensiveLabourSupplyRHS(w,iConsumption,T,pz,pTau,pEta,pChi,pa,pr);
+        iRHS                = pz * w * (1 - pTau) * (pz * w * (1 - pTau) / (pEta * iConsumption))^(pChi) + pa * (1 + pr * (1 - pTau)) + T;
         % Reduce c_temp if the RHS value is too large
-        if iRHS < 0
-            iConsumption  = 0.5 * iConsumption;
-            continue
-        end 
+        iConsumption        = iConsumption - 0.5 * iConsumption * (iRHS < 0);
+
+        % Next period's consumption
         iConsumptionNext    = iRHS / (1+pBeta);
-        iError                 = abs(iConsumptionNext-iConsumption);
+        iError              = abs(iConsumptionNext-iConsumption);
+
         % Stop if the error is small
         if iError < 1e-5
             iConvergence    = true;

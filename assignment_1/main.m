@@ -15,5 +15,8 @@ addpath _scripts\
 % Load parameters
 parameters;
 
-% Calibrate the model (stanard)
+% Calibrate the model (standard)
 calibrate;
+
+% Calibrate the model (alternative options)
+calibrate_pattern_search;

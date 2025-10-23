@@ -3,9 +3,12 @@
 
 %% 1. Prepare plot values
 
+% Equilibrium values
+[w_star, T_star]    = fnSolvePrices(pTau,pEta,pChi,pBeta,pSigmaz,pAlpha,pA,pa,pr,pb,pMaxIter,pStepSize);
+
 % Define RHS & LHS 
-vwTemp              = 5;
-vTTemp              = 2;
+vwTemp              = w_star;
+vTTemp              = T_star;
 vzTemp              = pAvgz;
 
 % Create RHS and LHS values
@@ -16,12 +19,12 @@ fnRHSlow            = @(c) fnIntensiveLabourSupplyRHS(0.8*vwTemp,c,vTTemp,vzTemp
 %% 2. Plot
 
 figure(1); 
-fplot({fnRHS,fnRHSlow, fnLHS}, [1 10], 'LineWidth', 2.5);
+fplot({fnRHS,fnRHSlow, fnLHS}, [0.3 2], 'LineWidth', 2.5);
 grid on;
-legend({'RHS ($w = 5$)','RHS ($w = 4$)', 'LHS'},...
+legend({'RHS ($w = w^\star$)','RHS ($w = 0.8w^\star$)', 'LHS'},...
     'fontsize',14,'interpreter','latex','Location','best');
-title('Working household Euler equation: Consumption decision','fontsize',18);
-subtitle('Assumed values: $T = 2$, $z = 1$, $\chi = 1$',...
-    'fontsize',14,'interpreter','latex');
+% title('Working household Euler equation: Consumption decision','fontsize',18);
+% subtitle('Assumed values: $T = 2$, $z = 1$, $\chi = 1$',...
+%     'fontsize',14,'interpreter','latex');
 xlabel('c');
 saveas(gcf,'_figures/consumption_plot.png');

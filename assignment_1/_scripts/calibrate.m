@@ -8,11 +8,14 @@
 
 % Function
 tic;
-vInitial                = [0,log(1.1507),log(0.1230),log(0.2996)];
+vInitial                = log([0.956,4.608,0.062,0.276]);
 fnMinimise              = @(x) fnLossFunctionQuadratic(vTargetMoments,mWeights,pTau,exp(x(2)),exp(x(1)),pBeta,exp(x(4)),pAlpha,pA,pa,pr,exp(x(3)),pMaxIter,pStepSize);
 fnOptions               = optimset('Display','iter');
 [vParamsSolved, Loss]   = fminsearch(fnMinimise,vInitial,fnOptions);
-ElapsedTime             = toc / 60;         
+ElapsedTime             = toc / 60;   
+
+% Display time message
+fprintf('Elapsed time for standard calibration: %.2f minutes\n', ElapsedTime);
 
 % Parameters
 pChi                    = exp(vParamsSolved(1));

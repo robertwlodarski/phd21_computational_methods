@@ -1,6 +1,6 @@
 \subsection*{Questions 1 through 4}
 
-\colorbox{Gray!25}{ \parbox{\textwidth}{
+\colorbox{BurntOrange!25}{ \parbox{\textwidth}{
     \textbf{\textit{\underline{Question}}}:
 \textit{\begin{enumerate}
     \item Label and interpret the model ingredients properly.
@@ -9,7 +9,7 @@
     \item Characterise the aggregate labor demand curve
 \end{enumerate}}}}\\
 
-\colorbox{Gray!25}{\textbf{\textit{\underline{Step 1A}}}: Working households $\to$ intensive margin labour supply.}
+\colorbox{BurntOrange!25}{\textbf{\textit{\underline{Step 1A}}}: Working households $\to$ intensive margin labour supply.}
 Start with the working household's problem.
 \begin{equation}
     \begin{aligned}
@@ -68,7 +68,7 @@ Using the combination of the Envelope Theorem and chain rule, this implies that,
 Equation \eqref{a1_working_derivative} effectvely means that \textcolor{BurntOrange}{\textbf{$W(a,z)$ monotonically increases in $z$}}. \\
 
 
-\colorbox{Gray!25}{\textbf{\textit{\underline{Step 1B}}}: Non-working households.}
+\colorbox{BurntOrange!25}{\textbf{\textit{\underline{Step 1B}}}: Non-working households.}
 The problem is similar here, apart from the labour first order condition. 
 Skipping the Lagrangian setup, I arrive at the following first-order conditions:
 \begin{subequations}
@@ -91,7 +91,7 @@ This effectively implies that:
     \boxed{\frac{\partial N(a,z)}{\partial z} =0.}\label{a1_nonworking_derivative}
 \end{equation}
 
-\colorbox{Gray!25}{\textbf{\textit{\underline{Step 2}}}: Extensive margin labour supply decision.}
+\colorbox{BurntOrange!25}{\textbf{\textit{\underline{Step 2}}}: Extensive margin labour supply decision.}
 Household $\left(a,z\right)$ enters the labour market when:
 \begin{equation}\label{a1_participation_decision}
     \mathbf{I}_n(a,z)=
@@ -112,13 +112,13 @@ then for $z > z^\star$, we have:
 \end{equation}
 This will come handy while numerically solving the model. \\
 
-\colorbox{Gray!25}{\textbf{\textit{\underline{Step 3}}}: Aggregate labour supply.}
+\colorbox{BurntOrange!25}{\textbf{\textit{\underline{Step 3}}}: Aggregate labour supply.}
 Assuming that $\Phi(a,z)$ is the joint distribution of ex-ante wealth and productivity, the \textcolor{BurntOrange}{\textbf{aggregate labour supply}} is:
 \begin{equation}
     L^S = \int  \mathbf{I}_n(a,z) h(a,z)  \, \mathrm{d}\Phi(a,z) \label{a1_aggsup1}
 \end{equation}
 
-\colorbox{Gray!25}{\textbf{\textit{\underline{Step 4A}}}: Aggregate labour demand.}
+\colorbox{BurntOrange!25}{\textbf{\textit{\underline{Step 4A}}}: Aggregate labour demand.}
 We abstract from the capital markets, which makes the representative firm's problem near-trivial:
 \begin{subequations}
     \begin{align}
@@ -126,15 +126,15 @@ We abstract from the capital markets, which makes the representative firm's prob
         & w = A(1-\alpha) \left(\frac{L^D}{K}\right)^{-\alpha},
     \end{align}
     or, putting $L^D$ on the LHS:
-    \begin{align}
-        \boxed{L^D = \left(\frac{(1-\alpha)A}{w}\right)^{\frac{1}{\alpha}}K.}
+    \begin{align} 
+        \boxed{L^D = \left(\frac{(1-\alpha)A}{w}\right)^{\frac{1}{\alpha}}K.}\label{a1_aggdem1}
     \end{align}
 \end{subequations}
 
 %=================================================================================
 \subsection*{Question 5}
 
-\colorbox{Gray!25}{ \parbox{\textwidth}{
+\colorbox{BurntOrange!25}{ \parbox{\textwidth}{
     \textbf{\textit{\underline{Question}}}:
 \textit{
     Suppose the following parameter levels:
@@ -144,7 +144,7 @@ $$
 Define and characterize the stationary recursive competitive equilibrium.
 }}}\\
 
-\colorbox{Gray!25}{\textbf{\textit{\underline{Step 1}}}: Parameters left.} 
+\colorbox{BurntOrange!25}{\textbf{\textit{\underline{Step 1}}}: Parameters left.} 
 $\boldsymbol{\Xi}$ represents the original vector of parameters:
 \begin{equation}
    \boldsymbol{\Xi}= \left(a, \eta, \xi, \tau, b, \beta, \sigma_z, A, \alpha, r \right)^T.
@@ -154,7 +154,7 @@ Given the pre-specified parameters, the unknown ones are:
     \hat{\boldsymbol{\Xi}}= \left(\eta, b, \sigma_z, \right)^T.
 \end{equation}
 
-\colorbox{Gray!25}{\textbf{\textit{\underline{Step 2}}}: Equilibrium.}
+\colorbox{BurntOrange!25}{\textbf{\textit{\underline{Step 2}}}: Equilibrium.}
 Given the distribution of labour productivity, $\Phi$, a set of functions $\left\{n,c,a',z^\star,L,w,T \right\}$ is a \textcolor{BurntOrange}{\textbf{stationary competitive equilibrium}} if
 \begin{enumerate}
     \item $\left(n,c,a^\prime, z^\star \right)$ solves the household's problem.
@@ -162,15 +162,7 @@ Given the distribution of labour productivity, $\Phi$, a set of functions $\left
     \item The labour and capital markets clear. 
 \end{enumerate}  
 
-\colorbox{Gray!25}{\textbf{\textit{\underline{Step 3}}}: Simplification.}
-Given that we have only one wealth level in the economy, $a=1$, the aggregate labour supply in Equation \eqref{a1_aggsup1} becomes:
-\begin{equation}
-    L^s = \int_{z^\star} n(z) \,  \mathrm{d}\Phi(z),
-\end{equation}
-where I set $\Phi(z)\equiv \Phi(z,1)$ for expositional clarity. 
-\newpage
-
-\colorbox{Gray!25}{\textbf{\textit{\underline{Step 4}}}: Equilibrium algorithm.}
+\colorbox{BurntOrange!25}{\textbf{\textit{\underline{Step 3}}}: Equilibrium algorithm.}
 I set out the \textcolor{BurntOrange}{\textbf{algorithm used to compute the equilibrium}} given a set of parameters. 
 \begin{enumerate}
     \item Guess $\left(w_0,T_0 \right)$.
@@ -200,5 +192,28 @@ I set out the \textcolor{BurntOrange}{\textbf{algorithm used to compute the equi
 
         \item \texttt{fnExtensiveLabourSupply} determines if household $(a,z)$ chooses to work based on Equation \eqref{a1_participation_decision}.  
     \end{itemize}
-    \item Aggregate all labour supply decisions (\texttt{fnAggregateLabourSupply}) and compare them with the aggregate labour demand.  
+    \item Aggregate all labour supply decisions (\texttt{fnAggregateLabourSupply}) and compare them with the aggregate labour demand.
+    \texttt{fnSolvePrices} iterates $w$ and $T$ until both clear the labour market. 
+    \begin{itemize}
+        \item One way of doing that is following the same method as for \texttt{fnIntensiveLabourSupply}, with Equations \eqref{a1_aggsup1} and \eqref{a1_aggdem1} used to compute labour supply and demand, respectively. 
+        \item Another method is to use bisection, in \texttt{fnSolvePricesBisection}. 
+        As illustrated in Figure \ref{fig:a1_bisection}, the method is based on creating a grid for different wage values, finding the negative value closest to $0$, $w_{\text{lower}}$, and taking the weighted average of $w_{\text{lower}}$ and $w_{\text{upper}}$ (the next value in the grid).
+        \textbf{Note}: I use the \say{naive} approach in my code, as bisection seems to produce a 
+    \end{itemize}   
 \end{enumerate}
+
+\begin{figure}[hbt]
+\centering
+\caption{Household block of the model.}
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \caption{Euler equation \& consumption decision.}
+  \includegraphics[width=\linewidth]{_figures/consumption_plot.png}
+\end{subfigure}%
+\begin{subfigure}{.5\textwidth}
+  \centering
+    \caption{Excess labour supply on the aggregate level.}
+    \label{fig:a1_bisection}
+  \includegraphics[width=\linewidth]{_figures/excess_supply_bisection.png}
+\end{subfigure}
+\end{figure}	

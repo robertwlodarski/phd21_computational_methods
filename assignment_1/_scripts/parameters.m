@@ -20,6 +20,7 @@ pBeta           = 0.96;
 % Solving iterations parameters
 pStepSize       = 0.1;
 pMaxIter        = 2000;
+pMaxWage        = 10;
 
 % Target moments
 mWeights        = eye(4);
