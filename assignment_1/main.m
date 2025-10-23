@@ -7,8 +7,8 @@ clear;
 close all;
 
 % Add extra paths
-addpath _functions\
-addpath _scripts\
+addpath _functions/
+addpath _scripts/
 
 %% 2. Solve the model
 
