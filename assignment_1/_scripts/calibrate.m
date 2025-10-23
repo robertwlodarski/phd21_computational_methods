@@ -18,10 +18,10 @@ ElapsedTime             = toc / 60;
 fprintf('Elapsed time for standard calibration: %.2f minutes\n', ElapsedTime);
 
 % Parameters
-pChi                    = exp(vParamsSolved(1));
-pEta                    = exp(vParamsSolved(2));
-pb                      = exp(vParamsSolved(3));
-pSigmaz                 = exp(vParamsSolved(4));
+pChiBas                 = exp(vParamsSolved(1));
+pEtaBas                 = exp(vParamsSolved(2));
+pbBas                   = exp(vParamsSolved(3));
+pSigmazBas              = exp(vParamsSolved(4));
 
 % Parameters: (27 minutes)
 % Chi        = 0.956 

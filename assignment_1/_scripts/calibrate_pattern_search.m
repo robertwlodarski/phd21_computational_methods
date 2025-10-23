@@ -18,7 +18,7 @@ ElapsedTimePS               = toc / 60;
 fprintf('Elapsed time for standard calibration: %.2f minutes\n', ElapsedTimePS)
 
 % Parameters
-pChiPS                      = exp(vParamsSolvedPS(1));
-pEtaPS                      = exp(vParamsSolvedPS(2));
-pbPS                        = exp(vParamsSolvedPS(3));
-pSigmazPS                   = exp(vParamsSolvedPS(4));
+pChiPS                      = vParamsSolvedPS(1);
+pEtaPS                      = vParamsSolvedPS(2);
+pbPS                        = vParamsSolvedPS(3);
+pSigmazPS                   = vParamsSolvedPS(4);
