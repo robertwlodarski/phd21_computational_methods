@@ -8,6 +8,7 @@ The repository contains a few folders.
 
 
 # Requirements
+Don't expect rocket science here. 
 - `Matlab`: Apart from the standard tools, you need to download the *Global Optimisation Toolbox* for some of my calibration experiments.
-- `LaTeX`: I use standard VSCode for that. You may need to follow their instructions. 
+- `LaTeX`: I use the standard VSCode for that. You may need to follow their instructions. 
 
