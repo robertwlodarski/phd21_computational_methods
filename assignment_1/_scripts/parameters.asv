@@ -20,7 +20,7 @@ pBeta           = 0.96;
 pSigmaz         = pSigmazBas;
 pEta            = pEtaBas;
 pb              = pbBas;
-pChi            = pChiBas;
+pC
 
 % Solving iterations parameters
 pStepSize       = 0.1;

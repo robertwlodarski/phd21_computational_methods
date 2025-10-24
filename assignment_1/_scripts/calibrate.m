@@ -8,7 +8,7 @@
 
 % Function
 tic;
-vInitial                = log([0.956,4.608,0.062,0.276]);
+vInitial                = log([0.7744,6.4986,0.0633,0.3136]);
 fnMinimise              = @(x) fnLossFunctionQuadratic(vTargetMoments,mWeights,pTau,exp(x(2)),exp(x(1)),pBeta,exp(x(4)),pAlpha,pA,pa,pr,exp(x(3)),pMaxIter,pStepSize);
 fnOptions               = optimset('Display','iter');
 [vParamsSolved, Loss]   = fminsearch(fnMinimise,vInitial,fnOptions);
@@ -22,6 +22,7 @@ pChiBas                 = exp(vParamsSolved(1));
 pEtaBas                 = exp(vParamsSolved(2));
 pbBas                   = exp(vParamsSolved(3));
 pSigmazBas              = exp(vParamsSolved(4));
+LossBas                 = Loss;
 
 % Parameters: (27 minutes)
 % Chi        = 0.956 
@@ -29,3 +30,5 @@ pSigmazBas              = exp(vParamsSolved(4));
 % Eta        = 4.608 
 % Sigma_z    = 0.276 
 % Q. error   = 0.11310 
+
+save('_results/ParametersBas.mat', 'pChiBas', 'pEtaBas', 'pbBas', 'pSigmazBas', 'LossBas');

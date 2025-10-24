@@ -1,5 +1,5 @@
 function [c,n]      = fnIntensiveLabourSupply(w,T,pz,pTau,pEta,pChi,pBeta,pa,pr,pMaxIter,pStepSize)
-    iConsumption    = 1.0;       % Initialise consumpton
+    iConsumption    = 0.6751;       % Initialise consumpton
     iConvergence    = false;
     iIteration      = 0;
 
