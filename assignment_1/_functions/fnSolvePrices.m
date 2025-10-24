@@ -1,7 +1,7 @@
 function [w, T] = fnSolvePrices(pTau,pEta,pChi,pBeta,pSigmaz,pAlpha,pA,pa,pr,pb,pMaxIter,pStepSize)
     % Initialise
-    iWage           = 0.6751;
-    iT              = 0.0478;
+    iWage           = 0.9972;
+    iT              = 0.0462;
     iIteration      = 0;
     iConvergence    = false;
 
@@ -17,7 +17,7 @@ function [w, T] = fnSolvePrices(pTau,pEta,pChi,pBeta,pSigmaz,pAlpha,pA,pa,pr,pb,
 
         % Update error
         iDeviation          = [iWage - iWageNext; iT - iTNext];
-        iError              = iDeviation' * iDeviation;
+        iError              = sum(abs(iDeviation));
 
         % Convergence criterion
         if iError < 1e-5

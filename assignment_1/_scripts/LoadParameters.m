@@ -12,18 +12,14 @@ pr              = 0.04;
 pBeta           = 0.96;
 
 % Placeholder parameters
-% pb              = 0.0633;
-% pEta            = 6.4986;
-% pSigmaz         = 0.3136;
-% pChi            = 0.7744;
-
-pSigmaz         = pSigmazBas;
-pEta            = pEtaBas;
-pb              = pbBas;
-pC
+load('_results\ParametersPS.mat');
+pSigmaz         = pSigmazPS;
+pEta            = pEtaPS;
+pb              = pbPS;
+pChi            = pChiPS;
 
 % Solving iterations parameters
-pStepSize       = 0.1;
+pStepSize       = 0.9;
 pMaxIter        = 2000;
 pMaxWage        = 10;
 

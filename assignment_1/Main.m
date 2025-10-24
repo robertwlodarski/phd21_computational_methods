@@ -10,13 +10,13 @@ close all;
 addpath _functions/
 addpath _scripts/
 
-%% 2. Solve the model
+%% 2. Calibrate the model
 
 % Load parameters
-parameters;
+LoadParameters;
 
-% Calibrate the model (standard)
-calibrate;
+% Calibrate the model
+%calibrate;
+%calibrate_pattern_search;
 
-% Calibrate the model (alternative options)
-calibrate_pattern_search;
+%% 3. Analysis

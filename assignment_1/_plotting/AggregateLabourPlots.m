@@ -16,7 +16,7 @@ ExcessSupply        = @(w) Supply(w) - Demand(w);
 
 % Plot
 figure(2); 
-fplot(ExcessSupply, [0.3 1], 'LineWidth', 2.5);
+fplot(ExcessSupply, [0.5 1.5], 'LineWidth', 2.5);
 xline(w_star,'--', '$w^\star$','interpreter','latex', 'LabelVerticalAlignment','bottom','LineWidth',2.5,'FontSize',18);
 xline(w_star-0.05,'-.', '$w_{\text{lower}}$','interpreter','latex', 'LabelVerticalAlignment','bottom','LineWidth',1.5, 'Color','c','FontSize',18);
 xline(w_star+0.05,'-.', '$w_{\text{upper}}$','interpreter','latex', 'LabelVerticalAlignment','bottom','LineWidth',1.5, 'Color','c','FontSize',18);
@@ -25,5 +25,15 @@ grid on;
 xlabel('w');
 %title('Bisection: Excess supply of labour (aggregate)','fontsize',18);
 legend('Excess supply', 'Location', 'best');
-saveas(gcf,'_figures/excess_supply_bisection.png');
+saveas(gcf,'_figures/ExcessSupplyBisection.png');
 
+% Aggregate demand and supply
+figure(3); 
+fplot({Supply, Demand}, [0.8 1.5], 'LineWidth', 2.5);
+xline(w_star,'--', '$w^\star$','interpreter','latex', 'LabelVerticalAlignment','bottom','LineWidth',2.5,'FontSize',18);
+grid on;
+xlabel('w');
+ylabel('$E[z n(z)]$','interpreter','latex');
+%title('Bisection: Excess supply of labour (aggregate)','fontsize',18);
+legend({'Supply', 'Demand'}, 'Location', 'best');
+saveas(gcf,'_figures/demand_supply.png');
