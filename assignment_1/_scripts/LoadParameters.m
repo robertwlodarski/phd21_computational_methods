@@ -12,7 +12,7 @@ pr              = 0.04;
 pBeta           = 0.96;
 
 % Placeholder parameters
-load('_results\ParametersPS.mat');
+load('_results/ParametersPS.mat');
 pSigmaz         = pSigmazPS;
 pEta            = pEtaPS;
 pb              = pbPS;
