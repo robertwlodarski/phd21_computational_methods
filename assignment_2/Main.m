@@ -8,3 +8,7 @@ close all;
 
 % Add paths
 addpath '_functions'; 
+addpath '_scripts'; 
+
+% Load parameters
+LoadParameters;
