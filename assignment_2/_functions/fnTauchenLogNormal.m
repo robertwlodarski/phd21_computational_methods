@@ -14,7 +14,7 @@ function [vGrid, mTransition] = fnTauchenLogNormal(Parameters)
     vXGrid(1)       = -N * Sigmaz;
     vXGrid(end)     = N * Sigmaz;
     d               = (vXGrid(end)-vXGrid(1)) / (M-1);
-    for iii         = 2:size(vXGrid,2)
+    for iii         = 2:size(vXGrid,1)
         vXGrid(iii) = vXGrid(iii-1)+d;
     end
     vGrid           = exp(vXGrid);    

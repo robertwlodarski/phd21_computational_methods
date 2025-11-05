@@ -21,4 +21,7 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
     % 5. Initialise values 
     h0                  = 0;
     a0                  = 1;
+
+    % 6. Start simulating
+
 end

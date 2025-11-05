@@ -3,6 +3,7 @@ function LHS = fnGumbelTrick(A,B,Parameters)
     pZeta           = Parameters.pZeta;
     pEuler          = 0.577215;
     % Solve
-    Inner           = exp(A / pZeta) + exp(B / pZeta);
-    LHS             = pZeta * (pEuler + log(Inner));
+    Max             = max(A/pZeta,B/pZeta);
+    Inner           = exp(A / pZeta - Max) + exp(B / pZeta - Max);
+    LHS             = pZeta * (pEuler + Max + log(Inner));
 end

@@ -31,12 +31,16 @@ function [mV,mS,mW,mN]      = fnValueFunctionMatrices(Parameters,Grids)
                 w           = fnWage(h,z,Parameters);
                 % Working household
                 a_next_w    = (pBeta/(pBeta+1))*(w + (1+pr)*a);
+                a_next_w    = max(a_next_w, 1e-9);
                 c_w         = (1 / pBeta) * a_next_w;
+                c_w         = max(c_w, 1e-9);
                 W           = log(c_w) - pEta + pBeta * log(a_next_w);
                 % Non-working household
                 a_next_n    = (pBeta/(pBeta+1))*(pb + (1+pr)*a);
+                a_next_n    = max(a_next_n,1e-9);
                 c_n         = (1 / pBeta) * a_next_n;
-                N           = log(c_n) + pBeta * log(a_next_n);
+                c_n         = max(c_n,1e-9);
+                N           = log(c_n) + pBeta * log(a_next_n); 
                 % Value functions
                 V           = fnGumbelTrick(W,N,Parameters);
                 arg1        = pVarphi * W + (1 - pVarphi) * N - pPhi;
@@ -61,9 +65,10 @@ function [mV,mS,mW,mN]      = fnValueFunctionMatrices(Parameters,Grids)
                         h_fut       = min(size(vGridH,1),hhh+1);
                         % Working household
                         c           = (1 / pBeta) * a_next;
-                        W           = log(c) - pEta + pBeta * (mTransition(zzz,:) * squeeze(mV(aaa,h_fut,:,ttt+1,aap)));
+                        c           = max(c, 1e-9);
+                        W           = log(c) - pEta + pBeta * (mTransition(zzz,:) * squeeze(mV(aaa,h_fut,:,ttt+1,aap))); %ERROR
                         % Non-working household
-                        N           = log(c) + pBeta * (mTransition(zzz,:) * squeeze(mS(aaa,h_fut,:,ttt+1,aap)));
+                        N           = log(c) + pBeta * (mTransition(zzz,:) * squeeze(mS(aaa,h_fut,:,ttt+1,aap))); %ERROR
                         % Value functions
                         V           = fnGumbelTrick(W,N,Parameters);
                         arg1        = pVarphi * W + (1 - pVarphi) * N - pPhi;
