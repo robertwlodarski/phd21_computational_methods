@@ -45,15 +45,23 @@ function [mV,mS,mW,mN]      = fnValueFunctionMatrices(Parameters,Grids)
                 V           = fnGumbelTrick(W,N,Parameters);
                 arg1        = pVarphi * W + (1 - pVarphi) * N - pPhi;
                 S           = fnGumbelTrick(arg1,N,Parameters);
-                % Save the results
-                mV(aaa,hhh,zzz,pT+1,:) = V;
-                mS(aaa,hhh,zzz,pT+1,:) = S;
-                mW(aaa,hhh,zzz,pT+1,:) = W;
-                mN(aaa,hhh,zzz,pT+1,:) = N;
+                % Save the "incorrect choice" results
+                mV(aaa,hhh,zzz,pT+1,:) = -Inf;
+                mS(aaa,hhh,zzz,pT+1,:) = -Inf;
+                mW(aaa,hhh,zzz,pT+1,:) = -Inf;
+                mN(aaa,hhh,zzz,pT+1,:) = -Inf;
+                % Find the index of a' that satisies the correct result
+                [~ , index_ap_w]       = min(abs(vGrida - a_next_w));
+                [~ , index_ap_n]       = min(abs(vGrida - a_next_n));
+                % Assign better values
+                mV(aaa,hhh,zzz,pT+1,index_ap_w) = V;
+                mS(aaa,hhh,zzz,pT+1,index_ap_n) = S;
+                mW(aaa,hhh,zzz,pT+1,index_ap_w) = W;
+                mN(aaa,hhh,zzz,pT+1,index_ap_n) = N;
             end
         end 
     end
-
+    
     % Solve for the remaining times (backward)
     for ttt=pT:(-1):1                               % Time
         for aaa = 1:1:size(vGrida,1)                % Existing wealth
@@ -63,12 +71,18 @@ function [mV,mS,mW,mN]      = fnValueFunctionMatrices(Parameters,Grids)
                         % Wages, assets and human capital
                         a_next      = vGrida(aap);
                         h_fut       = min(size(vGridH,1),hhh+1);
+                        h           = vGridH(hhh);
+                        a           = vGrida(aaa);
+                        z           = vGridZ(zzz);
+                        w           = fnWage(h,z,Parameters);                        
                         % Working household
-                        c           = (1 / pBeta) * a_next;
-                        c           = max(c, 1e-9);
-                        W           = log(c) - pEta + pBeta * (mTransition(zzz,:) * squeeze(mV(aaa,h_fut,:,ttt+1,aap))); %ERROR
+                        c_w         = w + (1+pr)*a - a_next;
+                        c_w         = max(c_w, 1e-9);
+                        W           = log(c_w) - pEta + pBeta * (mTransition(zzz,:) * max(squeeze(mV(aap,h_fut,:,ttt+1,:)),[],2));
                         % Non-working household
-                        N           = log(c) + pBeta * (mTransition(zzz,:) * squeeze(mS(aaa,h_fut,:,ttt+1,aap))); %ERROR
+                        c_n         = pb + (1+pr)*a - a_next;
+                        c_n         = max(c_n,1e-9);
+                        N           = log(c_n) + pBeta * (mTransition(zzz,:) * max(squeeze(mS(aap,hhh,:,ttt+1,:)),[],2)); 
                         % Value functions
                         V           = fnGumbelTrick(W,N,Parameters);
                         arg1        = pVarphi * W + (1 - pVarphi) * N - pPhi;
