@@ -55,15 +55,13 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
             % Solve (working)
             obj_W                   = @(x) -F_W(a,h,z,ttt-1,x);
             [ap_w, W]               = fminbnd(obj_W, min(vGrida), ap_upper_w, fnOptions);
-            W                       = -W;
             mW_opt(ttt,iii)         = W;
             % Solve (non-working)
             obj_N                   = @(x) -F_N(a,h,z,ttt-1,x);
             [ap_n, N]               = fminbnd(obj_N, min(vGrida), ap_upper_n, fnOptions);
-            N                       = -N;
             mN_opt(ttt,iii)         = N;
             % Working probabilities 
-            [dv,ds]                 = fnGumbelTrickProbabilities(-W,-N,Parameters);
+            [dv,ds]                 = fnGumbelTrickProbabilities(W,N,Parameters);
             CondLabSupp_w           = (mWorkingShocks(ttt,iii) <= dv);
             CondLabSupp_n           = (mNonWorkingShocks(ttt,iii) <= ds);
             % Updating decisions and variables going into the next period
@@ -79,8 +77,7 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
                 mIncome(ttt,iii)            = mEarnings(ttt,iii) + (1+pr) * a;
                 mConsumption(ttt,iii)       = mIncome(ttt,iii) -mAssetsNext(ttt,iii);
                 % Update next skill level
-                t_h                         = min(pT,ttt+1);
-                mH(t_h,iii)                 = (h + 1) * min(CondLabSupp_n,pBarh) + h * (1 - CondLabSupp_n);
+                t_h                         = min(p,)
             elseif mParticipation(ttt-1,iii)==1 %(Working households)
                 % Update employment status
                 mParticipation(ttt,iii)     = CondLabSupp_w;
@@ -88,13 +85,11 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
                 mAssetsNext(ttt,iii)        = ap_w * CondLabSupp_w + (1-CondLabSupp_w) * ap_n;
                 mAssets(ttt+1,iii)          = ap_w * CondLabSupp_w + (1-CondLabSupp_w) * ap_n;
                 % Other things worth saving
-                mWage(ttt,iii)              = w * CondLabSupp_w;
+                mWage(ttt,iii)              = w * CondLabSupp_n;
                 mEarnings(ttt,iii)          = w * CondLabSupp_w + (1-CondLabSupp_w) * pb;
                 mIncome(ttt,iii)            = mEarnings(ttt,iii) + (1+pr) * a;
                 mConsumption(ttt,iii)       = mIncome(ttt,iii) -mAssetsNext(ttt,iii);
                 % Update next skill level
-                t_h                         = min(pT,ttt+1);
-                mH(t_h,iii)                 = CondLabSupp_w * min((h + 1),pBarh) + h * (1 - CondLabSupp_w);
             end 
         end
     end

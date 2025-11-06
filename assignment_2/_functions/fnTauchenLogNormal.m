@@ -28,4 +28,6 @@ function [vGrid, mTransition] = fnTauchenLogNormal(Parameters)
         mTransition(:,jjj)  = repmat(P,[M,1]);
     end
     
+    % Ensure transition rows sum to 1 (they don't for N=1)
+    mTransition             = mTransition ./ sum(mTransition,2);
 end 

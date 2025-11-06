@@ -12,3 +12,8 @@ addpath '_scripts';
 
 % Load parameters
 LoadParameters;
+
+% Simulate the model
+tic;
+Simulations     = fnSimulationsSolver(Parameters,Grids,20000);
+toc;

@@ -46,10 +46,10 @@ function [mV,mS,mW,mN]      = fnValueFunctionMatrices(Parameters,Grids)
                 arg1        = pVarphi * W + (1 - pVarphi) * N - pPhi;
                 S           = fnGumbelTrick(arg1,N,Parameters);
                 % Save the "incorrect choice" results
-                mV(aaa,hhh,zzz,pT+1,:) = -Inf;
-                mS(aaa,hhh,zzz,pT+1,:) = -Inf;
-                mW(aaa,hhh,zzz,pT+1,:) = -Inf;
-                mN(aaa,hhh,zzz,pT+1,:) = -Inf;
+                mV(aaa,hhh,zzz,pT+1,:) = -1e5;
+                mS(aaa,hhh,zzz,pT+1,:) = -1e5;
+                mW(aaa,hhh,zzz,pT+1,:) = -1e5;
+                mN(aaa,hhh,zzz,pT+1,:) = -1e5;
                 % Find the index of a' that satisies the correct result
                 [~ , index_ap_w]       = min(abs(vGrida - a_next_w));
                 [~ , index_ap_n]       = min(abs(vGrida - a_next_n));
