@@ -1,7 +1,7 @@
 % Loading parameters
 
 %% 1. Standard parameters
-Parameters.pZeta        = 0.01;
+Parameters.pZeta        = 0.5;
 Parameters.pVarphi      = 0.80;
 Parameters.pPhi         = 0.5;
 Parameters.pEta         = 2;

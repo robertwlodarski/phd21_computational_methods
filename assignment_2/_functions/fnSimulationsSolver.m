@@ -63,7 +63,7 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
             N                       = -N;
             mN_opt(ttt,iii)         = N;
             % Working probabilities 
-            [dv,ds]                 = fnGumbelTrickProbabilities(-W,-N,Parameters);
+            [dv,ds]                 = fnGumbelTrickProbabilities(W,N,Parameters);
             CondLabSupp_w           = (mWorkingShocks(ttt,iii) <= dv);
             CondLabSupp_n           = (mNonWorkingShocks(ttt,iii) <= ds);
             % Updating decisions and variables going into the next period
