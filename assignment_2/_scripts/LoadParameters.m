@@ -19,8 +19,8 @@ Parameters.pT           = 50;
 %% 2. Grids: Productivity, human capital, age, and wealth
 
 % Tauchen productivity parameters
-Parameters.pTauchenN    = 1;
-Parameters.pTauchenM    = 5;
+Parameters.pTauchenN    = 1.5;
+Parameters.pTauchenM    = 11;
 
 % Tauchen productiviy grid % INITIATE THE GRID INSIDE THE FUNCTION
 [Grids.vGridZ,... 

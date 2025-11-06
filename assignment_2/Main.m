@@ -15,5 +15,7 @@ LoadParameters;
 
 % Simulate the model
 tic;
-Simulations     = fnSimulationsSolver(Parameters,Grids,20000);
+Simulations     = fnSimulationsSolver(Parameters,Grids,100);
 toc;
+
+% Plotting

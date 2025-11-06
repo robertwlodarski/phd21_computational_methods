@@ -32,13 +32,13 @@ function [mV,mS,mW,mN]      = fnValueFunctionMatrices(Parameters,Grids)
                 % Working household
                 a_next_w    = (pBeta/(pBeta+1))*(w + (1+pr)*a);
                 a_next_w    = max(a_next_w, 1e-9);
-                c_w         = (1 / pBeta) * a_next_w;
+                c_w         = w + (1+pr)*a-a_next_w;
                 c_w         = max(c_w, 1e-9);
                 W           = log(c_w) - pEta + pBeta * log(a_next_w);
                 % Non-working household
                 a_next_n    = (pBeta/(pBeta+1))*(pb + (1+pr)*a);
                 a_next_n    = max(a_next_n,1e-9);
-                c_n         = (1 / pBeta) * a_next_n;
+                c_n         = pb + (1+pr)*a-a_next_n;
                 c_n         = max(c_n,1e-9);
                 N           = log(c_n) + pBeta * log(a_next_n); 
                 % Value functions
