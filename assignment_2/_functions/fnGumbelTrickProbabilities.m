@@ -4,8 +4,8 @@ function [dv,ds] = fnGumbelTrickProbabilities(W,N,Parameters)
     pPhi            = Parameters.pPhi;
     pVarphi         = Parameters.pVarphi;
     % Tricking Matlab to behave well
-    X1              = max(W,N);
-    X2              = max((pVarphi * W + (1 - pVarphi) * N - pPhi),N);
+    X1              = min(W,N);
+    X2              = min((pVarphi * W + (1 - pVarphi) * N - pPhi),N);
     % Probability of working given working
     Den1            = exp( (W-X1) / pZeta ) + exp( (N-X1) / pZeta);
     dv              = exp( (W-X1) / pZeta) / Den1;
