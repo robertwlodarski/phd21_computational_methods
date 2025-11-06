@@ -9,6 +9,7 @@ close all;
 % Add paths
 addpath '_functions'; 
 addpath '_scripts'; 
+addpath '_plotting';
 
 % Load parameters
 LoadParameters;
