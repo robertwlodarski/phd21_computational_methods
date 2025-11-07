@@ -27,7 +27,7 @@ The value functions are:
     \end{align}
 \end{subequations}
 
-\colorbox{Cerulean!25}{\textbf{\textit{\underline{Step 1A}}}}: Working household problem.
+\colorbox{Cerulean!25}{\textbf{\textit{\underline{Step 1A}}} Working household problem:} 
 \begin{equation}
     \begin{aligned}
          W_t(a, h, z) & =\max _{c, a^{\prime}} \left\{ \log (c)-\eta+\beta \mathbb{E} V_{t+1}\left(a^{\prime}, h^{\prime}, z^{\prime}\right) \right\} \\
@@ -61,7 +61,7 @@ Further, assuming that $V_{T+1}= \log \left( a^\prime\right)$, the terminal asse
 \end{subequations}
 This can be used to recover the solution and final $V_{t}$, which can later be used to solve the problem.\\ 
 
-\colorbox{Cerulean!25}{\textbf{\textit{\underline{Step 1B}}}}: Working household problem.
+\colorbox{Cerulean!25}{\textbf{\textit{\underline{Step 1B}}} Working household problem:} 
 The non-working household faces the following problem:
 \begin{equation}
     \begin{aligned}
@@ -144,5 +144,11 @@ The terminal asset choice becomes:
     node[midway, below, yshift=-30pt,rotate=-45] {\small Grid 4};
     
 \end{tikzpicture}
-\caption{Tauchen discretisation}
+\caption{Tauchen discretisation.}
+\label{fig:a2_tauchen}
 \end{figure}
+
+\colorbox{Cerulean!25}{\textbf{\textit{\underline{Step 2}}} Tauchen discretisation: } \texttt{fnTauchenLogNormal} allows for conducting a quick Tauchen discretisation under the assumption that $z$ follows $\log \mathcal{N}\left(0, \sigma_z \right)$, as visualised on Figure \ref{fig:a2_tauchen}.
+\\
+
+\colorbox{Cerulean!25}{\textbf{\textit{\underline{Step 3}}} Probabilistic labour supply decision: } 
