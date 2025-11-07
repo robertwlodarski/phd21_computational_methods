@@ -4,6 +4,7 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
     pr                  = Parameters.pr;
     pb                  = Parameters.pb;
     pBarh               = Parameters.pBarh;
+    pBeta               = Parameters.pBeta;
     vGridZ              = Grids.vGridZ;
     vGridH              = Grids.vGridH;
     vGrida              = Grids.vGrida;
@@ -11,9 +12,9 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
 
     % 2A. Simulate shocks drawn from U(0,1)
     rng(1997,"twister");
-    mProductivityShocks = rand(pT,SimulationsNumber);
-    mWorkingShocks      = rand(pT,SimulationsNumber);
-    mNonWorkingShocks   = rand(pT,SimulationsNumber);
+    mProductivityShocks = rand(pT+1,SimulationsNumber);
+    mWorkingShocks      = rand(pT+1,SimulationsNumber);
+    mNonWorkingShocks   = rand(pT+1,SimulationsNumber);
 
     % 3. Generate matrices 
     [~,~,mW,mN]      = fnValueFunctionMatrices(Parameters,Grids);
@@ -44,7 +45,7 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
     
     % 7. Start simulating
     for iii = 1:1:SimulationsNumber
-        for ttt = 1:1:pT
+        for ttt = 1:1:pT+1
             % Worker states
             a                       = mAssets(ttt,iii);
             h                       = mH(ttt,iii);
@@ -53,48 +54,50 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
             ap_upper_w              = (1+pr) * a + w;
             ap_upper_n              = (1+pr) * a + pb;
             % Solve (working)
-            obj_W                   = @(x) -F_W(a,h,z,ttt-1,x);
+            obj_W                   = @(x) -F_W(a,h,z,vGridAge(ttt),x);
             [ap_w, W]               = fminbnd(obj_W, min(vGrida), ap_upper_w, fnOptions);
             W                       = -W;
             mW_opt(ttt,iii)         = W;
             % Solve (non-working)
-            obj_N                   = @(x) -F_N(a,h,z,ttt-1,x);
+            obj_N                   = @(x) -F_N(a,h,z,vGridAge(ttt),x);
             [ap_n, N]               = fminbnd(obj_N, min(vGrida), ap_upper_n, fnOptions);
             N                       = -N;
             mN_opt(ttt,iii)         = N;
             % Working probabilities 
             [dv,ds]                 = fnGumbelTrickProbabilities(W,N,Parameters);
-            CondLabSupp_w           = (mWorkingShocks(ttt,iii) <= dv);
-            CondLabSupp_n           = (mNonWorkingShocks(ttt,iii) <= ds);
+            CondLabSupp_w           = (mWorkingShocks(ttt,iii)      <= dv);
+            CondLabSupp_n           = (mNonWorkingShocks(ttt,iii)   <= ds);
             % Updating decisions and variables going into the next period
             if (ttt == 1 || mParticipation(ttt-1,iii)==0) 
                 % Update employment status
                 mParticipation(ttt,iii)     = CondLabSupp_n;
                 % Update asset decision
                 mAssetsNext(ttt,iii)        = ap_w * CondLabSupp_n + (1-CondLabSupp_n) * ap_n;
-                mAssets(ttt+1,iii)          = ap_w * CondLabSupp_n + (1-CondLabSupp_n) * ap_n;
                 % Other things worth saving
-                mWage(ttt,iii)              = ap_w * CondLabSupp_n;
+                mWage(ttt,iii)              = w * CondLabSupp_n;
                 mEarnings(ttt,iii)          = w * CondLabSupp_n + (1-CondLabSupp_n) * pb;
                 mIncome(ttt,iii)            = mEarnings(ttt,iii) + (1+pr) * a;
-                mConsumption(ttt,iii)       = mIncome(ttt,iii) -mAssetsNext(ttt,iii);
+                mConsumption(ttt,iii)       = mIncome(ttt,iii) - mAssetsNext(ttt,iii);
                 % Update next skill level
-                t_h                         = min(pT,ttt+1);
-                mH(t_h,iii)                 = (h + 1) * min(CondLabSupp_n,pBarh) + h * (1 - CondLabSupp_n);
+                mH(ttt,iii)                 = min(h + CondLabSupp_n, pBarh);
             elseif mParticipation(ttt-1,iii)==1 %(Working households)
                 % Update employment status
                 mParticipation(ttt,iii)     = CondLabSupp_w;
                 % Update asset decision
                 mAssetsNext(ttt,iii)        = ap_w * CondLabSupp_w + (1-CondLabSupp_w) * ap_n;
-                mAssets(ttt+1,iii)          = ap_w * CondLabSupp_w + (1-CondLabSupp_w) * ap_n;
                 % Other things worth saving
                 mWage(ttt,iii)              = w * CondLabSupp_w;
                 mEarnings(ttt,iii)          = w * CondLabSupp_w + (1-CondLabSupp_w) * pb;
                 mIncome(ttt,iii)            = mEarnings(ttt,iii) + (1+pr) * a;
-                mConsumption(ttt,iii)       = mIncome(ttt,iii) -mAssetsNext(ttt,iii);
+                mConsumption(ttt,iii)       = mIncome(ttt,iii) - mAssetsNext(ttt,iii);
                 % Update next skill level
-                t_h                         = min(pT,ttt+1);
-                mH(t_h,iii)                 = CondLabSupp_w * min((h + 1),pBarh) + h * (1 - CondLabSupp_w);
+                mH(ttt,iii)                 = min(h + CondLabSupp_w, pBarh);
+            end 
+            % Save update assets between periods
+            if ttt <= pT
+                mAssets(ttt+1,iii)            = mAssetsNext(ttt,iii);
+            elseif ttt == pT+1
+                mAssetsNext(ttt,iii)        = pBeta / (1 + pBeta) * mIncome(ttt,iii);
             end 
         end
     end
