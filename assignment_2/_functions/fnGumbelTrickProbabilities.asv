@@ -1,14 +1,14 @@
 function [dv,ds] = fnGumbelTrickProbabilities(W,N,X,Parameters)
     % Handbaek's trick: X = max(W,N) (of them all)
-    %X = mean([median([W,N]),X]);
+    X = mean([median([W,N]),X]);
 
     % Unpack parameters
     pZeta           = Parameters.pZeta;
     pPhi            = Parameters.pPhi;
     pVarphi         = Parameters.pVarphi;
     % Probability of working given working
-    Den1            = (exp(W + X))^(1/pZeta) + (exp(N + X))^(1/pZeta);
-    dv              = exp( W / pZeta - log(Den1) + log(X / pZeta));
+    Den1            = exp ( W / pZeta -  X / pZeta) + exp( N / pZeta - X / pZeta);
+    dv              = exp( W / pZeta - log(Den1) - log(X / pZeta));
     % Probability of working given not working
     Inner           = (pVarphi * W + (1 - pVarphi) * N - pPhi);
     Den2            = exp( Inner / pZeta - X) + exp( N / pZeta - X);

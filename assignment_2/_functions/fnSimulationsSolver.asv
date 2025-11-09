@@ -18,8 +18,8 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
 
     % 3. Generate matrices 
     [~,~,mW,mN]         = fnValueFunctionMatrices(Parameters,Grids);
-    Temp                = min(mW,mN);
-    vX                  = mean(Temp(Temp>0),"all"); 
+    temp                = min(min(mN,mW),[],"all");
+    vX                  = min(min(mN(mN~=) ) )
 
     % 4. Prepare space
     mAssets             = zeros(size(mWorkingShocks));

@@ -12,6 +12,7 @@ function [mV,mS,mW,mN]      = fnValueFunctionMatrices(Parameters,Grids)
     vGrida                  = Grids.vGrida;
     vGridAge                = Grids.vGridAge;
     mTransition             = Grids.mTransitionZ;
+    pPenalty                = NaN;
 
     % Initialise value function matrices
     % (a,h,z,T,a')
@@ -24,40 +25,40 @@ function [mV,mS,mW,mN]      = fnValueFunctionMatrices(Parameters,Grids)
     for aaa = 1:1:size(vGrida,1)
         for hhh = 1:1:size(vGridH,1)
             for zzz = 1:1:size(vGridZ,1)
-                % Wages, assets and human capital
-                h           = vGridH(hhh);
-                a           = vGrida(aaa);
-                z           = vGridZ(zzz);
-                w           = fnWage(h,z,Parameters);
-                % Working household
-                a_next_w    = (pBeta/(pBeta+1))*(w + (1+pr)*a);
-                a_next_w    = max(a_next_w, 1e-9);
-                c_w         = w + (1+pr)*a-a_next_w;
-                c_w         = max(c_w, 1e-9);
-                W           = log(c_w) - pEta + pBeta * log(a_next_w);
-                % Non-working household
-                a_next_n    = (pBeta/(pBeta+1))*(pb + (1+pr)*a);
-                a_next_n    = max(a_next_n,1e-9);
-                c_n         = pb + (1+pr)*a-a_next_n;
-                c_n         = max(c_n,1e-9);
-                N           = log(c_n) + pBeta * log(a_next_n); 
-                % Value functions
-                V           = fnGumbelTrick(W,N,Parameters);
-                arg1        = pVarphi * W + (1 - pVarphi) * N - pPhi;
-                S           = fnGumbelTrick(arg1,N,Parameters);
-                % Save the "incorrect choice" results
-                mV(aaa,hhh,zzz,pT+1,:) = -1e5;
-                mS(aaa,hhh,zzz,pT+1,:) = -1e5;
-                mW(aaa,hhh,zzz,pT+1,:) = -1e5;
-                mN(aaa,hhh,zzz,pT+1,:) = -1e5;
-                % Find the index of a' that satisies the correct result
-                [~ , index_ap_w]       = min(abs(vGrida - a_next_w));
-                [~ , index_ap_n]       = min(abs(vGrida - a_next_n));
-                % Assign better values
-                mV(aaa,hhh,zzz,pT+1,index_ap_w) = V;
-                mS(aaa,hhh,zzz,pT+1,index_ap_n) = S;
-                mW(aaa,hhh,zzz,pT+1,index_ap_w) = W;
-                mN(aaa,hhh,zzz,pT+1,index_ap_n) = N;
+                    % Wages, assets and human capital
+                    h           = vGridH(hhh);
+                    a           = vGrida(aaa);
+                    z           = vGridZ(zzz);
+                    w           = fnWage(h,z,Parameters);
+                    % Working household
+                    a_next_w    = (pBeta/(pBeta+1))*(w + (1+pr)*a);
+                    a_next_w    = max(a_next_w, 1e-9);
+                    c_w         = w + (1+pr)*a-a_next_w;
+                    c_w         = max(c_w, 1e-9);
+                    W           = log(c_w) - pEta + pBeta * log(a_next_w);
+                    % Non-working household
+                    a_next_n    = (pBeta/(pBeta+1))*(pb + (1+pr)*a);
+                    a_next_n    = max(a_next_n,1e-9);
+                    c_n         = pb + (1+pr)*a-a_next_n;
+                    c_n         = max(c_n,1e-9);
+                    N           = log(c_n) + pBeta * log(a_next_n); 
+                    % Value functions
+                    V           = fnGumbelTrick(W,N,Parameters);
+                    arg1        = pVarphi * W + (1 - pVarphi) * N - pPhi;
+                    S           = fnGumbelTrick(arg1,N,Parameters);
+                    % Save the "incorrect choice" results
+                    mV(aaa,hhh,zzz,pT+1,:) = pPenalty;
+                    mS(aaa,hhh,zzz,pT+1,:) = pPenalty;
+                    mW(aaa,hhh,zzz,pT+1,:) = pPenalty;
+                    mN(aaa,hhh,zzz,pT+1,:) = pPenalty;
+                    % Find the index of a' that satisies the correct result
+                    [~ , index_ap_w]       = min(abs(vGrida - a_next_w));
+                    [~ , index_ap_n]       = min(abs(vGrida - a_next_n));
+                    % Assign better values
+                    mV(aaa,hhh,zzz,pT+1,index_ap_w) = V;
+                    mS(aaa,hhh,zzz,pT+1,index_ap_n) = S;
+                    mW(aaa,hhh,zzz,pT+1,index_ap_w) = W;
+                    mN(aaa,hhh,zzz,pT+1,index_ap_n) = N;
             end
         end 
     end
@@ -97,5 +98,15 @@ function [mV,mS,mW,mN]      = fnValueFunctionMatrices(Parameters,Grids)
             end 
         end 
     end
+
+% Normalise the matrices to avoid chaos and explosive probabilities 
+% vXN                 = min(mN(mN~=pPenalty),[],"all");
+% vXW                 = min(mW(mW~=pPenalty),[],"all");
+% vXS                 = min(mS(mS~=pPenalty),[],"all");
+% vXV                 = min(mV(mV~=pPenalty),[],"all");
+% mN(mN~=pPenalty)    = mN(mN~=pPenalty) - vXN;
+% mW(mW~=pPenalty)    = mW(mW~=pPenalty) - vXW;
+% mS(mS~=pPenalty)    = mS(mS~=pPenalty) - vXS;
+% mV(mV~=pPenalty)    = mV(mV~=pPenalty) - vXV;
 
 end
