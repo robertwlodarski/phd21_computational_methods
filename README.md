@@ -12,3 +12,8 @@ Don't expect rocket science here.
 - `Matlab`: Apart from the standard tools, you need to download the *Global Optimisation Toolbox* for some of my calibration experiments.
 - `LaTeX`: I use the standard VSCode for that. You may need to follow their instructions. 
 
+# Problem sets
+
+1. RBC GE with labour participation.
+2. A simple life-cycle PE model.
+3. Aiyagari (QJE, 1994)
