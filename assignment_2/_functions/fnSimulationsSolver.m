@@ -79,27 +79,27 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
                 mParticipation(ttt,iii)     = CondLabSupp_n;
                 mWorking(ttt,iii)           = CondLabSupp_n * mMatching(ttt,iii);
                 % Update asset decision
-                mAssetsNext(ttt,iii)        = ap_w * mWorking + (1-mWorking) * ap_n;
+                mAssetsNext(ttt,iii)        = ap_w * mWorking(ttt,iii) + (1-mWorking(ttt,iii)) * ap_n;
                 % Other things worth saving
-                mWage(ttt,iii)              = w * mWorking;
-                mEarnings(ttt,iii)          = w * mWorking + (1-mWorking) * pb;
+                mWage(ttt,iii)              = w * mWorking(ttt,iii);
+                mEarnings(ttt,iii)          = w * mWorking(ttt,iii) + (1-mWorking(ttt,iii)) * pb;
                 mIncome(ttt,iii)            = mEarnings(ttt,iii) + (1+pr) * a;
                 mConsumption(ttt,iii)       = mIncome(ttt,iii) - mAssetsNext(ttt,iii);
                 % Update next skill level
-                mH(ttt,iii)                 = min(h + mWorking, pBarh);
+                mH(ttt,iii)                 = min(h + mWorking(ttt,iii), pBarh);
             elseif mWorking(ttt-1,iii)==1 %(Working households)
                 % Update labour status
                 mParticipation(ttt,iii)     = CondLabSupp_w;
                 mWorking(ttt,iii)           = 1;
                 % Update asset decision
-                mAssetsNext(ttt,iii)        = ap_w * mWorking + (1-mWorking) * ap_n;
+                mAssetsNext(ttt,iii)        = ap_w * mWorking(ttt,iii) + (1-mWorking(ttt,iii)) * ap_n;
                 % Other things worth saving
-                mWage(ttt,iii)              = w * mWorking;
-                mEarnings(ttt,iii)          = w * mWorking + (1-mWorking) * pb;
+                mWage(ttt,iii)              = w * mWorking(ttt,iii);
+                mEarnings(ttt,iii)          = w * mWorking(ttt,iii) + (1-mWorking(ttt,iii)) * pb;
                 mIncome(ttt,iii)            = mEarnings(ttt,iii) + (1+pr) * a;
                 mConsumption(ttt,iii)       = mIncome(ttt,iii) - mAssetsNext(ttt,iii);
                 % Update next skill level
-                mH(ttt,iii)                 = min(h + mWorking, pBarh);
+                mH(ttt,iii)                 = min(h + mWorking(ttt,iii), pBarh);
             end 
             % Save update assets between periods
             if ttt <= pT
