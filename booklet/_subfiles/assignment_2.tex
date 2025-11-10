@@ -152,4 +152,16 @@ The terminal asset choice becomes:
 \\
 
 \colorbox{Cerulean!25}{\textbf{\textit{\underline{Step 3}}} Probabilistic labour supply decision: } 
-Given the presence of the Gumbel \say{shock} in the participation decision, the conditional decision to participate is: 
+Given the presence of the Gumbel \say{shock} in the participation decision, the conditional decisions to participate, $d_v$ and $d_s$, are governed by the following binary probabilities:
+\begin{subequations}
+    \begin{align}
+        & \mathbb{P} \left( d_v = 1 \right) = \frac{\exp \left( \frac{W}{\zeta} \right)}{\exp \left( \frac{W}{\zeta} \right)+\exp \left( \frac{N}{\zeta} \right)}
+    \end{align}
+    and 
+    \begin{align}
+        & \mathbb{P} \left( d_s = 1 \right) = \frac{\exp \left( \frac{\varphi W + (1-\varphi)N - \phi}{\zeta} \right)}{\exp \left( \frac{\varphi W + (1-\varphi)N - \phi}{\zeta} \right)+\exp \left( \frac{N}{\zeta} \right)}.
+    \end{align}
+\end{subequations}
+
+
+

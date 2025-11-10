@@ -1,7 +1,7 @@
 % Plotting key model statistics 
 
 %% 1. Average values
-Plotting.vAverageEmployment         = mean(Simulations.mParticipation,2);
+Plotting.vAverageEmployment         = mean(Simulations.mWorking,2);
 Plotting.vAverageWealth             = mean(Simulations.mAssets,2);
 Plotting.vAverageConsumption        = mean(Simulations.mConsumption,2);
 

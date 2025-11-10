@@ -4,16 +4,16 @@
 Parameters.pZeta        = 0.01;
 Parameters.pVarphi      = 0.8;
 Parameters.pPhi         = 0.5;
-Parameters.pEta         = 0.5;
-Parameters.pb           = 0.05;
+Parameters.pEta         = 2;
+Parameters.pb           = 0.2;
 Parameters.pBarh        = 10;
-Parameters.pr           = 0.06;
+Parameters.pr           = 0.04;
 Parameters.pBeta        = 0.96;
-Parameters.pSigmaz      = 0.5;
+Parameters.pSigmaz      = 0.05;
 Parameters.pRho         = 0.90;
-Parameters.pGammah      = 0.025;
+Parameters.pGammah      = 0.1;
 Parameters.pGammaz      = 0.1;
-Parameters.pGamma0      = 0.15;
+Parameters.pGamma0      = 0.2;
 Parameters.pT           = 50;
 
 %% 2. Grids: Productivity, human capital, age, and wealth
