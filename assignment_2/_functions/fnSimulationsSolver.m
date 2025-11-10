@@ -1,4 +1,4 @@
-function [Simulations]          = fnSimulationsSolver(Parameters,Grids,SimulationsNumber)
+function [Simulations]          = fnSimulationsSolver(Parameters,Grids,SimulationsNumber,ValueFunctions)
     % 1. Unpack parameters & grids
     pT                  = Parameters.pT;
     pr                  = Parameters.pr;
@@ -18,8 +18,9 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
     mNonWorkingShocks   = rand(pT+1,SimulationsNumber);
     mMatchingShocks     = rand(pT+1,SimulationsNumber);
 
-    % 3. Generate matrices 
-    [~,~,mW,mN]         = fnValueFunctionMatrices(Parameters,Grids);
+    % 3. Generate matrices
+    mW                  = ValueFunctions.mW;
+    mN                  = ValueFunctions.mN;
 
     % 4. Prepare space
     mAssets             = zeros(size(mWorkingShocks));
@@ -85,12 +86,10 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
                 mEarnings(ttt,iii)          = w * mWorking(ttt,iii) + (1-mWorking(ttt,iii)) * pb;
                 mIncome(ttt,iii)            = mEarnings(ttt,iii) + (1+pr) * a;
                 mConsumption(ttt,iii)       = mIncome(ttt,iii) - mAssetsNext(ttt,iii);
-                % Update next skill level
-                mH(ttt,iii)                 = min(h + mWorking(ttt,iii), pBarh);
             elseif mWorking(ttt-1,iii)==1 %(Working households)
                 % Update labour status
                 mParticipation(ttt,iii)     = CondLabSupp_w;
-                mWorking(ttt,iii)           = 1;
+                mWorking(ttt,iii)           = (W >= N);
                 % Update asset decision
                 mAssetsNext(ttt,iii)        = ap_w * mWorking(ttt,iii) + (1-mWorking(ttt,iii)) * ap_n;
                 % Other things worth saving
@@ -98,12 +97,11 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
                 mEarnings(ttt,iii)          = w * mWorking(ttt,iii) + (1-mWorking(ttt,iii)) * pb;
                 mIncome(ttt,iii)            = mEarnings(ttt,iii) + (1+pr) * a;
                 mConsumption(ttt,iii)       = mIncome(ttt,iii) - mAssetsNext(ttt,iii);
-                % Update next skill level
-                mH(ttt,iii)                 = min(h + mWorking(ttt,iii), pBarh);
             end 
             % Save update assets between periods
             if ttt <= pT
                 mAssets(ttt+1,iii)            = mAssetsNext(ttt,iii);
+                mH(ttt+1,iii)                 = min(h + mWorking(ttt,iii), pBarh);
             elseif ttt == pT+1
                 mAssetsNext(ttt,iii)        = pBeta / (1 + pBeta) * mIncome(ttt,iii);
             end 
@@ -120,4 +118,6 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
     Simulations.mConsumption    = mConsumption;
     Simulations.mH              = mH;
     Simulations.mWorking        = mWorking;
+    Simulations.mNopt           = mN_opt;
+    Simulations.mWopt           = mW_opt;
 end

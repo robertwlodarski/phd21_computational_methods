@@ -12,7 +12,7 @@ function [mV,mS,mW,mN]      = fnValueFunctionMatrices(Parameters,Grids)
     vGrida                  = Grids.vGrida;
     vGridAge                = Grids.vGridAge;
     mTransition             = Grids.mTransitionZ;
-    pPenalty                = -1e5;
+    pPenalty                = 0;
 
     % Initialise value function matrices
     % (a,h,z,T,a')

@@ -11,6 +11,7 @@ function [dv,ds] = fnGumbelTrickProbabilities(W,N,Parameters)
     dv              = exp(A - X - log(exp(A-X) + exp(B-X)));
 
     % Probability of working given not working
-    C               = (pVarphi * W + (1 - pVarphi) * N - pPhi);
-    ds              = exp(C - X - log(exp(C-X) + exp(B-X)));
+    C               = (pVarphi * W + (1 - pVarphi) * N - pPhi) / pZeta;
+    X2              = max(B,C);
+    ds              = exp(C - X2 - log(exp(C-X2) + exp(B-X2)));
 end

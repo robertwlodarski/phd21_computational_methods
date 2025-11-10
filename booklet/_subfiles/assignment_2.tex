@@ -155,13 +155,64 @@ The terminal asset choice becomes:
 Given the presence of the Gumbel \say{shock} in the participation decision, the conditional decisions to participate, $d_v$ and $d_s$, are governed by the following binary probabilities:
 \begin{subequations}
     \begin{align}
-        & \mathbb{P} \left( d_v = 1 \right) = \frac{\exp \left( \frac{W}{\zeta} \right)}{\exp \left( \frac{W}{\zeta} \right)+\exp \left( \frac{N}{\zeta} \right)}
+        & \mathbb{P} \left( d_v = 1 \right) = \frac{\exp \left( \frac{W}{\zeta} \right)}{\exp \left( \frac{W}{\zeta} \right)+\exp \left( \frac{N}{\zeta} \right)} \label{a2:g1}
     \end{align}
     and 
     \begin{align}
-        & \mathbb{P} \left( d_s = 1 \right) = \frac{\exp \left( \frac{\varphi W + (1-\varphi)N - \phi}{\zeta} \right)}{\exp \left( \frac{\varphi W + (1-\varphi)N - \phi}{\zeta} \right)+\exp \left( \frac{N}{\zeta} \right)}.
+        & \mathbb{P} \left( d_s = 1 \right) = \frac{\exp \left( \frac{\varphi W + (1-\varphi)N - \phi}{\zeta} \right)}{\exp \left( \frac{\varphi W + (1-\varphi)N - \phi}{\zeta} \right)+\exp \left( \frac{N}{\zeta} \right)}.\label{a2:g2}
     \end{align}
 \end{subequations}
 
 
+\colorbox{Gray!25}{ \parbox{\textwidth}{
+    \textbf{\textit{\underline{Gumbel probabilities trick}}}:
+    Estimating Equations \eqref{a2:g1} and \eqref{a2:g2} in MATLAB is tricky. 
+    In each case, both numerators and denominators get very large (small), with the programme doing a bad job at computing $\frac{0}{0}$ or $\frac{\infty}{\infty}$. 
+    The method I leverage in \texttt{fnGumbelTrickProbabilities} is based on the proprtis of the logistic sigmoid function. 
+    For notational parsimony, set, $A \equiv \frac{W}{\zeta}$ and $B \equiv \frac{N}{\zeta}$, $X \equiv \max (A,B)$, and focus on Equation \eqref{a2:g1}:
+    \begin{subequations}
+        \begin{align}
+             & \mathbb{P} \left( d_v = 1 \right) = \frac{\exp A}{\exp A + \exp B} \implies\\
+            & \log \mathbb{P} \left( d_v = 1 \right) = A - \log \left(\exp A + \exp B \right) \underbrace{- X + \log( \exp X)}_{=0} \implies \\
+            & \log \mathbb{P} \left( d_v = 1 \right) = A-X - \log \left[\exp (A-X) + \exp (B-X) \right]  \implies \\
+            & \boxed{\mathbb{P} \left( d_v = 1 \right) = \exp\left\{ \underbrace{A - X}_{\leq 0} - \log \left[ \underbrace{ \exp (\overbrace{A-X}^{\leq 0}) + \exp \overbrace{(B-X)}^{\leq 0}}_{\leq 1} \right]\right\}. } \label{a2:gumb}
+        \end{align}
+    \end{subequations}
+    By restating the problem as in Equation \eqref{a2:gumb} I ensure that MATLAB doesn't have to deal with excessively large numbers. 
+    }}\\
 
+    %======================================================================
+    \subsection*{Questions 4 through 6}
+    \colorbox{Cerulean!25}{ \parbox{\textwidth}{
+    \textbf{\textit{\underline{Question}}}:
+\textit{\begin{itemize}
+    \item Suppose the following parameter levels:
+$$
+\begin{aligned}
+& \zeta=0.01, \varphi=0.80, \phi=0.5, \eta=2, b=0.2, \bar{h}=10, r=0.04, \beta=0.96 \\
+& \sigma_z=0.05, \rho=0.90, \gamma_h=0.1, \gamma_z=0.1, \gamma_0=0.2
+\end{aligned}
+$$
+    \item Simulate 20,000 households (same cohort) and simulate them for the life time.
+    \item Visualize the life-time wealth and consumption patterns.
+\end{itemize}}}}\\
+
+
+\colorbox{Cerulean!25}{\textbf{\textit{\underline{Step 1}}} The algorithm: } The model's solution is structured according to the following algorithm.
+\begin{enumerate}
+    \item \texttt{LoadParameters.m} loads parameters and sets the wealth, skill, productivity, and age grids. 
+    For the skill grid, I use a standard Tauchen method from \texttt{fnTauchenLogNormal.m}.
+    \item In \texttt{fnValueFunctionMatrices.m}, the algorithm computes the value function for worker $\left(a,h,z,t,a^\prime\right)$.  
+    \begin{enumerate}
+        \item For $t=50$, I compute $\mathbb{E}V\left(a^\prime,h^\prime,z^\prime \right)=\mathbb{E}S\left(a^\prime,h^\prime,z^\prime \right)=\log a^\prime$.
+        \item For $t<50$, I compute:
+        \begin{subequations}
+            \begin{align}
+                & W\left(a,h,z,t,a^\prime \right)= \log c - \eta + \beta \mathbb{E}_t V_{\max}\left(a^\prime,z,t,h \right) \\
+                & N\left(a,h,z,t,a^\prime \right)= \log c + \beta \mathbb{E}_t S_{\max}\left(a^\prime,z,t,h \right) \\
+                & V\left(a,h,z,t,a^\prime \right)=\zeta \left\{\delta_E + \log \left[\exp \left( \frac{W}{\zeta}\right)+\exp \left( \frac{N}{\zeta}\right) \right] \right\} \\
+                & S\left(a,h,z,t,a^\prime \right)=\zeta \left\{\delta_E + \log \left[\exp \left( \frac{ \varphi W+ (1-\varphi) N-\phi}{\zeta}\right)+\exp \left( \frac{N}{\zeta}\right) \right] \right\} 
+            \end{align}
+        \end{subequations}
+    \end{enumerate} 
+\end{enumerate}

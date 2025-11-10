@@ -16,7 +16,10 @@ LoadParameters;
 
 % Simulate the model
 tic;
-Simulations     = fnSimulationsSolver(Parameters,Grids,20000);
+pSimulationsNumber  = 20000;
+[~,~,VFs.mW,VFs.mN] = fnValueFunctionMatrices(Parameters,Grids);
+Simulations         = fnSimulationsSolver(Parameters,Grids,pSimulationsNumber,VFs);
 toc;
 
 % Plotting
+StandardPlots;
