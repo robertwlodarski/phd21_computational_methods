@@ -7,3 +7,5 @@ close all;
 % Add extra paths
 addpath _functions/
 addpath _scripts/
+
+%% 2. Simulate the model
