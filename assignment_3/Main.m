@@ -12,3 +12,5 @@ addpath _scripts/
 LoadParameters;
 
 %% 2. Simulate the model
+
+fnSimulateAiyagari1994(Parameters,Grids)

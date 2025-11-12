@@ -119,6 +119,7 @@ while iErrorGE>iTolGE
         % Update VFI loop items
         iNumIterVFI                 = iNumIterVFI + 1;
         iErrorVFI                   = max(abs(mValue-mValueNew),[],"all");
+        fprintf("Error VFI: %.3f \n",iErrorVFI)
         mValue                      = mValueNew;  
         % END VFI LOOP
     end
@@ -176,18 +177,18 @@ while iErrorGE>iTolGE
     iMarginalDist       = sum(iCurrentDistribution,2);
     iEndoK              = vGridA2' * iMarginalDist;
     iErrorGE            = abs(iEndoK - iK);
-    iK                  = iK .* iWeightOld + iEndoK .* (1-iWeightOld);
+    iK                  = iK .* iWeightOld + iEndoK .* (1-WeightOld);
 
     % Print cute messages 
     if (pVerbose == true && floor((iIterNumGE-1) / 50) == ((iIterNumGE-1) / 50) || iErrorGE < iTolGE)
         fprintf('SUMMARY \n')
-        fprintf('Maximum error:     %.3f \n', iErrorGE);
-        fprintf('Iterest rate:      %.3f \n', iInterest);
-        fprintf('Wage:              %.3f \n', iWage);
+        fprintf('Maximum error: %.3f \n', iErrorGE);
     else 
     end
     % END GE LOOP
     iIterNumGE          = iIterNumGE + 1;
 end
+
+
 
 end

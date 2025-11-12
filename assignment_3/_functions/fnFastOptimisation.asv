@@ -1,0 +1,24 @@
+function [a_next]       = fnFastOptimisation(Budget,Minimum,ExpectedValue,Parameters,Grids)
+    % Initialisation
+    vGridaA1            = Grids.vGridA1;
+    pBeta               = Parameters.pBeta;
+
+    % Maximisation function
+
+    % Nested
+    function [optValue] = fnResidualCalc(Guess)
+        % Setting
+        a_prime                         = Guess;
+        a_bot                           = sum(vGridA1<a_prime);
+        a_bot(a_bot <1)                 = 1;
+        a_bot(a_bot > size(vGridA1,1))  = size(vGridA1,1)-1;
+        a_up                            = a_bot+1;
+        % Weights 
+        weight_low                      = (vGridaA1(a_up) - a_prime) / (vGridaA1(a_up) - vGridaA1(a_bot));
+        weight_low(weight_low<0)        = 0;
+        weight_low(weight_low>1)        = 1;
+        % Calculations
+        AvgExpectedValue                = weight_low * ExpectedValue(a_bot)+ (1 - weight_low)*ExpectedValue(a_up)
+    end
+
+end
