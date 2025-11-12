@@ -14,6 +14,8 @@ Don't expect rocket science here.
 
 # Problem sets
 
+**Note**: I've found a few errors in assignment 2, and I am updating it slowly. 
+
 1. RBC GE with labour participation.
 2. A simple life-cycle PE model.
 3. Aiyagari (QJE, 1994)
