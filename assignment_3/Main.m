@@ -8,4 +8,7 @@ close all;
 addpath _functions/
 addpath _scripts/
 
+% Load parameters
+LoadParameters;
+
 %% 2. Simulate the model
