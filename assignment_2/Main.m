@@ -15,11 +15,11 @@ addpath '_plotting';
 LoadParameters;
 
 % Simulate the model
+pSimulationsNumber  = 10000;
 tic;
-pSimulationsNumber  = 1000;
 [~,~,VFs.mW,VFs.mN] = fnValueFunctionMatrices(Parameters,Grids);
-Simulations         = fnSimulationsSolver(Parameters,Grids,pSimulationsNumber,VFs);
 toc;
+Simulations         = fnSimulationsSolver(Parameters,Grids,pSimulationsNumber,VFs);
 
 % Plotting
 StandardPlots;

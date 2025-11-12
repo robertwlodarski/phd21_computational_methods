@@ -60,11 +60,9 @@ function [mV,mS,mW,mN]      = fnValueFunctionMatrices(Parameters,Grids)
     
     % Solve for the remaining times (backward)
     for ttt=pT:(-1):1                               % Time
+        
         for aaa = 1:1:size(vGrida,1)                % Existing wealth
             for hhh = 1:1:size(vGridH,1)            % Human capital
-                    % Add minimum wealth level
-                    a_next_min_w                 = vGrida(1);
-                    a_next_min_n                 = vGrida(1);
                 for zzz = 1:1:size(vGridZ,1)        % Productivity
                         % Wages, assets and human capital
                         h_fut           = min(size(vGridH,1),hhh+1);
@@ -78,8 +76,8 @@ function [mV,mS,mW,mN]      = fnValueFunctionMatrices(Parameters,Grids)
                         a_next_up_w     = BC_w;
                         a_next_up_n     = BC_n;
                         % Set functions
-                        Obj_W           = @(x) -(log(BC_w - x) - pEta + pBeta * (mTransition(zzz,:) * squeeze(X_inter(x,h_fut,mV(:,:,:,ttt+1)))));
-                        Obj_N           = @(x) -(log(BC_n - x) + pBeta * (mTransition(zzz,:) * squeeze(X_inter(x,h_fut,mS(:,:,:,ttt+1))))); 
+                        Obj_W           = @(x) -(log(BC_w - x) - pEta + pBeta * (mTransition(zzz,:) * squeeze(X_inter(x,h_fut,mW(:,:,:,ttt+1)))));
+                        Obj_N           = @(x) -(log(BC_n - x) + pBeta * (mTransition(zzz,:) * squeeze(X_inter(x,h_fut,mN(:,:,:,ttt+1))))); 
                         % Solve for the wealth next period
                         [a_next_w,W]    = fminbnd(Obj_W,a_next_min_w,a_next_up_w);
                         [a_next_n,N]    = fminbnd(Obj_N,a_next_min_n,a_next_up_n);

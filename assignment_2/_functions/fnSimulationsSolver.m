@@ -10,6 +10,7 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
     vGridH              = Grids.vGridH;
     vGrida              = Grids.vGrida;
     vGridAge            = Grids.vGridAge;
+    mTransition         = Grids.mTransition;
 
     % 2A. Simulate shocks drawn from U(0,1)
     rng(1997,"twister");
@@ -46,8 +47,7 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
     mMatching           = (mMatchingShocks < pVarphi);
 
     % 6. Prepare function
-    F_W                 = griddedInterpolant({vGrida, vGridH, vGridZ, vGridAge, vGrida}, mW);
-    F_N                 = griddedInterpolant({vGrida, vGridH, vGridZ, vGridAge, vGrida}, mN);
+    X_inter             = @(a_prime, h_prime, X) interpn(vGrida, vGridH, X, a_prime, h_prime); 
     fnOptions           = optimset('TolX', 1e-4, 'Display', 'off');
     
     % 7. Start simulating
@@ -60,8 +60,12 @@ function [Simulations]          = fnSimulationsSolver(Parameters,Grids,Simulatio
             w                       = fnWage(h,z,Parameters);
             ap_upper_w              = (1+pr) * a + w;
             ap_upper_n              = (1+pr) * a + pb;
+            % Lower bounds
+            a_grid_bot              = sum(vGrida<a);
+            a_grid_up               = a_grid_bot;
             % Solve (working)
-            obj_W                   = @(x) -F_W(a,h,z,vGridAge(ttt),x);
+            h_fut                   = min(size(vGridH,1),h+1);
+            obj_W                   = @(x) -(log(ap_upper_w - x) - pEta + pBeta * (mTransition(mZ(ttt,iii),:) * squeeze(X_inter(x,h_fut,mW(:,:,:,ttt+1)))));
             [ap_w, W]               = fminbnd(obj_W, min(vGrida), ap_upper_w, fnOptions);
             W                       = -W;
             mW_opt(ttt,iii)         = W;

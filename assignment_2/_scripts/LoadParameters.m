@@ -20,7 +20,7 @@ Parameters.pT           = 50;
 
 % Tauchen productivity parameters
 Parameters.pTauchenN    = 2;
-Parameters.pTauchenM    = 11;
+Parameters.pTauchenM    = 4;
 
 % Tauchen productiviy grid % INITIATE THE GRID INSIDE THE FUNCTION
 [Grids.vGridZ,... 
