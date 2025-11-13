@@ -26,7 +26,7 @@ mAssetsNext             = mAssets;
 mConsumption            = mAssetsNext;
 mEarnings               = mConsumption;
 % Assumption: Everyone starts w/ tiny assets.
-mAssets(1,:)            = vGridA1(2);
+mAssets(1,:)            = vGridA1(25);
 
 % Generate labour shocks
 mLabour                 = fnGenerateProductivityValues(mLabourShocks, Grids);
