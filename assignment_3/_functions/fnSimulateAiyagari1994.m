@@ -1,4 +1,5 @@
-function [RESULT]       = fnSimulateAiyagari1994(Parameters,Grids)
+function [Results]       = fnSimulateAiyagari1994(Parameters,Grids)
+tic; 
 
 %% 1. Unpacking
 % Parameters
@@ -48,7 +49,7 @@ vLabSupply              = vGridZ'*vZDist;
 %% 4. GE & VFI loops
 
 % Initial K guess
-iK                      = 6;
+iK                      = 7.1495;
 
 % START GE LOOP
 while iErrorGE>iTolGE
@@ -184,10 +185,19 @@ while iErrorGE>iTolGE
         fprintf('Maximum error:     %.3f \n', iErrorGE);
         fprintf('Iterest rate:      %.3f \n', iInterest);
         fprintf('Wage:              %.3f \n', iWage);
+        toc;
     else 
     end
     % END GE LOOP
     iIterNumGE          = iIterNumGE + 1;
 end
+
+%% Save results
+Results.mDistribution       = iCurrentDistribution;
+Results.vWage               = iWage;
+Results.vInterest           = iInterest;
+Results.vCapitalOpt         = iK;
+Results.mPolicyWealthNext   = mPolicyWealthNext2;
+Results.vLabourSupply       = vLabSupply;
 
 end

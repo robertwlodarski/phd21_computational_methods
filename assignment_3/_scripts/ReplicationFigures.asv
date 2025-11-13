@@ -1,0 +1,19 @@
+% Replication of figures 2a and 2b
+
+%% 2a. Interest rate vs. per capita assets
+
+% Bounds for interest
+pBeta               = Parameters.pBeta;
+pUpperInterst       = 1/ pBeta - 1;
+vInterests          = linspace(-0.01,pUpperInterst,50);
+
+% Linearised function
+InterestAssets      = @(x) arrayfun(@(x_scalar) fnInterestAssets(x_scalar,Grids,Parameters), x);
+vAssets             = InterestAssets(vInterests);
+
+% Plot 
+figure(1);
+plot(vAssets,vInterests,'LineWidth',2.5);
+yline(pUpperInterst, '--', '\frac{1-\beta}{\beta}','interpreter','latex','LineWidth',1.5);
+grid on;
+xlabel('\mathbb{E}a','interpreter','latex')
