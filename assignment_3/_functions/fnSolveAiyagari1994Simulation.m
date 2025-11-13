@@ -181,7 +181,7 @@ while iErrorGE>iTolGE
 
     % Update other elements
     iMarginalDist       = sum(iCurrentDistribution,2);
-    iEndoK              = vGridA2' * iMarginalDist;
+    iEndoK              = vGridA1' * iMarginalDist;
     iErrorGE            = abs(iEndoK - iK);
     iK                  = iK .* iWeightOld + iEndoK .* (1-iWeightOld);
 
