@@ -1,5 +1,5 @@
 function [mProductivityValues]      = fnGenerateProductivityValues(mProductivityShocks, Grids)
-    % Unpacking
+    % Unpacking 
     mTransitionZ                        = Grids.mTransitionZ;         
     mTransitionZCDF                     = cumsum(mTransitionZ,2);
 

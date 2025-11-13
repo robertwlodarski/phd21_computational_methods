@@ -11,5 +11,6 @@ addpath _scripts/
 % Load parameters
 LoadParameters;
 
-%% 2. Simulate the model
-Results = fnSimulateAiyagari1994(Parameters,Grids);
+%% 2. Solve the model using the iteration method
+Results             = fnSolveAiyagari1994Iteration(Parameters,Grids);
+ResultsSimulation   = fnSolveAiyagari1994Simulation(Parameters,Grids);

@@ -37,10 +37,13 @@ vCapital            = Capital(vInterests);
 figure(2);
 plot(vInterests, vCapital, 'LineWidth', 2.5);
 hold on;
-plot(vInterests, vAssets, 'LineWidth', 2.5)
 grid on;
+plot(vInterests, vAssets, 'LineWidth', 2.5)
+plot(Results.vInterest,Results.vCapitalOpt,'-s','MarkerFaceColor','black');
+text(Results.vInterest*0.85,Results.vCapitalOpt*0.9,"r^{*},K^{*}",'FontSize',14);
+xline(Results.vInterest,'--','LineWidth',1.5);
+yline(Results.vCapitalOpt,'--','LineWidth',1.5);
 xlabel('$r$','interpreter','latex','FontSize',14);
 ylabel('$K$','interpreter','latex','FontSize',14);
 legend('Capital demand','Asset supply','Location','best');
-
-%saveas(gcf,'_figures/Figure2bReplication.png');
+saveas(gcf,'_figures/Figure2bReplication.png');

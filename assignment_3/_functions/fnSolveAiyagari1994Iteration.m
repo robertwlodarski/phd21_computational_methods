@@ -1,4 +1,4 @@
-function [Results]       = fnSimulateAiyagari1994(Parameters,Grids)
+function [Results]       = fnSolveAiyagari1994Iteration(Parameters,Grids)
 tic; 
 
 %% 1. Unpacking

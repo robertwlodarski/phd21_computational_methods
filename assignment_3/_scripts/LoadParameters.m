@@ -24,3 +24,6 @@ Parameters.pNumGridA2   = 100;
 Grids.vGridA1           = fnWealthGridMMV(Parameters.pGridAMin, Parameters.pGridAMax, Parameters.pNumGridA1);
 Grids.vGridA2           = fnWealthGridMMV(Parameters.pGridAMin, Parameters.pGridAMax, Parameters.pNumGridA2);
 
+%% 4. Simulation related
+Parameters.pN           = 10000;
+Parameters.pT           = 100;
