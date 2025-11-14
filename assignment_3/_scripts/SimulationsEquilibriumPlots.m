@@ -19,7 +19,7 @@ saveas(gcf,'_figures/SimulationsWealth.png');
 
 %% 2. 95th perctentile plot
 
-Plots.Sim95Wealth       = prctile(ResultsSimulation.mAssets,0.95,2);
+Plots.Sim95Wealth       = prctile(ResultsSimulation.mAssets,95,2);
 
 % Figure
 figure(2);
