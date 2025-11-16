@@ -32,12 +32,7 @@ plot(50:1:Parameters.pT,mean(vWealthTop10,2),'r', 'LineWidth', 2.5, 'DisplayName
 hold on;
 fill([50:1:Parameters.pT,fliplr(50:1:Parameters.pT)],[vWealthTopCI(:,1)',fliplr(vWealthTopCI(:,2))'],'r', 'FaceAlpha', 0.1, 'EdgeColor', 'none', 'DisplayName', '95% CI')
 grid on;
-plot(50:1:Parameters.pT,mean(vWealthBottom10,2),'b', 'LineWidth', 2.5, 'DisplayName', 'Bottom 10% wealth at t=50: Mean')
-fill([50:1:Parameters.pT,fliplr(50:1:Parameters.pT)],[vWealthBottomCI(:,1)',fliplr(vWealthBottomCI(:,2))'],'b', 'FaceAlpha', 0.1, 'EdgeColor', 'none', 'DisplayName', '95% CI')
 legend('show');
-xlabel('t','Interpreter','latex','FontSize',14);
-ylabel('a','Interpreter','latex','FontSize',14);
-saveas(gcf,'_figures/TopBottomWealth.png');
-
+plot(50:1:Parameters.pT,mean(vWealthBottom10,2),'b', 'LineWidth', 2.5, 'DisplayName', 'Bottom 10% wealth at t=50: Mean')
 
 

@@ -15,4 +15,4 @@ LoadParameters;
 Results             = fnSolveAiyagari1994Iteration(Parameters,Grids);
 
 %% 3. Simulations
-Simulations         = fnGenerateSimulations(1000,10000,Results, Parameters, Grids);
+Simulations         = fnGenerateSimulations(Parameters.pN,Parameters.pT,Results, Parameters, Grids);

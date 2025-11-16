@@ -31,19 +31,24 @@ function [Simulations]  = fnGenerateSimulations(N,T,Results, Parameters, Grids)
     rng(1997,"twister");
     mLabourShocks       = rand(T,N);
     mCumTransitionZ     = cumsum(mTransitionZ,2);
+    mBernoulliShocks    = rand(T,N);
     
     % Simulate further peridods
     for ttt=2:1:T
         % Previous wealth & labour
-        iIndexPreva             = mWealthIndices(ttt-1,:);
-        iIndexPrevz             = mLabourIndices(ttt-1,:);
-        iIndices                = sub2ind([pNA,pNZ],iIndexPreva,iIndexPrevz);
+        iIndexPreva                 = mWealthIndices(ttt-1,:);
+        iIndexPrevz                 = mLabourIndices(ttt-1,:);
+        iIndices                    = sub2ind([pNA,pNZ],iIndexPreva,iIndexPrevz);
 
         % Generate the wealth from policy
-        iNextWealth             = mPolicyWealthNext(iIndices);
-        % THIS INDUCES A MASSIVE ERROR - RANDOMLY ALLOCATE ACC. TO
-        % BERNOULLI
-        [~,iIndicesNW]          = min(abs(vGridA2-iNextWealth)); % A cool trick
+        iNextWealth                 = mPolicyWealthNext(iIndices);
+        iLB                         = sum(vGridA2 <= iNextWealth);
+        iLB(iLB<=0)                 = 1;
+        iLB(iLB >= size(vGridA2,1)) = size(vGridA2,1)-1;
+        iUB                         = iLB + 1;
+        iRatio                      = (iNextWealth-vGridA2(iLB)')./(vGridA2(iUB)'-vGridA2(iLB)');
+        iBernoulli                  = iRatio>mBernoulliShocks(ttt,:);
+        iIndicesNW                  = iLB + iBernoulli;
 
         % Generate new wealth 
         mWealthIndices(ttt,:)   = iIndicesNW;
