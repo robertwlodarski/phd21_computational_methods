@@ -1,5 +1,7 @@
 function [EndoK, DistributionImplied, ValueFunction] =fnIntermediateEquilibriumStep(FutureValue,GuessK,FutureDistribution,vLabSupply, ParametersUsed,Grids)
 
+% ARCHIVED, NOT TO BE USED. 
+
 %% 1. Unpacking
 % Parameters
 pAlpha                  = ParametersUsed.pAlpha;

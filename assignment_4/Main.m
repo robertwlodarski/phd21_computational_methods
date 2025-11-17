@@ -16,3 +16,5 @@ LoadParameters;
 
 %% 2. Questions (a) & (b) 
 
+Results         = fnAiyagari1994Transition(1.0,1.1,Parameters,Grids);
+
