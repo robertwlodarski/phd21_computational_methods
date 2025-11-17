@@ -169,7 +169,7 @@ while iErrorGE>iTolGE
         end
     end
     % Save
-    iErrorDist          = max(abs(iNextDistribution-iCurrentDistribution),[],"all");
+    iErrorDist          = max(iNextDistribution-iCurrentDistribution,[],"all");
     iCurrentDistribution=iNextDistribution;
     end
 

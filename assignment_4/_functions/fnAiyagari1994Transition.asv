@@ -1,0 +1,28 @@
+function [Results]          = fnAiyagari1994Transition(Start,End,Parameters,Grids)
+
+%% 1. Compute the initial and terminal equilibria
+% Initial state
+Parameters.pA       = Start;
+Results0            = fnSolveAiyagari1994Iteration(Parameters,Grids);
+
+% Terminal state
+Parameters.pA       = End;
+ResultsT            = fnSolveAiyagari1994Iteration(Parameters,Grids);
+Parameters.pA       = St;
+
+%% 2. Unpacking
+% Parameters
+pAlpha                  = Parameters.pAlpha;
+pDelta                  = Parameters.pDelta;
+pA                      = Parameters.pA;                   
+pBeta                   = Parameters.pBeta;
+pVerbose                = true;
+
+% Grids
+vGridA1                 = Grids.vGridA1;
+vGridA2                 = Grids.vGridA2;
+vGridZ                  = Grids.vGridZ;
+mTransitionZ            = Grids.mTransitionZ;
+
+
+end 

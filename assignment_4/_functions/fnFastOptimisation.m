@@ -1,0 +1,33 @@
+function [a_next]       = fnFastOptimisation(Budget,Minimum,ExpectedValue,Parameters,Grids)
+    % Initialisation
+    vGridA1             = Grids.vGridA1;
+    pBeta               = Parameters.pBeta;
+
+    % Maximisation function
+    Options             = optimset('Display','off','TolFun',1e-12,'TolX',1e-12,'MaxIter',20000,'MaxFunEvals',20000);
+    [a_next]            = fminbnd(@fnResidualCalc,Minimum,Budget,Options);
+
+    % Nested
+    function [OptValue] = fnResidualCalc(Guess)
+        % Setting
+        a_prime                         = Guess;
+        a_bot                           = sum(vGridA1<a_prime);
+        a_bot(a_bot <1)                 = 1;
+        a_bot(a_bot >= size(vGridA1,1)) = size(vGridA1,1)-1;
+        a_up                            = a_bot+1;
+
+        % Weights 
+        Weight_low                      = (vGridA1(a_up) - a_prime) / (vGridA1(a_up) - vGridA1(a_bot));
+        Weight_low(Weight_low<0)        = 0;
+        Weight_low(Weight_low>1)        = 1;
+
+        % Calculations
+        AvgExpectedValue                = Weight_low * ExpectedValue(a_bot)+ (1 - Weight_low)*ExpectedValue(a_up);
+        Consumption                     = Budget - a_prime;
+
+        % Current period value
+        Value                           = log(Consumption) + pBeta * AvgExpectedValue;
+        OptValue                        = -Value;
+    end
+
+end
