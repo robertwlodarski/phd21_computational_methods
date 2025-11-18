@@ -13,7 +13,8 @@ vGridA1                 = Grids.vGridA1;
 vGridA2                 = Grids.vGridA2;
 vGridZ                  = Grids.vGridZ;
 mTransitionZ            = Grids.mTransitionZ;
-vAPath                  = linspace(Start,End,pT)';   
+vAPath                  = Grids.vAPath;
+
 %% 2. Compute the initial and terminal equilibria
 
 % Terminal state
@@ -21,14 +22,18 @@ ParametersUsed.pA       = End;
 ResultsT                = fnSolveAiyagari1994Iteration(ParametersUsed,Grids);
 
 % Initial state
-ParametersUsed.pA       = Start;
-Results0                = fnSolveAiyagari1994Iteration(ParametersUsed,Grids);
+if Start == End
+    Results0            = ResultsT;
+else
+    ParametersUsed.pA   = Start;
+    Results0            = fnSolveAiyagari1994Iteration(ParametersUsed,Grids);
+end
 
 %% 3. Set-up
 % Iterations business: Convergence, acceleration, and GE
 iWeightOld              = 0.9;
 iErrorK                 = 10;
-iTolK                   = 1e-4;
+iTolK                   = 2*1e-4;
 iIterNumK               = 1;
 
 %% 4. Stationary dist. of labour allocation
@@ -152,13 +157,14 @@ while iErrorK > iTolK
                 end
             end
         end
-        % Save
-        iCurrentDistribution=iNextDistribution;
 
         % B. Aggregation station
         iMarginalDist       = sum(iCurrentDistribution,2);
         iEndoK(ttt)         = vGridA2' * iMarginalDist;
         iGini(ttt)          = 1 / (2*iEndoK(ttt)) * sum((iMarginalDist * iMarginalDist') .* abs( repmat(vGridA2',size(vGridA2,1),1)-repmat(vGridA2,1,size(vGridA2,1))),'all');
+
+        % Save
+        iCurrentDistribution=iNextDistribution;
     end 
 
     % C. Update
@@ -173,7 +179,7 @@ while iErrorK > iTolK
 end
 
 Results.vK                  = iK;
-Results.vGrini              = iGini;
+Results.vGini               = iGini;
 Results.vK0                 = Results0.vCapitalOpt;
 Results.vKT                 = ResultsT.vCapitalOpt;
 
