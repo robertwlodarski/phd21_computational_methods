@@ -4,3 +4,45 @@
 \textit{
     Solve the stationary competitive equilibrium for $A=1$ and $A=1.1$.
 }}}\\
+
+
+
+
+%=======================================================================
+\subsection*{Questions (g)}
+\colorbox{ForestGreen!25}{ \parbox{\textwidth}{
+\textbf{\textit{\underline{Question}}}:
+\textit{
+    Calculate the Gini coefficient for each period on the transition path.
+}}}\\
+
+To compute the Gini coefficient, I adapt the following formula:
+\begin{equation}
+    G = \frac{1}{2\mu} \iint p(x) p(x) \left| x-y\right| \; \mathrm{d}x\mathrm{d}y,
+\end{equation}
+where $\mu$ is the average asset position of the households.
+In my Matlab code, $p\left( \cdot \right)$ comes from \texttt{iMarginalDist} in each iteration:
+\begin{subequations}
+    \begin{align}
+        &p(x) = \texttt{iMarginalDist} = \left(\begin{array}{c}
+            \varphi_1 \\
+            \varphi_2 \\
+            \cdots \\
+            \varphi_N
+        \end{array} \right) \implies \\
+        & \iint p(x) p(y)\; \mathrm{d}x\mathrm{d}y = \iint 
+         \left(\begin{array}{c}
+            \varphi_1 \\
+            \varphi_2 \\
+            \cdots \\
+            \varphi_N
+        \end{array} \right) \times   
+        \left(
+        \begin{array}{cccc}
+            \varphi_1 & \varphi_2 & \cdots & \varphi_4
+        \end{array}
+        \right)
+        \\
+        & \iint p(x) p(y)\; \mathrm{d}x\mathrm{d}y = \texttt{sum(sum(iMarginalDist * iMarginalDist'))} 
+    \end{align}
+\end{subequations}

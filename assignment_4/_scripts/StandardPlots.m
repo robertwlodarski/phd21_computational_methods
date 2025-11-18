@@ -1,10 +1,24 @@
 % Transitional dynamics plots 
 
-%% K behaviour
+%% A behaviours
 
 figure(1);
+plot(1:1:Parameters.pT,Paths.v1,'LineWidth',2.5);
+grid on;
+hold on;
+plot(1:1:Parameters.pT,Paths.v2,'LineWidth',2.5);
+plot(1:1:Parameters.pT,Paths.v3,'LineWidth',2.5);
+
+
+%% K behaviours
+
+figure(2);
 plot(1:1:Parameters.pT,Results.vK,'LineWidth',2.5);
 grid on;
+hold on;
+plot(1:1:Parameters.pT,repmat(Results.vK0,Parameters.pT,1),'--','LineWidth',2.5);
+plot(1:1:Parameters.pT,repmat(Results.vKT,Parameters.pT,1),'--','LineWidth',2.5);
 xlabel('$t$','interpreter','latex','FontSize',14);
 ylabel('$K$','interpreter','latex','FontSize',14);
+legend('Transitional dynamics', '$A=1$ SS', '$A=1.1$ SS','interpreter','latex','FontSize',14, 'Location','best');
 saveas(gcf,'_figures/CapitalTransitions.png');

@@ -13,7 +13,7 @@ vGridA1                 = Grids.vGridA1;
 vGridA2                 = Grids.vGridA2;
 vGridZ                  = Grids.vGridZ;
 mTransitionZ            = Grids.mTransitionZ;
-
+vAPath                  = linspace(Start,End,pT)';   
 %% 2. Compute the initial and terminal equilibria
 
 % Terminal state
@@ -28,7 +28,7 @@ Results0                = fnSolveAiyagari1994Iteration(ParametersUsed,Grids);
 % Iterations business: Convergence, acceleration, and GE
 iWeightOld              = 0.9;
 iErrorK                 = 10;
-iTolK                   = 1e-5;
+iTolK                   = 1e-4;
 iIterNumK               = 1;
 
 %% 4. Stationary dist. of labour allocation
@@ -45,20 +45,23 @@ vLabSupply              = vGridZ'*vZDist;
 %% 5. TRANSITIONAL DYNAMICS
 
 % Capital guess
-A_path                  = linspace(Start,End,pT)';   
 iK                      = linspace(Results0.vCapitalOpt,ResultsT.vCapitalOpt,pT)';
 iEndoK                  = zeros(size(iK));
+iGini                   = zeros(size(iK));
 
 % Initialise values
-iCurrentDistribution    = Results0.mDistribution;
 iValueNext              = ResultsT.mValue;
 mValueNew               = zeros(size(iValueNext));
-mPolicyWealth           = zeros([pT,size(iCurrentDistribution)]);
+mPolicyWealth           = zeros([pT,size(vGridA2,1),size(vGridZ,1)]);
 
 while iErrorK > iTolK
+    % Initialise
+    iCurrentDistribution    = Results0.mDistribution;
+    iValueNext              = ResultsT.mValue;
+
     % Compute endogenous objects
-    iInterest               = pAlpha .* A_path .* (iK / vLabSupply).^(pAlpha - 1) - pDelta;
-    iWage                   = (1 - pAlpha) .* A_path .* (iK / vLabSupply).^(pAlpha);
+    iInterest               = pAlpha .* vAPath .* (iK / vLabSupply).^(pAlpha - 1) - pDelta;
+    iWage                   = (1 - pAlpha) .* vAPath .* (iK / vLabSupply).^(pAlpha);
 
     %% 5.1. Value & policy functions
     for ttt = pT:(-1):1
@@ -155,6 +158,7 @@ while iErrorK > iTolK
         % B. Aggregation station
         iMarginalDist       = sum(iCurrentDistribution,2);
         iEndoK(ttt)         = vGridA2' * iMarginalDist;
+        iGini(ttt)          = 1 / (2*iEndoK(ttt)) * sum((iMarginalDist * iMarginalDist') .* abs( repmat(vGridA2',size(vGridA2,1),1)-repmat(vGridA2,1,size(vGridA2,1))),'all');
     end 
 
     % C. Update
@@ -169,5 +173,8 @@ while iErrorK > iTolK
 end
 
 Results.vK                  = iK;
+Results.vGrini              = iGini;
+Results.vK0                 = Results0.vCapitalOpt;
+Results.vKT                 = ResultsT.vCapitalOpt;
 
 end 

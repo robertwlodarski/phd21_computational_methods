@@ -24,6 +24,22 @@ Parameters.pNumGridA2   = 100;
 Grids.vGridA1           = fnWealthGridMMV(Parameters.pGridAMin, Parameters.pGridAMax, Parameters.pNumGridA1);
 Grids.vGridA2           = fnWealthGridMMV(Parameters.pGridAMin, Parameters.pGridAMax, Parameters.pNumGridA2);
 
-%% 4. Simulation related
-Parameters.pN           = 10000;
-Parameters.pT           = 50;
+%% 4. Transitional dynamics related
+Parameters.pT           = 200;
+
+% Path 1 
+Paths.v1                = repmat(1.1,Parameters.pT,1);
+Paths.v1(1)             = 1;
+Grids.vAPath            = Paths.v1;
+
+% Path 2
+Paths.v2                = ones(Parameters.pT,1);
+Paths.v2(1)             = 0.95;
+
+% Path 3
+Paths.pRho              = 0.90;
+Paths.v3                = zeros(Parameters.pT,1);
+Paths.v3(1)             = 0.95;
+for ttt = 2:1:Parameters.pT
+    Paths.v3(ttt)       = Paths.v3(ttt-1)^(Paths.pRho);
+end
