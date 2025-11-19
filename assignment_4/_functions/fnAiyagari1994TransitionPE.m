@@ -1,4 +1,4 @@
-function [Results]          = fnAiyagari1994Transition(Start,End,Parameters,Grids)
+function [Results]          = fnAiyagari1994TransitionPE(Start,End,Parameters,Grids)
 
 %% 1. Unpacking
 % Parameters
@@ -49,7 +49,7 @@ vLabSupply              = vGridZ'*vZDist;
 
 %% 5. TRANSITIONAL DYNAMICS
 
-% Capital guess 
+% Capital guess
 iK                      = linspace(Results0.vCapitalOpt,ResultsT.vCapitalOpt,pT)';
 iEndoK                  = zeros(size(iK));
 iGini                   = zeros(size(iK));
@@ -60,14 +60,14 @@ iValueNext              = ResultsT.mValue;
 mValueNew               = zeros(size(iValueNext));
 mPolicyWealth           = zeros([pT,size(vGridA2,1),size(vGridZ,1)]);
 
+% Set fixed prices (PE element)
+vInterest               = repmat(ResultsT.vInterest,pT,1);
+vWage                   = repmat(ResultsT.vWage,pT,1);
+
 while iErrorK > iTolK
     % Initialise
     iCurrentDistribution    = Results0.mDistribution;
     iValueNext              = ResultsT.mValue;
-
-    % Compute endogenous objects
-    iInterest               = pAlpha .* vAPath .* (iK / vLabSupply).^(pAlpha - 1) - pDelta;
-    iWage                   = (1 - pAlpha) .* vAPath .* (iK / vLabSupply).^(pAlpha);
 
     %% 5.1. Value & policy functions
     for ttt = pT:(-1):1
@@ -90,7 +90,7 @@ while iErrorK > iTolK
 
                 % Current values
                 iWealth                     = vGridA1(aaa);
-                iBudget                     = iWage(ttt) * iLabour + (1+iInterest(ttt)) * iWealth;
+                iBudget                     = vWage(ttt) * iLabour + (1+vInterest(ttt)) * iWealth;
 
                 % Optimisation station
                 iWealthNext                 = fnFastOptimisation(iBudget,iMinWealth,iExpValueZ,ParametersUsed,Grids);

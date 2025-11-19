@@ -49,11 +49,10 @@ vLabSupply              = vGridZ'*vZDist;
 
 %% 5. TRANSITIONAL DYNAMICS
 
-% Capital guess 
+% Capital guess & S
 iK                      = linspace(Results0.vCapitalOpt,ResultsT.vCapitalOpt,pT)';
 iEndoK                  = zeros(size(iK));
 iGini                   = zeros(size(iK));
-iMarginalDist           = zeros(size(iK,1),size(vGridA2,1));
 
 % Initialise values
 iValueNext              = ResultsT.mValue;
@@ -160,8 +159,8 @@ while iErrorK > iTolK
         end
 
         % B. Aggregation station
-        iMarginalDist(ttt,:)= sum(iCurrentDistribution,2)';
-        iEndoK(ttt)         = vGridA2' * iMarginalDist(ttt,:)';
+        iMarginalDist       = sum(iCurrentDistribution,2);
+        iEndoK(ttt)         = vGridA2' * iMarginalDist;
         iGini(ttt)          = 1 / (2*iEndoK(ttt)) * sum((iMarginalDist * iMarginalDist') .* abs( repmat(vGridA2',size(vGridA2,1),1)-repmat(vGridA2,1,size(vGridA2,1))),'all');
 
         % Save
@@ -183,6 +182,5 @@ Results.vK                  = iK;
 Results.vGini               = iGini;
 Results.vK0                 = Results0.vCapitalOpt;
 Results.vKT                 = ResultsT.vCapitalOpt;
-Results.mMarginalWealth     = iMarginalDist;
 
 end 

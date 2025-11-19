@@ -19,3 +19,4 @@ Don't expect rocket science here.
 1. RBC GE with labour participation.
 2. A simple life-cycle PE model.
 3. Aiyagari (QJE, 1994)
+3. Aiyagari (QJE, 1994): Transitional dynamics

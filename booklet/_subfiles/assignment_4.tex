@@ -1,12 +1,55 @@
-\subsection*{Questions (a) and (b)}
+\subsection*{Questions (a) through (e)}
 \colorbox{ForestGreen!25}{ \parbox{\textwidth}{
 \textbf{\textit{\underline{Question}}}:
 \textit{
-    Solve the stationary competitive equilibrium for $A=1$ and $A=1.1$.
+\begin{itemize}
+    \item Solve the stationary competitive equilibrium for $A=1$ and $A=1.1$.
+    \item Define the transitional competitive equilibrium for the jump in $A$.
+    \item Compute the transitional competitive equilibrium.
+    \item How long does it take for an economy to converge to the new stationary competitive equilibrium?
+\end{itemize}
 }}}\\
 
 
+\begin{figure}[]
+\centering
+\caption{Transition dynamics.}
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \caption{Shock types.}
+  \label{fig:a4_capital_transition}
+  \includegraphics[width=\linewidth]{_figures/ShockTypes.png}
+\end{subfigure}%
+\begin{subfigure}{.5\textwidth}
+  \centering
+    \caption{Capital dynamics.}
+    \label{fig:a4_capital_transition}
+  \includegraphics[width=\linewidth]{_figures/CapitalTransitions.png}
+\end{subfigure}
+\end{figure}
 
+\colorbox{ForestGreen!25}{\textbf{\textit{\underline{Part 1}}} Equilibrium definition: }
+Let $\boldsymbol{\Theta_0}$ be the original SRCE distribution, for $A=1$, and $v_{T+1}$ be the new SRCE value function, for $A=1.1$.
+
+\begin{definition}(Transitional competitive equilibrium)
+    Given $\boldsymbol{\Theta_0}$ and $v_{T+1}$, $\left(g_{a,t},g_{c,t},v_t, G_t, r_t,w_t,\boldsymbol{\Theta_t}\right)_{t=1}^T$ and
+    $\left(g_K,g_{a,L} \right)$ are \textcolor{ForestGreen}{\textbf{transitional compettive equilibrium}} if:
+    \begin{enumerate}
+        \item $\left(g_{a,t},g_{c,t},v_t\right)_{t=1}^T$ solves the household's problem given $\left(\boldsymbol{\Theta_t} \right)^T_{t=1}$.
+        \item $\left(g_K,g_{a,L} \right)$ solves a representative firm's problem given $\left(\boldsymbol{\Theta_t} \right)^T_{t=1}$.
+        \item $\left(r_t,w_t\right)_{t=1}^T$ clears the capital and labour markets $\forall t$:
+        \begin{subequations}
+            \begin{align}
+                &\left[K \right]: \quad  g_K \left(\boldsymbol{\Theta_t} \right) = \int a \; \mathrm{d}\boldsymbol{\Theta_t} \\
+                &\left[L \right]: \quad  g_{a,L} \left(\boldsymbol{\Theta_t} \right)= \iint \boldsymbol{\Theta_t}(a,z) z \;  \mathrm{d}a\mathrm{d}z.
+            \end{align}
+        \end{subequations}
+        \item The aggregate resource constraint holds:
+        \begin{equation}
+            \iint g_{c,t}(a,z)+g_{a,t}(a,z)\; \mathrm{d}\boldsymbol{\Theta_t} = F \left(g_K,g_{a,L} \right)+ (1-\delta)g_K.
+        \end{equation}
+    \end{enumerate}
+\end{definition}
 
 %=======================================================================
 \subsection*{Questions (g)}
@@ -31,7 +74,7 @@ In my Matlab code, $p\left( \cdot \right)$ comes from \texttt{iMarginalDist} in 
             \varphi_N
         \end{array} \right) \implies \\
         & \iint p(x) p(y)\; \mathrm{d}x\mathrm{d}y = \iint 
-         \left(\begin{array}{c}
+         \boldsymbol{\iota}^T \left(\begin{array}{c}
             \varphi_1 \\
             \varphi_2 \\
             \cdots \\
@@ -39,10 +82,29 @@ In my Matlab code, $p\left( \cdot \right)$ comes from \texttt{iMarginalDist} in 
         \end{array} \right) \times   
         \left(
         \begin{array}{cccc}
-            \varphi_1 & \varphi_2 & \cdots & \varphi_4
+            \varphi_1 & \varphi_2 & \cdots & \varphi_N
         \end{array}
-        \right)
+        \right)\boldsymbol{\iota}\; \mathrm{d}x\mathrm{d}y \implies 
         \\
-        & \iint p(x) p(y)\; \mathrm{d}x\mathrm{d}y = \texttt{sum(sum(iMarginalDist * iMarginalDist'))} 
+        & \iint p(x) p(y)\; \mathrm{d}x\mathrm{d}y = \texttt{sum(sum(iMDist * iMDist'))} 
+    \end{align}
+    which can be combined with the fact that:
+    \begin{align}
+        & \iint \left| x- y \right| \; \mathrm{d}x\mathrm{d}y= \iint 
+        \left|\boldsymbol{\iota}^T \left(\begin{array}{c}
+            a_1 \\
+            a_2 \\
+            \cdots \\
+            a_N
+        \end{array} \right) - 
+         \left(\begin{array}{cccc}
+            a_1 & a_2 & \cdots & a_N
+        \end{array}\right) \boldsymbol{\iota}
+        \right|\; \mathrm{d}x\mathrm{d}y \implies \\
+        & \iint \left| x- y \right| \; \mathrm{d}x\mathrm{d}y=\texttt{abs(repmat(vGridA2',pNA2,1)-repmat(vGridA2,1,pNA2))}.
+    \end{align} 
+    This gives:
+    \begin{align}
+        & G = \texttt{sum((iMDist*iMDist').*abs(repmat(vGridA2',pNA2,1)-repmat(vGridA2,1,pNA2)),'all')}.
     \end{align}
 \end{subequations}
