@@ -11,59 +11,24 @@ using Roots
 using LinearAlgebra
 using Infiltrator
 
-## 2.       Inner functions
-#           Content:
-#           1) Intensive labour supply
-#           2) Extensive labour supply
+## 2.       Load functions 
+include("_functions/InnerFunctions.jl")
+include("_functions/Functions.jl")
 
-function    fnIntensiveLabourSupply(w,r,T,z,a,τ,η,χ,β)
-    #       Function settings
-    iConsumption    = 0.6751
-    iConvergence    = false
-    iIteration      = 1
-    pErrorTol       = 1e-5
-    pStepSize       = 0.9
+## 3.       Set parameters
+#           Exogeneous
+const a     = 1.0
+const α     = 0.3
+const τ     = 0.15
+const z̄     = 1.0
+const A     = 1.0
+const r     = 0.04
+const β     = 0.96
+#           Temporary
+const η     = 6.4986
+const χ     = 0.7744
+const σ     = 0.3136
+const b     = 0.0633
 
-    #       Start the loop
-    while iter < 1000
-
-        #   From Euler
-        iRHS                = z * w * (1-τ) * (z * w * (1-τ) / (η * iCons))
-
-        #   Adjust if needed
-        if iRHC     < 0
-            iConsumption    = 0.5 * iConsumption
-            continue
-        end 
-
-        #   Update consumption & compute the error
-        iConsumptionNext    = iRHS / (1 + β) 
-        iError              = abs(iConsumptionNext-iConsumption)
-
-        #   Convergence criterion 
-        if iError < pErrorTol
-            iConvergence    = true
-            break
-        else 
-            # Update consumption
-            iConsumption    = pStepSize * iConsumption + (1 - pStepSize) * iConsumptionNext
-        end 
-        iIteration          = iIteration + 1
-    end 
-
-    #       Erorr for a failed loop
-    if !iConvergence
-        println("w = ", w, "z = ",z,"T = ", T, "η = ",η)# FINISH HERE
-    end  
-
-    # FINISH HERE
-
-    
-
-end
-
-## 3.       Main functions 
-#           Content:
-#           1) Aggregate labour supply
-#           2) Labour demand (aggregate)
-#           3) Government lump sum (implied)
+## 4.       Solve for equilibrium
+wₑ,Tₑ       = fnWageSolver(A,α,r,z̄,a,b,τ,η,χ,β,σ)
