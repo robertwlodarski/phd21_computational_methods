@@ -22,4 +22,4 @@ Parameters.pGridAMax    = 150;
 Parameters.pNumGridA    = 50;
 
 % Compute grid
-Grids.vWealthGrid       = fnWealthGridMMV(Parameters.pGridAMin,Parameters.pGridAMax,Parameters.pNumGrid
+Grids.vWealthGrid       = fnWealthGridMMV(Parameters.pGridAMin,Parameters.pGridAMax,Parameters.pNumGridA);
