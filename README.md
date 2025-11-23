@@ -11,6 +11,7 @@ The repository contains a few folders.
 Don't expect rocket science here. 
 - `Matlab`: Apart from the standard tools, you need to download the *Global Optimisation Toolbox* for some of my calibration experiments.
 - `LaTeX`: I use the standard VSCode for that. You may need to follow their instructions. 
+- `Julia`: I try to translate the assignments to Julia, as well. I recommend using it with VSCode.
 
 # Problem sets
 
