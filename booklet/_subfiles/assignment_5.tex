@@ -1,0 +1,42 @@
+
+Consider the problem without plugging all the functions. 
+To solve the policy function iteration, we effectively need to \say{get rid off} the value function.
+\begin{equation}
+    \begin{aligned}
+         V(k) = & \max_{n,k^\prime,c} \left\{ u(c) + u(n) +\beta V \left(k^\prime \right) \right\} \\
+         \text{s.t.} & c + k^\prime + \Psi\left(k,k^\prime \right) = (1+r) k + w n 
+    \end{aligned}
+\end{equation}
+The problem's Lagrangian is:
+\begin{equation}
+    \mathcal{L} = u(c) + u(n) +\beta V \left(k^\prime \right) + \lambda \left[ (1+r) k + w n  - c - k^\prime - \Psi\left(k,k^\prime \right) \right],
+\end{equation}
+with the associated optimality conditions:
+\begin{subequations}
+    \begin{align}
+        & \mathcal{L}_c = u_c(c) - \lambda = 0 \implies \lambda = u_c(c) \\
+        & \mathcal{L}_n = u_n(n) + \lambda n = 0 \implies u_n(n) = - u_c(c) w \\
+        & \mathcal{L}_{k^\prime}  = \beta V_{k^\prime } \left(k^\prime \right) - \lambda \left[1+ \Psi_{k^\prime} \left(k,k^\prime \right)\right] = 0 \implies \beta V_{k^\prime } \left(k^\prime \right)= u_c(c) \left[1+ \Psi_{k^\prime} \left(k,k^\prime \right)\right].
+    \end{align}
+\end{subequations}
+We want to find an expression for the first derivative of the value fuction, which can be simplified using the first-order conditions:
+\begin{subequations}
+    \begin{align}
+        & V_{k } \left(k \right)= u_c (c) \frac{\partial c}{\partial k}+ u_n(n)\frac{\partial n}{\partial k} + \beta V_{k^\prime } \left(k^\prime \right) \frac{\partial k^\prime}{\partial k} \implies \\
+        & V_{k } \left(k \right)= u_c (c) \frac{\partial c}{\partial k} - u_c(c)w\frac{\partial n}{\partial k}+ u_c(c) \left[1+ \Psi_{k^\prime} \left(k,k^\prime \right)\right]  \frac{\partial k^\prime}{\partial k}\implies \\
+        & V_{k } \left(k \right)= u_c (c) \left\{\frac{\partial c}{\partial k}- w \frac{\partial n}{\partial k}+\left[1+ \Psi_{k^\prime} \left(k,k^\prime \right) \right] \frac{\partial k^\prime}{\partial k}\right\}.
+    \end{align}
+\end{subequations}
+The unpleasant terms from the \say{curly} bracket can be obtained from the budget constraint's derivative w.r.t. $k$:
+\begin{subequations}
+    \begin{align}
+        & \frac{\partial c}{\partial k} + \frac{\partial k^\prime}{\partial k} + \Psi_k\left(k,k^\prime \right) + \Psi_{k^\prime}\left(k,k^\prime \right) \frac{\partial k^\prime}{\partial k}= (1+r) + w \frac{\partial n}{\partial k} \implies  \\
+        & \frac{\partial c}{\partial k}- w \frac{\partial n}{\partial k}+\left[1+ \Psi_{k^\prime} \left(k,k^\prime \right) \right] \frac{\partial k^\prime}{\partial k} = 1 + r -  \Psi_k\left(k,k^\prime \right).
+    \end{align}
+\end{subequations}
+This implies that:
+\begin{equation}
+    \boxed{V_{k } \left(k \right)= u_c (c) \left[1 + r -  \Psi_k\left(k,k^\prime \right) \right],}
+\end{equation}
+which is the key element of the policy function iteration. 
+
