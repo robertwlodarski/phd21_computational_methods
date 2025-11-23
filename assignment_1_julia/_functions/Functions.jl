@@ -7,11 +7,11 @@
 function        fnWageSolver(A,α,r,z̄,a,b,τ,η,χ,β,σ)
 
     #       Initialise 
-    iWage       = 0.99
-    iT          = 0.04
-    iWageNext   = 0
-    iTNext      = 0
-    iError      = 1
+    iWage       = 2#0.99
+    iT          = 1.0#0.04
+    iWageNext   = 0.0
+    iTNext      = 0.0
+    iError      = 1.0
     iIteration  = 0
     iConvergence= false
     pMaxIter    = 1000
@@ -35,8 +35,8 @@ function        fnWageSolver(A,α,r,z̄,a,b,τ,η,χ,β,σ)
             iConvergence= true
             break
         else
-            iWage       = pStepSize * iWage + (1 - pStepSize) * iWageNext
-            iT          = pStepSize * iT    + (1 - pStepSize) * iTNext  
+            iWage       = pStepSize * iWage + (1.0 - pStepSize) * iWageNext
+            iT          = pStepSize * iT    + (1.0 - pStepSize) * iTNext  
         end 
         iIteration      = iIteration + 1
     #       End the while loop
@@ -47,7 +47,7 @@ function        fnWageSolver(A,α,r,z̄,a,b,τ,η,χ,β,σ)
     println("Error              = ", iError)
     println("# of iterations    = ", iIteration)
     println("Wage               = ", iWageNext)
-    println("Lump trasnfer      = ", iTNext)
+    println("Lump transfer      = ", iTNext)
 
     #       Save results
     return iWageNext, iTNext

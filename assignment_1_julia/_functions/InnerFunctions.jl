@@ -18,7 +18,7 @@ function    fnIntensiveLabourSupply(w,r,T,z,a,τ,η,χ,β)
 
     #       Function settings
     iConsumption    = 0.6751
-    iConsumptionNext=0
+    iConsumptionNext=0.0
     iConvergence    = false
     iIteration      = 1
     pErrorTol       = 1e-5
@@ -28,10 +28,10 @@ function    fnIntensiveLabourSupply(w,r,T,z,a,τ,η,χ,β)
     while iIteration < 1000
 
         #   From Euler
-        iRHS                = z * w * (1-τ) * (z * w * (1-τ) / (η * iConsumption))
+        iRHS                = z * w * (1-τ) * (z * w * (1-τ) / (η * iConsumption))^χ + a * (1 + r * (1 - τ)) + T
 
         #   Adjust if needed
-        if iRHS     < 0
+        if iRHS     < 0.0
             iConsumption    = 0.5 * iConsumption
             continue
         end 
@@ -70,7 +70,7 @@ function    fnWorkingValue(c,n,β,χ,η)
 
     #       Assets & Frisch elasticity
     ap      = β * c
-    Frisch  = 1 + (1 / χ)
+    Frisch  = 1.0 + (1.0 / χ)
 
     #       Results 
     W       = log(c) - η * (1 / Frisch) * n^(Frisch) + β * log(ap)
@@ -84,8 +84,8 @@ end
 function    fnNonWorkingValue(T,b,a,r,τ,β)
 
     #       Consumption from the non-working Euler
-    Budget  = b + a * (1+r * (1 - τ)) + T 
-    c       = Budget  / (1 + β)
+    Budget  = b + a * (1.0+r * (1 - τ)) + T 
+    c       = Budget  / (1.0 + β)
 
     #       Assets 
     ap      = β * c 
@@ -132,7 +132,7 @@ function    fnAggregateLabourSupply(w,r,T,z̄,a,b,τ,η,χ,β,σ)
 
     #       Labour supply 
     LabourSupply    = solve(IntegralProblem((x,p) ->  pdf(DistributionZ,x) * x * fnExtensiveLabourSupply(w,r,T,x,a,b,τ,η,χ,β)[2],(0.0,Inf)),QuadGKJL()).u
-    Employment      = solve(IntegralProblem((x,p) ->  pdf(DistributionZ,x) * x * fnExtensiveLabourSupply(w,r,T,x,a,b,τ,η,χ,β)[1],(0.0,Inf)),QuadGKJL()).u
+    Employment      = solve(IntegralProblem((x,p) ->  pdf(DistributionZ,x) * fnExtensiveLabourSupply(w,r,T,x,a,b,τ,η,χ,β)[1],(0.0,Inf)),QuadGKJL()).u
     LabourSupply2M  = solve(IntegralProblem((x,p) ->  pdf(DistributionZ,x) * (x * fnExtensiveLabourSupply(w,r,T,x,a,b,τ,η,χ,β)[2])^2,(0.0,Inf)),QuadGKJL()).u
 
     #       Print results
@@ -144,7 +144,7 @@ end
 ##################################################
 
 function    fnAggregateLabourDemand(K,L,A,α)
-    w       = A * (1 - α) * (K / L)^α
+    w       = A * (1.0 - α) * (K / L)^α
     return w
 end
 
@@ -153,6 +153,6 @@ end
 ##################################################
 
 function    fnGovernmentLumpTransfer(L,E,w,a,r,τ,b)
-    T       = (L * w + a * r) * τ - (1 - E) * b 
+    T       = (L * w + a * r) * τ - (1.0 - E) * b 
     return T
 end

@@ -9,13 +9,13 @@ function [eff_labour_supply, employment, eff_labour_supply_std] = fnAggregateLab
     fn_Extensive_vec        = @(z) arrayfun(fn_Extensive,z);
     fn_Individual_vec       = @(z) arrayfun(fn_Individual,z);
     % Effective labour supply
-    fn_eff_integrand        = @(z) lognpdf(z,0,pSigmaz) .* z .* fn_Individual_vec(z);
+    fn_eff_integrand        = @(z) lognpdf(z,-0.5 * pSigmaz^2,pSigmaz) .* z .* fn_Individual_vec(z);
     eff_labour_supply       = integral(fn_eff_integrand,z_lower,z_upper);
     % Employment 
-    fn_emp_integrand        = @(z)  lognpdf(z,0,pSigmaz) .* fn_Extensive_vec(z);
+    fn_emp_integrand        = @(z)  lognpdf(z,-0.5 * pSigmaz^2,pSigmaz) .* fn_Extensive_vec(z);
     employment              = integral(fn_emp_integrand, z_lower, z_upper);
     % Effective labour supply standard deviation
-    fn_eff_std_integrand    = @(z) lognpdf(z,0,pSigmaz) .* (z .* fn_Individual_vec(z)).^2;
+    fn_eff_std_integrand    = @(z) lognpdf(z,-0.5 * pSigmaz^2,pSigmaz) .* (z .* fn_Individual_vec(z)).^2;
     eff_labour_supply_2m    = integral(fn_eff_std_integrand, z_lower, z_upper);
     eff_labour_supply_std   = sqrt(eff_labour_supply_2m - eff_labour_supply^2);
 end 

@@ -1,7 +1,7 @@
 function [w, T] = fnSolvePrices(pTau,pEta,pChi,pBeta,pSigmaz,pAlpha,pA,pa,pr,pb,pMaxIter,pStepSize)
     % Initialise
-    iWage           = 0.9972;
-    iT              = 0.0462;
+    iWage           = 2 %0.9972;
+    iT              = 1 %0.0462;
     iIteration      = 0;
     iConvergence    = false;
 

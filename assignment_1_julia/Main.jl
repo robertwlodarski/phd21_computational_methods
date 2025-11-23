@@ -10,6 +10,7 @@ using NLsolve
 using Roots
 using LinearAlgebra
 using Infiltrator
+using QuadGK
 
 ## 2.       Load functions 
 include("_functions/InnerFunctions.jl")
@@ -31,4 +32,4 @@ const σ     = 0.3136
 const b     = 0.0633
 
 ## 4.       Solve for equilibrium
-wₑ,Tₑ       = fnWageSolver(A,α,r,z̄,a,b,τ,η,χ,β,σ)
+@time wₑ,Tₑ       = fnWageSolver(A,α,r,z̄,a,b,τ,η,χ,β,σ)
