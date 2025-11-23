@@ -130,10 +130,16 @@ function    fnAggregateLabourSupply(w,r,T,z̄,a,b,τ,η,χ,β,σ)
     #       Set the distribution
     DistributionZ   = LogNormal(log(z̄) - 0.5 * σ^2, σ)
 
-    #       Labour supply 
-    LabourSupply    = solve(IntegralProblem((x,p) ->  pdf(DistributionZ,x) * x * fnExtensiveLabourSupply(w,r,T,x,a,b,τ,η,χ,β)[2],(0.0,Inf)),QuadGKJL()).u
-    Employment      = solve(IntegralProblem((x,p) ->  pdf(DistributionZ,x) * fnExtensiveLabourSupply(w,r,T,x,a,b,τ,η,χ,β)[1],(0.0,Inf)),QuadGKJL()).u
-    LabourSupply2M  = solve(IntegralProblem((x,p) ->  pdf(DistributionZ,x) * (x * fnExtensiveLabourSupply(w,r,T,x,a,b,τ,η,χ,β)[2])^2,(0.0,Inf)),QuadGKJL()).u
+    #       Labour supply - new version (more efficient)
+    function fnJointIntegrand(x)
+        PdfValue        = pdf(DistributionZ,x)
+        Decision,Hours  = fnExtensiveLabourSupply(w,r,T,x,a,b,τ,η,χ,β)
+        return [PdfValue * x * Hours, PdfValue * Decision, PdfValue * (x * Hours)^2]
+    end
+    ResultVector, _     = quadgk(fnJointIntegrand,0.0,Inf,rtol=1e-5)
+    LabourSupply        = ResultVector[1]
+    Employment          = ResultVector[2]
+    LabourSupply2M      = ResultVector[3] 
 
     #       Print results
     return LabourSupply, Employment, LabourSupply2M

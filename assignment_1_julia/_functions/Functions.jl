@@ -7,8 +7,8 @@
 function        fnWageSolver(A,α,r,z̄,a,b,τ,η,χ,β,σ)
 
     #       Initialise 
-    iWage       = 2#0.99
-    iT          = 1.0#0.04
+    iWage       = 0.99
+    iT          = 0.04
     iWageNext   = 0.0
     iTNext      = 0.0
     iError      = 1.0
