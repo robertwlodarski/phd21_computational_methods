@@ -17,7 +17,7 @@ Parameters.pEta         = 1.0;
 %% Grids 
 
 % Grid options
-Parameters.pGridAMin    = 1e-4;
+Parameters.pGridAMin    = 1e-2;
 Parameters.pGridAMax    = 150;
 Parameters.pNumGridA    = 50;
 
