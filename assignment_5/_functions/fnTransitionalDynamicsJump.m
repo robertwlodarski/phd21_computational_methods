@@ -1,4 +1,4 @@
-function [Results]          = fnTransitionalDynamicsCertain(A0,A1,Parameters,Grids)
+function [Results]          = fnTransitionalDynamicsJump(A0,A1,Parameters,Grids)
 
 %% 1. Parameters & grids
 pSigma              = Parameters.pSigma;
@@ -16,7 +16,6 @@ Results1        = fnSteadyStateSolverPFI(A0,Parameters,Grids);
 Results2        = fnSteadyStateSolverPFI(A1,Parameters,Grids);
 
 %% 3. Iterations
-
 % Useful functions
 A               = A1;
 Interest        = @(N,K)    A * pAlpha * K^(pAlpha-1) * N^(1-pAlpha) - pDelta;
@@ -26,8 +25,8 @@ Adjustment      = @(K,Kp)   pMu / 2 * ((Kp - K)/K)^2*K;
 BCError         = @(N,K,Kp) (1 + Interest(N,K))*K + Wage(N,K)*N - ConsImplied(N,K) - Kp - Adjustment(K,Kp);
 
 % Set time & tolerance for change
-pT              = 50;
-pTolDistance    = 1e-6;
+pT              = size(vAPath,1);
+pTolDistance    = 1e-5;
 
 % Prepare key items
 vPolicy         = Results2.Policy;
