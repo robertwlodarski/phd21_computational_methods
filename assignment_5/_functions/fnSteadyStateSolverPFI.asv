@@ -1,4 +1,4 @@
-function [vK]            = fnSteadyStateSolverPFI(A,Parameters,Grids)
+function [Policy,EqVals]            = fnSteadyStateSolverPFI(A,Parameters,Grids)
     
 %% 1. Unpack parameters & grids
 
@@ -22,6 +22,7 @@ vKNextNew           = zeros(size(vKNextGuess));
 iError              = 10.0;
 pErrorTol           = 1e-5;
 pStepSize           = 0.9;
+iIterNum            = 1;
 
 %% 3. Define key functions
 
@@ -39,49 +40,38 @@ ValueDerivative     = @(C,N,K,Kp) C^(-pSigma) * (1 + Interest(N,K) - Psi_1(K,Kp)
 EulerError          = @(C,N,K,Kp,Cp,Np,Kpp) C^(-pSigma) * (1 + Psi_2(K,Kp)) - pBeta *  ValueDerivative(Cp,Np,Kp,Kpp);
 
 %% 4. Start iterating 
-
 while iError > pErrorTol
     for kkk = 1:1:size(vK,1)
-       
 
-        % D. Optimal Kp_new
-        EulerErrorK         = @(x) fnEulerResidual(K,Kp,vK,vKNextGuess,EulerError)(C,N,K,x,Cp,Np,Kpp);
-        Kp_new              = fzero(EulerErrorK,1e-5);
+        % A. Optimal Kp_new
+        
+        EulerErrorK         = @(x) (fnEulerResidual(vK(kkk),x,vK,vKNextGuess,EulerError,BCError,ConsImplied,Interest,Wage))^2;
+        Kp_new              = fminbnd(EulerErrorK,0.5*vK(kkk),(1.2+size(vK,1)-kkk)*vK(kkk));
 
-        % E. Update results 
+        % B. Update results 
         vKNextNew(kkk)      = Kp_new;
     end
     
-    % F. Iteration items 
+    % C. Iteration items 
     vKNextGuess             = pStepSize*vKNextGuess + (1 - pStepSize)*vKNextNew;
     iError                  = max(abs(vKNextGuess-vKNextNew),[],"all");
+end 
+Policy              = vKNextGuess;
+
+%% 5. Find the steady state capital
+
+% Start
+K_ss                = 1;
+iErrorK_ss          = 100;
+
+while iErrorK_ss > 1e-10
+    K_ss_next       = interp1(vK,Policy,K_ss,"pchip");
+    iError          = abs(K_ss_next-K_ss);
+    K_ss            = K_ss_next;
+    fprintf('SUMMARY \n')
+    fprintf('Error:             %.3f \n', iError);
+    fprintf('Steady state K:    %.3f \n', K_ss);
 end 
 
 
 end
-
-
-
-% 
-% % A. Solve for today's N and C
-% % Narrow down the function
-% BCErrorK            = @(N) BCError(N,vK(kkk),vKNextGuess(kkk));
-% LabourImp           = fzero(BCErrorK,1);
-% ConsImp             = ConsImplied(LabourImp, vK(kkk));
-% 
-% % B. Obtain tomorrow's K prime (Kpp)
-% Kpp_bot                         = sum(vK<vKNextGuess(kkk));
-% Kpp_bot(Kpp_bot<1)              = 1;
-% Kpp_bot(Kpp_bot>=size(vK,1))    = size(vK,1)-1;
-% Kpp_up                          = Kpp_bot+1;
-% Bot_weight                      = (vKNextGuess(Kpp_up)-vKNextGuess(kkk)/(vKNextGuess(Kpp_up)-vKNextGuess(Kpp_bot)));
-% Kpp                             = Bot_weight * vKNextGuess(Kpp_bot) + (1 - Bot_weight) * vKNextGuess(Kpp_up);
-% 
-% % C. Obtain tomorrow's prices
-% BCErrorK            = @(N) BCError(N,vKNextGuess(kkk),Kpp);
-% Np                  = fzero(BCErrorK,1);
-% Ip                  = Interest(Np,vKNextGuess(kkk));
-% Wp                  = Wage(Np,vKNextGuess(kkk));
-% 
-% % D. Optimal K_new
-% vKNextNew(kkk)      = (1 + Ip) * Kpp + Np * Wp - Adjustment(vKNextGuess(kkk),Kpp);

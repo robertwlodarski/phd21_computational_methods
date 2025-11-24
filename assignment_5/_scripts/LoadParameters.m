@@ -18,8 +18,8 @@ Parameters.pEta         = 1.0;
 
 % Grid options
 Parameters.pGridAMin    = 1e-2;
-Parameters.pGridAMax    = 150;
+Parameters.pGridAMax    = 25;
 Parameters.pNumGridA    = 50;
 
 % Compute grid
-Grids.vWealthGrid       = fnWealthGridMMV(Parameters.pGridAMin,Parameters.pGridAMax,Parameters.pNumGridA);
+Grids.vWealthGrid       = linspace(Parameters.pGridAMin,Parameters.pGridAMax,Parameters.pNumGridA)';
