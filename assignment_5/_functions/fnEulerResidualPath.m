@@ -27,10 +27,9 @@ for ttt = 1:1:pT
     A                   = vAPathExpanded(ttt);
     Ap                  = vAPathExpanded(ttt+1);
     
-
     % B. Key values
     [~,C,~,~]           = fnFindNTransitions(K,Kp,A,Parameters);
-    [~,Cp,Rp,~]       = fnFindNTransitions(Kp,Kpp,Ap,Parameters);
+    [~,Cp,Rp,~]         = fnFindNTransitions(Kp,Kpp,Ap,Parameters);
 
     % C. Euler error 
     RHS                 = C^(-pSigma) * (1 + Psi_2(K,Kp));
