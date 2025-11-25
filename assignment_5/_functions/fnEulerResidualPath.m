@@ -14,18 +14,31 @@ Psi_2               = @(K,Kp) pMu * (Kp - K) / K;
 % Other key items
 pT              = size(vKGuess,1);
 vResiduals      = zeros(size(vKGuess));
-vKNext          = [K0;vKGuess; KT];
-vAPathExpanded  = [vAPath; vAPath(end)];
 
 %% 2. Run the loop
 for ttt = 1:1:pT
     
     % A. K, Kp, Kpp, A, and Ap
-    K                   = vKNext(ttt);
-    Kp                  = vKNext(ttt+1);
-    Kpp                 = vKNext(ttt+2);
-    A                   = vAPathExpanded(ttt);
-    Ap                  = vAPathExpanded(ttt+1);
+    % t=1 case
+    if ttt == 1
+        K               = K0; 
+        Kp              = vKGuess(1);
+        Kpp             = vKGuess(2);
+        A               = vAPath(1);
+        Ap              = vAPath(2);
+    elseif ttt == pT
+        K               = vKGuess(ttt-1);
+        Kp              = vKGuess(ttt);
+        Kpp             = KT;
+        A               = vAPath(ttt);
+        Ap              = vAPath(end);
+    else 
+        K               = vKGuess(ttt-1);
+        Kp              = vKGuess(ttt);
+        Kpp             = vKGuess(ttt+1);
+        A               = vAPath(ttt);
+        Ap              = vAPath(ttt+1);
+    end 
     
     % B. Key values
     [~,C,~,~]           = fnFindNTransitions(K,Kp,A,Parameters);
@@ -38,3 +51,4 @@ for ttt = 1:1:pT
 end 
 
 end 
+
