@@ -20,9 +20,9 @@ else
 end
 
 % Temporary A path
-vAPath          = zeros(200,1);
+vAPath          = zeros(100,1);
 vAPath(1)       = 0.95;
-for ttt=2:1:200
+for ttt=2:1:100
     vAPath(ttt)=vAPath(ttt-1)^(0.95);
 end
 

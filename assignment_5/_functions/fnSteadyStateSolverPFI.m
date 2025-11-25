@@ -16,7 +16,7 @@ vGridK              = Grids.vWealthGrid;
 
 %% 2. Iteration options
 vK                  = vGridK;
-vKNextGuess         = 1.05*vGridK;
+vKNextGuess         = vGridK;
 vKNextNew           = zeros(size(vKNextGuess));
 iError              = 10.0;
 pErrorTol           = 1e-5;
@@ -44,8 +44,9 @@ while iError > pErrorTol
     for kkk = 1:1:size(vK,1)
 
         % A. Optimal Kp_new
-        EulerErrorK         = @(x) fnEulerResidual(vK(kkk),x,vK,vKNextGuess,EulerError,BCError,ConsImplied,Interest,Wage)^2;
-        Kp_new              = fminbnd(EulerErrorK,0,1.5*max(vK));
+        opts                = optimoptions('fsolve','Display','none');
+        EulerErrorK         = @(x) fnEulerResidual(vK(kkk),x,vK,vKNextGuess,Parameters,A);
+        Kp_new              = fsolve(EulerErrorK,vK(kkk),opts);
 
         % B. Update results 
         vKNextNew(kkk)      = Kp_new;
@@ -53,7 +54,7 @@ while iError > pErrorTol
     
     % C. Iteration items 
     iError                  = max(abs(vKNextGuess-vKNextNew),[],"all");
-    vKNextGuess             = vKNextNew;
+    vKNextGuess             = pStepSize * vKNextGuess + (1 - pStepSize) * vKNextNew;
     fprintf('Error:             %.3f \n', iError);
 end 
 Policy              = vKNextGuess;
@@ -76,7 +77,7 @@ end
 
 % What we know
 Results.K                   = K_ss;
-[N_eq,C_eq,R_eq,W_eq]       = fnFindN(K_ss,K_ss,BCError,ConsImplied,Interest,Wage);
+[N_eq,C_eq,R_eq,W_eq]       = fnFindN(K_ss,K_ss,A,Parameters);
 Results.N                   = N_eq;
 Results.C                   = C_eq;
 Results.R                   = R_eq;

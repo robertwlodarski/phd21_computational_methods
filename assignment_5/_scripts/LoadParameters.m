@@ -2,7 +2,7 @@
 
 % Pre-set parameters
 Parameters.pSigma       = 1.0;
-Parameter.pRho          = 0.95;
+Parameters.pRho          = 0.95;
 Parameters.pSigmaEps    = 0.009;
 Parameters.pAlpha       = 0.33;
 Parameters.pBeta        = 0.99;
