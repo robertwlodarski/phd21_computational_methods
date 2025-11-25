@@ -12,7 +12,7 @@ addpath _scripts/
 %% 1. Prepare parameters
 LoadParameters;
 
-%% 2. Transitional dynamics
+%% 2. RA without uncertainty: Transitional dynamics
 
 % Run the shock
 ResultsJump             = fnTransitionalDynamicsJump(1,1.1,Paths.Path1,Parameters,Grids);

@@ -2,7 +2,7 @@
 
 % Pre-set parameters
 Parameters.pSigma       = 1.0;
-Parameters.pRho          = 0.95;
+Parameters.pRho         = 0.95;
 Parameters.pSigmaEps    = 0.009;
 Parameters.pAlpha       = 0.33;
 Parameters.pBeta        = 0.99;
@@ -23,6 +23,12 @@ Parameters.pNumGridA    = 50;
 
 % Compute grid
 Grids.vWealthGrid       = linspace(Parameters.pGridAMin,Parameters.pGridAMax,Parameters.pNumGridA)';
+
+% Tauchen grid for A
+Parameters.pTauchenN    = 3; 
+Parameters.pTauchenM    = 7;
+[Grids.vGridA,...
+    Grids.mTransitionA] = fnTauchenLogNormal(Parameters);
 
 %% 3. Paths for transition
 
