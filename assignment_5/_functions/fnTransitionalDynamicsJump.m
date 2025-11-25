@@ -1,4 +1,4 @@
-function [Results]          = fnTransitionalDynamicsJump(A0,A1,Parameters,Grids)
+function [Results]          = fnTransitionalDynamicsJump(A0,A1,vAPath,Parameters,Grids)
 
 %% 1. Parameters & grids
 pSigma              = Parameters.pSigma;
@@ -51,7 +51,7 @@ for ttt = 1:1:pT
     vKNext(ttt) = interp1(vGridK, vPolicy, vK(ttt), 'pchip');
 
     % C. Find N et al.
-    [N,C,R,W]   = fnFindN(vK(ttt),vKNext(ttt),BCError,ConsImplied,Interest,Wage);
+    [N,C,R,W]   = fnFindN(vK(ttt),vKNext(ttt),vAPath(ttt), Parameters);
     
     % D. Save results 
     vN(ttt)     = N;

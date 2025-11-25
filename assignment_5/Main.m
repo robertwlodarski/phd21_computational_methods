@@ -14,3 +14,6 @@ LoadParameters;
 
 %% 2. Transitional dynamics
 
+% Run the shock
+ResultsJump             = fnTransitionalDynamicsJump(1,1.1,Paths.Path1,Parameters,Grids);
+ResultsNegative         = fnTransitionalDynamicsPath(1,1,Paths.Path2,Parameters,Grids);
