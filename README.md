@@ -3,7 +3,8 @@
 # Content
 
 The repository contains a few folders. 
-- `assignment_n`: In each of such folders, I store the code solving each of the assignments.
+- `assignment_n`: In each of such folders, I store the `Matlab` code solving each of the assignments.
+- `assignment_n_julia`: In each of such folders, I store the `Julia` version of the code. 
 - `booklet`: This folder contains the written responses to each assignment.
 
 
@@ -15,9 +16,10 @@ Don't expect rocket science here.
 
 # Problem sets
 
-**Note**: I've found a few errors in assignment 2, and I am updating it slowly. 
+**Note**: I've found a few errors in assignments 2 and 5, and I am updating the scripts to correct those. 
 
 1. RBC GE with labour participation.
 2. A simple life-cycle PE model.
-3. Aiyagari (QJE, 1994)
-3. Aiyagari (QJE, 1994): Transitional dynamics
+3. Aiyagari (QJE, 1994): Standard GE solution
+4. Aiyagari (QJE, 1994): Transitional dynamics
+5. RA model w/ aggregate uncertainty.

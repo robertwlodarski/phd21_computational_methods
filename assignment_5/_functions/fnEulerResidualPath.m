@@ -34,7 +34,7 @@ for ttt = 1:1:pT
     % C. Euler error 
     RHS                 = C^(-pSigma) * (1 + Psi_2(K,Kp));
     LHS                 = pBeta * Cp^(-pSigma) * (1 + Rp - Psi_1(Kp,Kpp));
-    vResiduals(ttt)     = RHS - LHS;
+    vResiduals(ttt)     = LHS - RHS;
 end 
 
 end 
