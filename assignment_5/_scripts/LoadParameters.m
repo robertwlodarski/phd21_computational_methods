@@ -11,7 +11,7 @@ Parameters.pMu          = 0.60;
 Parameters.pDelta       = 0.025;
 
 % Temporary parameter
-Parameters.pEta         = 1.0;
+% Parameters.pEta         = 1.0;
 
 
 %% 2. Grids 

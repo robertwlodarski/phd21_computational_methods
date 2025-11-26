@@ -12,7 +12,10 @@ addpath _scripts/
 %% 1. Prepare parameters
 LoadParameters;
 
-%% 2. RA without uncertainty: Transitional dynamics
+%% 2. Calibrate pEta to a reasonable value
+Parameters.pEta         =    fnCalibrateEta(Parameters, Grids)
+
+%% 3. RA without uncertainty: Transitional dynamics
 
 % Run the shock
 ResultsJump             = fnTransitionalDynamicsJump(1,1.1,Paths.Path1,Parameters,Grids);
