@@ -24,7 +24,6 @@ iError2             = 10;
 pErrorTol           = 1e-8;
 vFuture             = [(2:pRequiredTime)'; pRequiredTime];
 pStepSize           = 0.8;
-iIterationNum       = 1;
 
 % Set up productivity shocks
 vMarginalTransition = (mTransitionA')^100 * ones(size(mTransitionA,1),1) / sum(ones(size(mTransitionA,1),1));
@@ -51,7 +50,6 @@ vK                  = ones(pRequiredTime,1)*ResultsSS.K + normrnd(0,1e-5,pRequir
 vC                  = ones(pRequiredTime,1)*ResultsSS.C;
 
 % Start the outer loop
-tic;
 while iError2 > pErrorTol
 
     % Update the Kp vector
@@ -91,8 +89,8 @@ while iError2 > pErrorTol
         iNHigh                                  = (vC(iKHigh).^(-pSigma) .* iWHigh / pEta).^(pChi);
         iRLow                                   = pAlpha * Ap * vK(iKLow).^(pAlpha-1).*iNLow.^(1-pAlpha)-pDelta;
         iRHigh                                  = pAlpha * Ap * vK(iKHigh).^(pAlpha-1).*iNHigh.^(1-pAlpha)-pDelta;
-        iPsi1Low                                = -pMu * (vKp(iKLow)-vK(iKLow)) ./ (vK(iKLow)) .* vKp(iKLow)./vK(iKLow)+ pMu / 2 * ((vKp(iKLow) - vK(iKLow))./vK(iKLow)).^2;
-        iPsi1High                               = -pMu * (vKp(iKHigh)-vK(iKHigh)) ./ (vK(iKHigh)) .* vKp(iKHigh)./vK(iKHigh) + pMu / 2 * ((vKp(iKHigh) - vK(iKHigh))./vK(iKHigh)).^2;
+        iPsi1Low                                = -pMu * (vKp(iKLow)-vK(iKLow)) ./ (vK(iKLow)) + pMu / 2 * ((vKp(iKLow) .* vKp(iKLow)./vK(iKLow) - vK(iKLow))./vK(iKLow)).^2;
+        iPsi1High                               = -pMu * (vKp(iKHigh)-vK(iKHigh)) ./ (vK(iKHigh)) + pMu / 2 * ((vKp(iKHigh) .* vKp(iKHigh)./vK(iKHigh) - vK(iKHigh))./vK(iKHigh)).^2;
 
         % E. Expected derivative of value
         iV1Low                                  = vC(iKLow).^(-pSigma) .* (1 + iRLow - iPsi1Low);
@@ -120,35 +118,23 @@ while iError2 > pErrorTol
     vKPast              = [vK(end);vK(1:end-1)];
     vIPast              = [vI(end);vI(1:end-1)];
     vKNew               = vKPast * (1 - pDelta) + vIPast;
-    vKpNew              = [vKNew(2:end);vKNew(1)];
-    vINew               = vKpNew - (1 - pDelta) * vKNew;
+    vKpNew              = [vKNew(2:end),vKNew(1)];
+    vINew               = vA .* vKNew .^(pAlpha) .* vN .^(1 - pAlpha) - (1 - pDelta) * vKNew - (pMu / 2) * ((vKpNew - vKNew) ./ vKNew).^2 .* vKNew;
     vCNew               = vA .* vKNew .^(pAlpha) .* vN .^(1 - pAlpha) -  pMu / 2 * ((vKpNew - vKNew) ./ vKNew).^2 - vINew;
 
     % Compute errror
     iError2             = mean([vC-vCNew;vK-vKNew].^2,"all");
-    iIterationNum       = iIterationNum + 1;
-
+    
     % Update guesses
     vC                  = pStepSize * vC + (1 - pStepSize) * vCNew;
     vK                  = pStepSize * vK + (1 - pStepSize) * vKNew;
 
     % Update other used values
-    vW                  = ((1 - pAlpha) * vA .* vK.^(pAlpha) .* (vC .^(-pSigma) / pEta).^(- pAlpha * pChi)).^(1 / (1 + pAlpha * pChi));
-    vN                  = (vC.^(-pSigma) .* vW / pEta).^(pChi);
-
-    %% 5. Optional reports
-    if (floor((iIterationNum-1)/50) == (iIterationNum-1)/50)
-        fprintf('Convergence: \n');
-        fprintf('Iteration: %.0f \n', iIterationNum);
-        fprintf('Error:     %.8f \n', iError2);
-    else 
-    end
+    vW                  = ones(pRequiredTime,1)*ResultsSS.W;
+    vN                  = ones(pRequiredTime,1)*ResultsSS.N;
 
 % End the outer loops
 end 
-toc;
 
-%% Save the results
-Results.vK              = vK;
 
 end 

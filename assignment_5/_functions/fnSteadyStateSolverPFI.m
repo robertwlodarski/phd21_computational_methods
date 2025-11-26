@@ -19,8 +19,8 @@ vK                  = vGridK;
 vKNextGuess         = vGridK;
 vKNextNew           = zeros(size(vKNextGuess));
 iError              = 10.0;
-pErrorTol           = 1e-5;
-pStepSize           = 0.7;
+pErrorTol           = 1e-4;
+pStepSize           = 0;
 
 %% 3. Define key functions
 
@@ -33,7 +33,7 @@ BCError             = @(N,K,Kp) (1 + Interest(N,K))*K + Wage(N,K)*N - ConsImplie
 BCConsumption       = @(N,K,Kp) (1 + Interest(N,K))*K + Wage(N,K)*N - Kp - Adjustment(K,Kp);
 
 % For Euler
-Psi_1               = @(K,Kp) -pMu * (Kp-K) / (K) - Adjustment(K,Kp) / K;
+Psi_1               = @(K,Kp) -pMu * (Kp-K) / (K) + Adjustment(K,Kp) / K;
 Psi_2               = @(K,Kp) pMu * (Kp - K) / K;
 ValueDerivative     = @(N,K,Kp) BCConsumption(N,K,Kp)^(-pSigma) * (1 + Interest(N,K) - Psi_1(K,Kp));
 EulerError          = @(N,K,Kp,Np,Kpp) BCConsumption(N,K,Kp)^(-pSigma) * (1 + Psi_2(K,Kp)) - pBeta *  ValueDerivative(Np,Kp,Kpp);
