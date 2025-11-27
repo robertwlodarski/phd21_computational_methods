@@ -96,8 +96,40 @@ I adapt the lecture algorithm to the problem.
         N^{\star(n)}_t = \left[ \frac{\left(C_t^{\star (n)}\right)^{-\sigma} w_t^{(n)}} {\eta} \right]^{\chi} 
     \end{equation}
     \end{enumerate}
-    \item (\textbf{\textcolor{BrickRed}{Iterate forward}}) Next
-\end{enumerate}
+    \item (\textbf{\textcolor{BrickRed}{Iterate forward}}) Next, I allow the new decisions to \say{flow} to set the new captial level. 
+    \begin{enumerate}
+        \item Set the investment rate:
+        \begin{equation}
+            I_t^{(n)} \equiv A_t \left(K_t^{(n)} \right)^{\alpha}\left(N_t^{\star (n)} \right)^{1-\alpha} - \Psi \left(K_{t+1}^{(n)},K_t^{(n)} \right)-C_{t}^{\star  (n)}.
+        \end{equation}
+        \item Use it to update the capital level, \texttt{vKnew} in my code:
+        \begin{equation}
+            \boxed{\textcolor{BrickRed}{K^{\star (n)}_t = K_{t-1}^{(n)} (1-\delta) + I_{n-1}^{(n)}.}}
+        \end{equation}
+        \item Recover the consumption level from the budget constraint:
+        \begin{equation}
+            C_{t}^{\star \star (n)} = A_t \left(K_t^{(n)} \right)^{\alpha}\left(N_t^{\star (n)} \right)^{1-\alpha} - \Psi \left(K_{t+1}^{(n)},K_t^{(n)} \right)-I_t^{(n)} .
+        \end{equation}
+    \end{enumerate} 
+    \item Compute the error and set the new guesses for consumption and capital levels.
+    \begin{subequations}
+        \begin{align}
+            & C_t^{(n+1)}= \lambda C_t^{(n)} + (1-\lambda) C_{t}^{\star \star (n)}\\
+            & K_t^{(n+1)}= \lambda K_t^{(n)} + (1-\lambda) K_{t}^{\star  (n)}
+        \end{align}
+    \end{subequations}
+    \item Compute the new wage and labour supply guesses based on the updated guesses:
+    \begin{subequations}
+        \begin{align}
+            & W_t^{(n+1)} = \left\{ (1-\alpha) A_t \left(K_t^{(n+1)}\right)^\alpha
+            \left[ \frac{\left(C_t^{(n+1)}\right)^{-\sigma}}{\eta} \right]^{- \alpha \chi}
+            \right\}^{\frac{1}{1-\alpha}} \\
+            & N_t^{(n+1)}=\left[ \frac{W_t^{(n+1)} \left(C_t^{(n+1)}\right)^{-\sigma}}{\eta} \right]^{\chi}.
+        \end{align}
+    \end{subequations}
+    \item Repeat steps 2-5 until the error term is small enough.
+    \end{enumerate}
+    
 
 
 
