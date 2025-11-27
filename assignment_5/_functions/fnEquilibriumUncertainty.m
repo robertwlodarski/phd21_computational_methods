@@ -17,11 +17,11 @@ mTransitionA        = Grids.mTransitionA;
 
 % Set-up elements
 rng(1997);
-pT                  = 10000;
+pT                  = 20000;
 pBurnIn             = 500;
 pRequiredTime       = pT + pBurnIn;
 iError2             = 10;
-pErrorTol           = 1e-8;
+pErrorTol           = 1e-6;
 vFuture             = [(2:pRequiredTime)'; pRequiredTime];
 pStepSize           = 0.8;
 iIterationNum       = 1;
@@ -47,14 +47,17 @@ end
 % Initial guesses
 vW                  = ones(pRequiredTime,1)*ResultsSS.W;
 vN                  = ones(pRequiredTime,1)*ResultsSS.N;
-vK                  = ones(pRequiredTime,1)*ResultsSS.K + normrnd(0,1e-5,pRequiredTime,1);
+vK                  = max(ones(pRequiredTime,1)*ResultsSS.K + normrnd(0,1e-8,pRequiredTime,1),1e-8);
 vC                  = ones(pRequiredTime,1)*ResultsSS.C;
 
 % Start the outer loop
 tic;
 while iError2 > pErrorTol
 
-    % Update the Kp vector
+    % Update the Kp vector & "sanitise"
+    vK                  = max(real(vK),1e-5);
+    vN                  = max(real(vN),1e-5);
+    vC                  = max(real(vC),1e-5);
     vKp                 = [vK(2:end);vK(1)];
     
     %% 3. Backward solution
@@ -104,7 +107,7 @@ while iError2 > pErrorTol
     iWFuture            = (1 - pAlpha) * vAp .* vKp.^(pAlpha) .* vN(vFuture).^(-pAlpha);
     iNFuture            = (vC(vFuture).^(-pSigma) .* iWFuture / pEta).^(pChi);
     iRFuture            = pAlpha * vAp .* vKp.^(pAlpha-1).*iNFuture.^(1-pAlpha)-pDelta;
-    iPsiFuture          = -pMu * (vKp(vFuture)-vKp) ./ (vKp) + pMu / 2 * ((vKp(vFuture) - vKp)./vKp).^2 .* vKp(vFuture)./vKp;
+    iPsiFuture          = -pMu * (vKp(vFuture)-vKp) ./ (vKp).* vKp(vFuture)./vKp + pMu / 2 * ((vKp(vFuture) - vKp)./vKp).^2;
     iVFuture            = vC(vFuture).^(-pSigma) .* (1 + iRFuture - iPsiFuture);
     iEV1                = iEV1 + pBeta * vRealisedP .* iVFuture;
 
@@ -112,8 +115,6 @@ while iError2 > pErrorTol
     iDenominator        = 1 + pMu * (vKp - vK) ./ vK;
     vCTemp              = (iEV1 ./ iDenominator).^(-1 / pSigma);
     vN                  = (vCTemp.^(-pSigma) .* vW / pEta).^(pChi);
-    vR                  = pAlpha * vA .* vK .^(pAlpha - 1) .* vN .^(1 - pAlpha) - pDelta;
-    vWNew               = (1 - pAlpha) * vA .* vK .^(pAlpha) .* vN .^(- pAlpha);
     vI                  =  vA .* vK .^(pAlpha) .* vN .^(1 - pAlpha) -  pMu / 2 * ((vKp - vK) ./ vK).^2 -vCTemp;
 
     %% 4. Iterate forward
@@ -137,7 +138,7 @@ while iError2 > pErrorTol
     vN                  = (vC.^(-pSigma) .* vW / pEta).^(pChi);
 
     %% 5. Optional reports
-    if (floor((iIterationNum-1)/50) == (iIterationNum-1)/50)
+    if (floor((iIterationNum-1)/25) == (iIterationNum-1)/25)
         fprintf('Convergence: \n');
         fprintf('Iteration: %.0f \n', iIterationNum);
         fprintf('Error:     %.8f \n', iError2);

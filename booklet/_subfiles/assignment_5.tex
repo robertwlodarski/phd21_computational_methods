@@ -1,4 +1,5 @@
 
+\colorbox{BrickRed!25}{\textbf{\textit{\underline{Part 1: Re-writing the problem.}}}} 
 Consider the problem without plugging all the functions. 
 To solve the policy function iteration, we effectively need to \say{get rid off} the value function.
 \begin{equation}
@@ -35,8 +36,68 @@ The unpleasant terms from the \say{curly} bracket can be obtained from the budge
     \end{align}
 \end{subequations}
 This implies that:
-\begin{equation}
+\begin{equation} \label{eq:a5_value_derivative}
     \boxed{V_{k } \left(k \right)= u_c (c) \left[1 + r -  \Psi_k\left(k,k^\prime \right) \right],}
 \end{equation}
-which is the key element of the policy function iteration. 
+which is the key element of the policy function iteration.\\
+
+\colorbox{BrickRed!25}{\textbf{\textit{\underline{Part 2: Global nonlinear solution method in the sequence space \citep{lee_global_2025}.}}}} 
+I adapt the lecture algorithm to the problem. 
+
+\begin{enumerate}
+    \item I simulate $\boldsymbol{A}\equiv\left(A_t \right)_{t=1}^T$ and guess $\boldsymbol{\Theta}^0\equiv \left(K^0_t,N^0_t,C^0_t,W^0_t \right)_{t=1}^T$, with $T=10,000$.
+    \item (\textbf{\textcolor{BrickRed}{Backward solution}}) For each  $K_t^{(n)}$ pick up all the potential future TFPs, $\tilde{A}_{t+1}$ (apart from the realised $A_{t+1}$). 
+    For each of them, find the \say{neighbour} candidates, called \texttt{vKlow} and \texttt{vKHigh} in the code.
+    For simplicity, denote the higher neighbour candidate as $\overline{K}_t^{(n)}$ and the lower neighbour candidate as $\underline{K}_t^{(n)}$.
+    \begin{enumerate}
+        \item Calculate standard weights for the candidates. 
+        \item Compute the associated wage, labour participation, interest rate, and first derivative of the adjustment cost.
+        For the \textcolor{BrickRed}{\say{lower} neighbour}, they are:
+        \begin{subequations}
+            \begin{align}
+                & \textcolor{BrickRed}{\underline{w}_t^{(n)}}= \tilde{A}_t (1-\alpha)  \left(\textcolor{BrickRed}{\underline{K}_t^{(n)}}\right)^{\alpha} \left(N_t^{(n)}\right)^{-\alpha} \\
+                & \textcolor{BrickRed}{\underline{N}_t^{(n)}}= \left[ \frac{\left(C_t^{(n)}\right)^{-\sigma} \textcolor{BrickRed}{\underline{w}_t^{(n)}} }{\eta} \right]^{\chi} \\
+                & \textcolor{BrickRed}{\underline{r}_t^{(n)}}= \tilde{A}_t \alpha  \left(\textcolor{BrickRed}{\underline{K}_t^{(n)}}\right)^{\alpha-1}  \left(\textcolor{BrickRed}{\underline{N}_t^{(n)}}\right)^{1-\alpha} - \delta \\
+                & \textcolor{BrickRed}{\underline{\Psi}_{k,t}^{(n)}} = - \mu \left( \frac{\textcolor{BrickRed}{\underline{K}_{t+1}^{(n)}}-\textcolor{BrickRed}{\underline{K}_{t}^{(n)}}}{\textcolor{BrickRed}{\underline{K}_{t}^{(n)}}}\right) \frac{\textcolor{BrickRed}{\underline{K}_{t+1}^{(n)}}}{\textcolor{BrickRed}{\underline{K}_{t}^{(n)}}} 
+                + \frac{\mu}{2} \left( \frac{\textcolor{BrickRed}{\underline{K}_{t+1}^{(n)}}-\textcolor{BrickRed}{\underline{K}_{t}^{(n)}}}{\textcolor{BrickRed}{\underline{K}_{t}^{(n)}}}\right)^2
+            \end{align}
+            Then, they are plugged to Equation \eqref{eq:a5_value_derivative} to find:
+            \begin{align}
+                & \textcolor{BrickRed}{\underline{V}^{(n)}_{k,t}} = \left(C_{t}^{(n)}\right)^{-\sigma}
+                \left[ 1+\textcolor{BrickRed}{\underline{r}_t^{(n)}} - \textcolor{BrickRed}{\underline{\Psi}_{k,t}^{(n)}}\right]
+            \end{align} 
+        \end{subequations}
+        \item Compute the interpolated derivative:
+        \begin{equation}
+            \mathcal{V}^{(n)}_{k,t}= \omega \textcolor{BrickRed}{\underline{V}^{(n)}_{k,t}} + (1-\omega) \textcolor{BrickRed}{\overline{V}^{(n)}_{k,t}}.
+        \end{equation} 
+    \item Re-do the same computations, without the interpolation element, for the \say{true} realised shock, $A_{t+1}$.
+    Combined together, I have:
+    \begin{equation}
+        \left[\begin{array}{l|l}
+            \mathcal{V}^{n}_{k,t} \left(A_{1} \right) & \text{Counterfactual} \\
+            \mathcal{V}^{n}_{k,t} \left(A_{2} \right) & \text{Counterfactual} \\
+            \cdots                                    & \cdots \\
+            V^{n}_{k,t} \left(A_{m} \right) & \text{Realised} \\
+             \cdots                                    & \cdots \\
+            \mathcal{V}^{n}_{k,t} \left(A_{N_a} \right) & \text{Counterfactual} \\
+        \end{array}\right].
+    \end{equation} 
+    \item These allow me to compute the expected value of the first derivative of the value function:
+    \begin{equation}
+        \E_t \left[ V^{n}_{k,t+1} \left(K_{t+1}^{(n)} \right) \right]=  \pi_{\text{Realised}}V^{n}_{k,t} \left(K_{t+1}^{(n)} \right)+ \left(1- \pi_{\text{Realised}} \right)\E_t \left[ \mathcal{V}^{n}_{k,t+1} \left(K_{t+1}^{(n)} \right) \mid \text{Counterfactual} \right].
+    \end{equation}
+    \item This, in turn, allows me to use the envelope condition to recover the optimal consumption level:
+    \begin{equation}
+       \boxed{\textcolor{BrickRed}{ C_{t}^{\star  (n)}= \left( \frac{1 + \mu \frac{K_{t+1}^{(n)}-K_{t}^{(n)}}{K_{t}^{(n)}}}{\beta \E_t \left[ V^{n}_{k,t+1} \left(K_{t+1}^{(n)} \right) \right]} \right)^{-\frac{1}{\sigma}}}}
+    \end{equation} 
+    \item Update the labour allocation:
+    \begin{equation}
+        N^{\star(n)}_t = \left[ \frac{\left(C_t^{\star (n)}\right)^{-\sigma} w_t^{(n)}} {\eta} \right]^{\chi} 
+    \end{equation}
+    \end{enumerate}
+    \item (\textbf{\textcolor{BrickRed}{Iterate forward}}) Next
+\end{enumerate}
+
+
 
