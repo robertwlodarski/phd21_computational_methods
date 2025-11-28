@@ -17,22 +17,21 @@ mTransitionA        = Grids.mTransitionA;
 
 % Set-up elements
 rng(1997);
-pT                  = 000;
+pT                  = 5000;
 pBurnIn             = 500;
 pRequiredTime       = pT + pBurnIn;
 iError2             = 10;
-pErrorTol           = 1e-6;
+pErrorTol           = 1e-8;
 vFuture             = [(2:pRequiredTime)'; pRequiredTime];
-pStepSize           = 0.98;
+pStepSize           = 0.95;
 iIterationNum       = 1;
 
 % Set up productivity shocks
-vMarginalTransition = (mTransitionA')^100 * ones(size(mTransitionA,1),1) / sum(ones(size(mTransitionA,1),1));
-vCMT                = cumsum(vMarginalTransition);
 vAShock             = rand(pRequiredTime,1);
 vAIndex             = zeros(pRequiredTime,1);
-for ttt = 1:1:pRequiredTime
-    vAIndex(ttt)    = sum(vAShock(ttt) >= vCMT)+1;
+vAIndex(1)          = 4;
+for ttt = 2:1:pRequiredTime
+    vAIndex(ttt)    = sum(vAShock(ttt) >= cumsum(squeeze(mTransitionA(vAIndex(ttt-1),:))))+1;
 end 
 vApIndex            = [vAIndex(2:end);vAIndex(1)];
 vA                  = vGridA(vAIndex);
@@ -73,36 +72,38 @@ while iError2 > pErrorTol
         iCandidateLoc(iCandidateLoc>pT)         = [];
         iCandidate                              = vK(iCandidateLoc);
         [iCandidate, iIndex]                    = sort(iCandidate);
-        iCandidateLoc                           = iCandidateLoc(iIndex);
+        iCandidateLoc                           = iCandidateLoc(iIndex);        
         
         % C. Extrapolation setting
-        iKLow                                   = sum(repmat(iCandidate',length(vKp),1)< vKp,2);
+        %iKLow                                   = sum(repmat(iCandidate',length(vKp),1)< vKp,2);
+        iEdges                                  = [-Inf; iCandidate; Inf];
+        iBinIndices                             = discretize(vKp, iEdges);
+        iKLow                                   = iBinIndices -1;
         iKLow(iKLow < 1)                        = 1;
         iKLow(iKLow >= length(iIndex))          = length(iIndex)-1;
         iKHigh                                  = iKLow + 1;
-        iWeightLow                              = (iCandidate(iKHigh) - vKp) ./ (iCandidate(iKHigh) - iCandidate(iKLow));
+        iIndLow                                 = iCandidateLoc(iKLow);
+        iIndHigh                                = iCandidateLoc(iKHigh);
+        iWeightLow                              = (vK(iIndLow) - vKp) ./ (vK(iIndHigh) - vK(iIndLow));
         iWeightLow(iWeightLow < 0)              = 0;
         iWeightLow(iWeightLow > 1)              = 1;
 
         % D. Extrapolation for wages, N, and adjustment cost derivative
-        iWLow                                   = (1 - pAlpha) * Ap * vK(iKLow).^(pAlpha) .* vN(iKLow).^(-pAlpha);
-        iWHigh                                  = (1 - pAlpha) * Ap * vK(iKHigh).^(pAlpha) .* vN(iKHigh).^(-pAlpha);
-        iNLow                                   = (vC(iKLow).^(-pSigma) .* iWLow / pEta).^(pChi);
-        iNHigh                                  = (vC(iKHigh).^(-pSigma) .* iWHigh / pEta).^(pChi);
-        iRLow                                   = pAlpha * Ap * vK(iKLow).^(pAlpha-1).*iNLow.^(1-pAlpha)-pDelta;
-        iRHigh                                  = pAlpha * Ap * vK(iKHigh).^(pAlpha-1).*iNHigh.^(1-pAlpha)-pDelta;
-        iPsi1Low                                = -pMu * (vKp(iKLow)-vK(iKLow)) ./ (vK(iKLow)) .* vKp(iKLow)./vK(iKLow)+ pMu / 2 * ((vKp(iKLow) - vK(iKLow))./vK(iKLow)).^2;
-        iPsi1High                               = -pMu * (vKp(iKHigh)-vK(iKHigh)) ./ (vK(iKHigh)) .* vKp(iKHigh)./vK(iKHigh) + pMu / 2 * ((vKp(iKHigh) - vK(iKHigh))./vK(iKHigh)).^2;
+        iNLow                                   = (((1-pAlpha) * Ap .* vK(iIndLow).^(pAlpha) .* vC(iIndLow).^(-pSigma)) / pEta).^(pChi / (1+ pAlpha* pChi));
+        iNHigh                                  = (((1-pAlpha) * Ap .* vK(iIndHigh).^(pAlpha) .* vC(iIndHigh).^(-pSigma)) / pEta).^(pChi / (1+ pAlpha* pChi));
+        iRLow                                   = pAlpha * Ap * vK(iIndLow).^(pAlpha-1).*iNLow.^(1-pAlpha)-pDelta;
+        iRHigh                                  = pAlpha * Ap * vK(iIndHigh).^(pAlpha-1).*iNHigh.^(1-pAlpha)-pDelta;
+        iPsi1Low                                = -pMu * (vKp(iIndLow)-vK(iIndLow)) ./ (vK(iIndLow)) .* vKp(iIndLow)./vK(iIndLow)+ pMu / 2 * ((vKp(iIndLow) - vK(iIndLow))./vK(iIndLow)).^2;
+        iPsi1High                               = -pMu * (vKp(iIndHigh)-vK(iIndHigh)) ./ (vK(iIndHigh)) .* vKp(iIndHigh)./vK(iIndHigh) + pMu / 2 * ((vKp(iIndHigh) - vK(iIndHigh))./vK(iIndHigh)).^2;
 
         % E. Expected derivative of value
-        iV1Low                                  = vC(iKLow).^(-pSigma) .* (1 + iRLow - iPsi1Low);
-        iV1High                                 = vC(iKHigh).^(-pSigma) .* (1 + iRHigh - iPsi1High);
+        iV1Low                                  = vC(iIndLow).^(-pSigma) .* (1 + iRLow - iPsi1Low);
+        iV1High                                 = vC(iIndHigh).^(-pSigma) .* (1 + iRHigh - iPsi1High);
         iEV1                                    = iEV1 + pBeta * (vAp ~= Ap) .* mTransitionA(vAIndex,iApIndex) .* (iWeightLow .* iV1Low + (1-iWeightLow) .* iV1High);
     end
 
     % F. Add the realised path
-    iWFuture            = (1 - pAlpha) * vAp .* vKp.^(pAlpha) .* vN(vFuture).^(-pAlpha);
-    iNFuture            = (vC(vFuture).^(-pSigma) .* iWFuture / pEta).^(pChi);
+    iNFuture            = (((1-pAlpha) * vAp .* vKp.^(pAlpha) .* vC(vFuture).^(-pSigma)) / pEta).^(pChi / (1+ pAlpha* pChi));
     iRFuture            = pAlpha * vAp .* vKp.^(pAlpha-1).*iNFuture.^(1-pAlpha)-pDelta;
     iPsiFuture          = -pMu * (vKp(vFuture)-vKp) ./ (vKp).* vKp(vFuture)./vKp + pMu / 2 * ((vKp(vFuture) - vKp)./vKp).^2;
     iVFuture            = vC(vFuture).^(-pSigma) .* (1 + iRFuture - iPsiFuture);
@@ -110,8 +111,8 @@ while iError2 > pErrorTol
 
     % G. Update the allocations
     iDenominator        = 1 + pMu * (vKp - vK) ./ vK;
-    vCTemp              = (iEV1 ./ iDenominator).^(-1 / pSigma);
-    vN                  = (vCTemp.^(-pSigma) .* vW / pEta).^(pChi);
+    vCTemp              = (iEV1 ./ max(iDenominator,1e-5)).^(-1 / pSigma);
+    vN                  = (((1-pAlpha) * vA .* vK.^(pAlpha) .* vCTemp.^(-pSigma)) / pEta).^(pChi / (1+ pAlpha* pChi));
     vI                  =  vA .* vK .^(pAlpha) .* vN .^(1 - pAlpha) -  pMu / 2 * ((vKp - vK) ./ vK).^2 -vCTemp;
 
     %% 4. Iterate forward
@@ -124,24 +125,50 @@ while iError2 > pErrorTol
 
     % Compute errror
     iError2             = mean([vC-vCNew;vK-vKNew].^2,"all");
+    iErrorK             = mean((vK-vKNew).^2,"all");
+    iErrorC             = mean((vC-vCNew).^2,"all");
     iIterationNum       = iIterationNum + 1;
 
     % Update guesses
     vC                  = pStepSize * vC + (1 - pStepSize) * vCNew;
     vK                  = pStepSize * vK + (1 - pStepSize) * vKNew;
 
-    % Update other used values
-    vW                  = ((1 - pAlpha) * vA .* vK.^(pAlpha) .* (vC .^(-pSigma) / pEta).^(- pAlpha * pChi)).^(1 / (1 + pAlpha * pChi));
-    vN                  = (vC.^(-pSigma) .* vW / pEta).^(pChi);
-
     %% 5. Optional reports
-    if (floor((iIterationNum-1)/25) == (iIterationNum-1)/25)
+    % Print out
+    if (floor((iIterationNum-1)/50) == (iIterationNum-1)/50)
+        fprintf('====================================== \n');
+        fprintf('====================================== \n');
         fprintf('Convergence: \n');
-        fprintf('Iteration: %.0f \n', iIterationNum);
-        fprintf('Error:     %.8f \n', iError2);
-    else 
+        fprintf('Iteration:         %.0f \n', iIterationNum);
+        fprintf('Error:             %.8f \n', iError2);
+        fprintf('Capital error:     %.8f \n', iErrorK);
+        fprintf('Consumption error: %.8f \n', iErrorC);
+        fprintf('------------------------------------- \n');
+        fprintf('Mean consumption:  %.2f \n', mean(vC));
+        fprintf('Mean capital:      %.2f \n', mean(vK));
+        fprintf('Mean wage:         %.2f \n', mean(vW));
+        fprintf('Mean employment:   %.2f \n', mean(vN));
+    else
     end
 
+    % Print out plots (more rarely than 
+    if (floor((iIterationNum-1)/200) == (iIterationNum-1)/200)
+        subplot(1,2,1);
+        plot(pBurnIn:pRequiredTime-pBurnIn,vK(pBurnIn:pRequiredTime-pBurnIn),'LineWidth',2,'Color','r');hold on;
+        plot(pBurnIn:pRequiredTime-pBurnIn,vKNew(pBurnIn:pRequiredTime-pBurnIn),'LineStyle','-.','LineWidth',2,'Color','b');
+        xlim([pBurnIn,pRequiredTime-pBurnIn]);
+        hold off;
+        legend("Predicted K","Realised K","location","northeast");
+
+        subplot(1,2,2);
+        plot(pBurnIn:pRequiredTime-pBurnIn,vC(pBurnIn:pRequiredTime-pBurnIn),'LineWidth',2,'Color','r');hold on;
+        plot(pBurnIn:pRequiredTime-pBurnIn,vCNew(pBurnIn:pRequiredTime-pBurnIn),'LineStyle','-.','LineWidth',2,'Color','b');
+        xlim([pBurnIn,pRequiredTime-pBurnIn]);
+        hold off;
+        legend("Predicted C","Realised C","location","northeast");
+
+    else
+    end
 % End the outer loops
 end 
 toc;
@@ -150,3 +177,17 @@ toc;
 Results.vK              = vK;
 
 end 
+
+
+%% ARCHIVE 
+% vW                  = ((1 - pAlpha) * vA .* vK.^(pAlpha) .* (vCTemp .^(-pSigma) / pEta).^(- pAlpha * pChi)).^(1 / (1 + pAlpha * pChi));
+% vN                  = (vCTemp.^(-pSigma) .* vW / pEta).^(pChi);
+% Update other used values
+% There was vW here.
+% vN                  = (vC.^(-pSigma) .* vW / pEta).^(pChi);
+% iWFuture            = (1 - pAlpha) * vAp .* vKp.^(pAlpha) .* vN(vFuture).^(-pAlpha);
+% iNFuture            = (vC(vFuture).^(-pSigma) .* iWFuture / pEta).^(pChi);
+% iWLow                                   = (1 - pAlpha) * Ap * vK(iKLow).^(pAlpha) .* vN(iKLow).^(-pAlpha);
+% iWHigh                                  = (1 - pAlpha) * Ap * vK(iKHigh).^(pAlpha) .* vN(iKHigh).^(-pAlpha);
+% iNLow                                   = (vC(iKLow).^(-pSigma) .* iWLow / pEta).^(pChi);
+% iNHigh                                  = (vC(iKHigh).^(-pSigma) .* iWHigh / pEta).^(pChi);
