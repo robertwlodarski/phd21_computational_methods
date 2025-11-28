@@ -1,0 +1,21 @@
+% Regression analysis 
+
+% Prepare data & run regresison 
+vLogK           = log(Results.vK);
+vLogA           = log(Results.vA);
+X               = [ones(length(vLogA),1) vLogA];
+
+% Perform linear regression
+b               = X \ vLogK;  
+vLogKFitted     = X*b;
+
+% Plot the figure
+figure;
+scatter(vLogA, vLogK,'filled',); 
+hold on; 
+grid on;
+plot(vLogA, vLogKFitted, 'r-', 'LineWidth', 2);
+xlabel('log(A)');
+ylabel('log(K)');
+legend('Data', 'Fitted line');
+hold off;
