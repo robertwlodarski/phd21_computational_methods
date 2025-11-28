@@ -7,6 +7,7 @@ The repository contains a few folders.
 - `assignment_n_julia`: In each of such folders, I store the `Julia` version of the code. 
 - `booklet`: This folder contains the written responses to each assignment.
 
+**Note**: The booklet is quite chaotic and very unfinished - I will fully update it one day. 
 
 # Requirements
 Don't expect rocket science here. 
@@ -16,10 +17,10 @@ Don't expect rocket science here.
 
 # Problem sets
 
-**Note**: I've found a few errors in assignments 2 and 5, and I am updating the scripts to correct those. 
-
 1. RBC GE with labour participation.
 2. A simple life-cycle PE model.
 3. Aiyagari (QJE, 1994): Standard GE solution
 4. Aiyagari (QJE, 1994): Transitional dynamics
-5. RA model w/ aggregate uncertainty.
+5. RA model w/ aggregate uncertainty and Frisch labour supply.
+
+**Note**: I've found a few errors in assignment 2, and I am updating the scripts to correct those. 
