@@ -16,10 +16,11 @@ Don't expect rocket science here.
 
 # Problem sets
 
-**Note**: I've found a few errors in assignments 2 and 5, and I am updating the scripts to correct those. 
+**Note**: I've found a few errors in assignment 2, and I am updating the scripts to correct those. 
 
 1. RBC GE with labour participation.
 2. A simple life-cycle PE model.
 3. Aiyagari (QJE, 1994): Standard GE solution
 4. Aiyagari (QJE, 1994): Transitional dynamics
-5. RA model w/ aggregate uncertainty.
+5. RBC with Frisch labour supply and convex capital adjustment cost
+6. RBC with Frisch labour supply and an occasionally binding constraint
