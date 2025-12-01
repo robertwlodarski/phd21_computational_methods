@@ -21,3 +21,7 @@ ResultsSS               = fnSolveSSEquilibrium(Parameters);
 
 %% 3. Uncertainty equilibrium
 Results                 = fnEquilibriumUncertainty(Parameters, Grids,ResultsSS);
+
+% Run version w/ no constraint
+Parameters.pPsi         = 0;
+ResultsNC               = fnEquilibriumUncertainty(Parameters, Grids,ResultsSS);
