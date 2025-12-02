@@ -11,3 +11,6 @@ addpath _scripts/
 
 %% 1. Prepare parameters
 LoadParameters;
+
+%% 2. Solve the model
+Result0             = fnSolveSSIteration(Parameters,Grids);
