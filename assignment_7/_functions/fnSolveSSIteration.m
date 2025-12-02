@@ -21,11 +21,11 @@ mTransitionZ            = Grids.mTransitionZ;
 
 %% 2. Set-up
 % Iterations business: Convergence, acceleration, and GE
-iWeightOld              = 0.9;
+iWeightOld              = 0.8;
 iErrorGE                = 10;
-iTolGE                  = 1e-8;
-iTolVFI                 = 1e-8;
-iTolDist                = 1e-8;
+iTolGE                  = 1e-5;
+iTolVFI                 = 1e-5;
+iTolDist                = 1e-5;
 iAccelerationInterv     = 20;
 iAccelerationStart      = 30;
 iIterNumGE              = 1;
@@ -52,9 +52,9 @@ end
 %% 4. GE & VFI loops
 
 % Initial K guess
-iK                      = 7.1495;
-iL                      = 0.33*vGridZ'*vZDist;
-iN                      = 0.33;
+iK                      = 26.6 / sqrt(pEta);
+iL                      = 0.94 / sqrt(pEta) *vGridZ'*vZDist;
+iN                      = 0.94 / sqrt(pEta);
 % Caution: iN = hours, iL = effective hours
 
 % START GE LOOP
@@ -197,10 +197,21 @@ while iErrorGE>iTolGE
     
     % Print cute messages 
     if (pVerbose == true && floor((iIterNumGE-1) / 50) == ((iIterNumGE-1) / 50) || iErrorGE < iTolGE)
+        fprintf('======================================== \n')
+        fprintf('             Iteration %.0f              \n',iIterNumGE);
+        fprintf('======================================== \n')
         fprintf('SUMMARY \n')
         fprintf('Maximum error:     %.3f \n', iErrorGE);
         fprintf('Iterest rate:      %.3f \n', iInterest);
         fprintf('Wage:              %.3f \n', iWage);
+        fprintf('IMPLIED VALUES \n')
+        fprintf('K:                 %.3f \n', iEndoK);
+        fprintf('L:                 %.3f \n', iEndoL);
+        fprintf('N:                 %.3f \n', iEndoN);
+        fprintf('NEW VALUES \n')
+        fprintf('K:                 %.3f \n', iK);
+        fprintf('L:                 %.3f \n', iL);
+        fprintf('N:                 %.3f \n', iN);
         toc;
     else 
     end

@@ -7,7 +7,7 @@ function [a_next, c, n]       = fnFastOptimisation(Wealth,Wage, Interest, LabSho
     pChi                = Parameters.pChi;
 
     % Maximisation function
-    Options             = optimset('Display','off','TolFun',1e-12,'TolX',1e-12,'MaxIter',20000,'MaxFunEvals',20000);
+    Options             = optimset('Display','off','TolFun',1e-5,'TolX',1e-5,'MaxIter',20000,'MaxFunEvals',20000);
     [a_next]            = fminbnd(@fnResidualCalc,Minimum,vGridA1(end),Options);
     A                   = (1 + Interest) * Wealth - a_next - pMu / 2 * (a_next^2 / Wealth - 2*a_next + Wealth);
     B                   = (Wage * LabShock)^2 / pEta;
