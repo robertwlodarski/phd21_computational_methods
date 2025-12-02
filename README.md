@@ -7,6 +7,14 @@ The repository contains a few folders.
 - `assignment_n_julia`: In each of such folders, I store the `Julia` version of the code. 
 - `booklet`: This folder contains the written responses to each assignment.
 
+The following diagram summarises organisation of each `assignment_n`.
+ 
+ ```text
+ assignment_n               # Assignment folder
+ ├── _functions             # Functions of parameters
+ ├── _scripts               # Standard scripts, to be re-used through the assignment
+ ├── _figures               # Assignment plots
+ ```
 
 # Requirements
 Don't expect rocket science here. 
