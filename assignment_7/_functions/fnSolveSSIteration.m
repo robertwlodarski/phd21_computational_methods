@@ -21,7 +21,7 @@ mTransitionZ            = Grids.mTransitionZ;
 
 %% 2. Set-up
 % Iterations business: Convergence, acceleration, and GE
-iWeightOld              = 0.8;
+iWeightOld              = 0.95;
 iErrorGE                = 10;
 iTolGE                  = 1e-5;
 iTolVFI                 = 1e-5;

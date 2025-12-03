@@ -1,4 +1,4 @@
-function [Results]       = fnSolveSSIteration(Parameters,Grids)
+function [Results]       = fnSolveSSIterationVectorised(Parameters,Grids)
 tic; 
 
 %% 1. Unpacking
@@ -9,6 +9,7 @@ pA                      = Parameters.pA;
 pBeta                   = Parameters.pBeta;
 pMu                     = Parameters.pMu;
 pChi                    = Parameters.pChi;
+pEta                    = Parameters.pEta;
 pVerbose                = true;
 
 % Grids
@@ -20,14 +21,21 @@ mTransitionZ            = Grids.mTransitionZ;
 
 %% 2. Set-up
 % Iterations business: Convergence, acceleration, and GE
-iWeightOld              = 0.9;
+iWeightOld              = 0.95;
 iErrorGE                = 10;
-iTolGE                  = 1e-8;
-iTolVFI                 = 1e-8;
-iTolDist                = 1e-8;
+iTolGE                  = 1e-5;
+iTolVFI                 = 1e-5;
+iTolDist                = 1e-5;
 iAccelerationInterv     = 20;
 iAccelerationStart      = 30;
 iIterNumGE              = 1;
+iWeightVFI              = 0;
+
+% Golden ratio settings
+pTolGR                  = 1e-6;
+pCGR1                   = (sqrt(5)-1)/2;
+pCGR2                   = (3-sqrt(5))/2;
+pIterNumTolGR           = 25;
 
 % Matrices: Value function, policy functions
 mValue                  = repmat(0.1*vGridA1,1,size(vGridZ,1));
@@ -47,19 +55,20 @@ while iErrorZDist>iTolZDist
     iErrorZDist         = abs(vZDistNext-vZDist);
     vZDist              = vZDistNext; 
 end
-vLabSupply              = vGridZ'*vZDist;
 
 %% 4. GE & VFI loops
 
 % Initial K guess
-iK                      = 7.1495;
-iN                      = vLabSupply
+iK                      = 26.6 / sqrt(pEta);
+iL                      = 0.94 / sqrt(pEta) *vGridZ'*vZDist;
+iN                      = 0.94 / sqrt(pEta);
+% Caution: iN = hours, iL = effective hours
 
 % START GE LOOP
 while iErrorGE>iTolGE
     % Derive K-related items
-    iInterest           = pAlpha * pA * (iK / vLabSupply)^(pAlpha - 1) - pDelta;
-    iWage               = (1 - pAlpha) * pA * (iK / vLabSupply)^(pAlpha);
+    iInterest           = pAlpha * pA * (iK / iL)^(pAlpha - 1) - pDelta;
+    iWage               = (1 - pAlpha) * pA * (iK / iL)^(pAlpha);
     % Prepare for starting VFI loop
     iErrorVFI           = 10;
     iNumIterVFI         = 1;
@@ -77,59 +86,60 @@ while iErrorGE>iTolGE
             iExpValueZ                  = mExpectedValue(:,zzz);
             iMinWealth                  = vGridA1(1);
 
-            for aaa = 1:1:size(vGridA1,1) 
 
-            % NON-ACCELERATED VERSION
-            if (floor((iNumIterVFI-1) / iAccelerationInterv) == ((iNumIterVFI-1) / iAccelerationInterv) || iNumIterVFI <= iAccelerationStart)
-            % Current values
-            iWealth                     = vGridA1(aaa);
-            %iBudget                     = iWage * iLabourProd + (1+iInterest) * iWealth;
+            %% A1. Golden ratio algorithm
+            % Initial points
+            vApLB                   = repmat(vGridA1(1),size(vGridA1,1),1);
+            vApUBSafe               = max(vGridA1 *3,vGridA1+5); %PROBLEM: MASSIVE NEGATIVE VALUES 
+            vApUB                   = min(repmat(vGridA1(end),size(vGridA1,1),1),vApUBSafe);
+            % Initial step
+            vApDiff                 = vApUB-vApLB;
+            vApMid1                 = vApLB+pCGR1*vApDiff;
+            vApMid2                 = vApLB+pCGR2*vApDiff;
 
-            % Optimisation station
-            [ap,c,n]                    = fnFastOptimisation(iWealth,iWage,iInterest,iLabourProd,iMinWealth,iExpValueZ,Parameters,Grids);
-            iWealthNext                 = ap;
-            iWealthNext(iWealthNext<vGridA1(1)) ...
-                                        =vGridA1(1);
-            iConsumption                = c;
-            iLabour                     = n;
+            % Simplify the function
+            fnObjective             = @(vAp,vA) fnVectorisedValues(vAp,vA,iLabourProd,iWage,iInterest,Parameters,Grids,iExpValueZ);
+            vVMid1                  = fnObjective(vApMid1,vGridA1);
+            vVMid2                  = fnObjective(vApMid2,vGridA1);
 
-            % Interpolate value function
-            iWLow                       = min(max(sum(vGridA1<iWealthNext),1),size(vGridA1,1)-1);
-            iWHigh                      = iWLow+1;
-            iWeightLow                  = (vGridA1(iWHigh)-iWealthNext) / (vGridA1(iWHigh)-vGridA1(iWLow));
-            iExpValue                   = iWeightLow*iExpValueZ(iWLow)+(1-iWeightLow)*iExpValueZ(iWHigh);
-            iValue                      = log(iConsumption)- pEta * iLabour^(1+1/pChi)/(1+1/pChi)+pBeta*iExpValue;
+            % Run the golden ratio algorithm
+            for iii = 1:1:25
+                % Identify better region
+                iIndexRegion            = (vVMid2 >= vVMid1);
+                vApLB(iIndexRegion)     = vApMid1(iIndexRegion);
+                vApUB(~iIndexRegion)    = vApMid2(~iIndexRegion);
+
+                % Update points [if vVMid1 >= vVmid2]
+                vApDiff(iIndexRegion)   = vApUB(iIndexRegion)-vApLB(iIndexRegion);
+                vApMid1(iIndexRegion)   = vApMid2(iIndexRegion);
+                vApMid2(iIndexRegion)   = vApLB(iIndexRegion)+pCGR2*vApDiff(iIndexRegion);
+                vVMid1(iIndexRegion)    = vVMid2(iIndexRegion);
+                vVMid2(iIndexRegion)    = fnObjective(vApMid2(iIndexRegion),vGridA1(iIndexRegion));
+
+                % Update points [if vVMid1 < vVmid2]
+                vApDiff(~iIndexRegion)  = vApUB(~iIndexRegion)-vApLB(~iIndexRegion);
+                vApMid2(~iIndexRegion)  = vApMid1(~iIndexRegion);
+                vApMid1(~iIndexRegion)  = vApLB(~iIndexRegion)+pCGR1*vApDiff(~iIndexRegion);
+                vVMid2(~iIndexRegion)   = vVMid1(~iIndexRegion);
+                vVMid1(~iIndexRegion)   = fnObjective(vApMid1(~iIndexRegion),vGridA1(~iIndexRegion));
+            end
+
+            % Save results
+            vAp                         = (vApLB + vApUB) / 2;
+            [vV,vC,vN]                  = fnObjective(vAp,vGridA1);
 
             % Updating
-            mValueNew(aaa,zzz)          = iValue;
-            mPolicyCons(aaa,zzz)        = iConsumption;
-            mPolicyWealthNext(aaa,zzz)  = iWealthNext;
-            mPolicyLabour(aaa,zzz)      = iLabour;
+            mValueNew(:,zzz)            = vV;
+            mPolicyCons(:,zzz)          = vC;
+            mPolicyWealthNext(:,zzz)    = vAp;
+            mPolicyLabour(:,zzz)        = vN;
 
-            % ACCELERATED VERSION
-            else
-            % Update based on the existing value
-            iConsumption                = mPolicyCons(aaa,zzz);
-            iWealthNext                 = mPolicyWealthNext(aaa,zzz);
-            iLabour                     = mPolicyLabour(aaa,zzz);
-            
-            % Interpolate the value function
-            iWLow                       = min(max(sum(vGridA1<iWealthNext),1),size(vGridA1,1)-1);
-            iWHigh                      = iWLow+1;
-            iWeightLow                  = (vGridA1(iWHigh)-iWealthNext) / (vGridA1(iWHigh)-vGridA1(iWLow));
-            iExpValue                   = iWeightLow*iExpValueZ(iWLow)+(1-iWeightLow)*iExpValueZ(iWHigh);
-            iValue                      = log(iConsumption)- pEta * iLabour^(1+1/pChi)/(1+1/pChi)+pBeta*iExpValue;
-
-            % Update wealth
-            mValueNew(aaa,zzz)          = iValue;
-            end 
-            end
         end
         % Update VFI loop items
         iNumIterVFI                 = iNumIterVFI + 1;
         iErrorVFI                   = max(abs(mValue-mValueNew),[],"all");
-        mValue                      = mValueNew;  
-        % END VFI LOOP
+        mValue                      = iWeightVFI*mValue + (1-iWeightVFI)*mValueNew;
+        fprintf("Error:  %.10f\n",iErrorVFI);
     end
     %% 4.2. Wealth policy: More granular grid
     mPolicyWealthNext2              = zeros(size(iCurrentDistribution));
@@ -182,19 +192,34 @@ while iErrorGE>iTolGE
     end
 
     % Update other elements
-    iEndoN              = sum(iCurrentDistribution.*mPolicyLabour,"all");
+    mPolicyLabour2      = interp1(vGridA1, mPolicyLabour, vGridA2, 'linear', 'extrap');
+    iEndoL              = vGridZ' * sum(iCurrentDistribution.*mPolicyLabour2,1)';
+    iEndoN              = sum(iCurrentDistribution.*mPolicyLabour2,"all");
     iMarginalDist       = sum(iCurrentDistribution,2);
     iEndoK              = vGridA2' * iMarginalDist;
-    iErrorGE            = abs(iEndoK - iK);
+    iErrorGE            = max(abs(iEndoK - iK),abs(iEndoL - iL));
     iK                  = iK .* iWeightOld + iEndoK .* (1-iWeightOld);
-    iN
-
+    iN                  = iN .* iWeightOld + iEndoN .* (1-iWeightOld);
+    iL                  = iL .* iWeightOld + iEndoL .* (1-iWeightOld);
+    
+    
     % Print cute messages 
     if (pVerbose == true && floor((iIterNumGE-1) / 50) == ((iIterNumGE-1) / 50) || iErrorGE < iTolGE)
+        fprintf('======================================== \n')
+        fprintf('             Iteration %.0f              \n',iIterNumGE);
+        fprintf('======================================== \n')
         fprintf('SUMMARY \n')
         fprintf('Maximum error:     %.3f \n', iErrorGE);
         fprintf('Iterest rate:      %.3f \n', iInterest);
         fprintf('Wage:              %.3f \n', iWage);
+        fprintf('IMPLIED VALUES \n')
+        fprintf('K:                 %.3f \n', iEndoK);
+        fprintf('L:                 %.3f \n', iEndoL);
+        fprintf('N:                 %.3f \n', iEndoN);
+        fprintf('NEW VALUES \n')
+        fprintf('K:                 %.3f \n', iK);
+        fprintf('L:                 %.3f \n', iL);
+        fprintf('N:                 %.3f \n', iN);
         toc;
     else 
     end
@@ -208,7 +233,8 @@ Results.vWage               = iWage;
 Results.vInterest           = iInterest;
 Results.vCapitalOpt         = iK;
 Results.mPolicyWealthNext   = mPolicyWealthNext2;
-Results.vLabourSupply       = vLabSupply;
+Results.vLabourSupply       = iL;
+Results.vHours              = iN;
 Results.mValue              = mValue;
 
 end
