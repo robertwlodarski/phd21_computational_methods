@@ -30,13 +30,13 @@ end
 
 %% 3. Set-up
 % Iterations business: Convergence, acceleration, and GE
-iWeightOld              = 0.99;
+iWeightOld              = 0.95;
 iErrorGE                = 10;
 iTolGE                  = 1e-5;
 iTolPFI                 = 1e-5;
 iTolDist                = 1e-5;
 iIterNumGE              = 1;
-iWeightPFI              = 0.7;
+iWeightPFI              = 0.65;
 
 % Initial K guess
 iK                      = 26.6 / sqrt(pEta);
@@ -98,14 +98,12 @@ while iErrorGE>iTolGE
         %% E. New policy
         mPsi            = pMu / 2 * (mAp.^2 ./ mA - 2* mAp + mA);
         mBudget         = (1+iInterest)*mA + iWage * mZ .* mN;
-        mApNew          = max(mBudget-mPsi-mC,vGridA1(1));
+        mApNew          = mBudget-mPsi-mC;
 
         %% F. Update & compute error
         iErrorPFI           = max(abs(mApNew - mAp),[],"all");
         mPolicyWealthNext   = iWeightPFI .* mAp + (1-iWeightPFI).*mApNew;
-        mPolicyLabour       = mN;
 
-        %fprintf("PFI error %.8f \n",iErrorPFI);
         % Finish PFI here
     end
 
@@ -122,8 +120,9 @@ while iErrorGE>iTolGE
     for zzz = 1:1:size(vGridZ,1)
         mPolicyWealthNext2(:,zzz)   = interp1(vGridA1,mPolicyWealthNext(:,zzz),vGridA2,"linear","extrap");
     end
-   
 
+    % Save the implied value function [useful for transitional dynamics]
+ 
     %% 4.3. Iteration method
     
     % Initialise
@@ -204,7 +203,7 @@ Results.vCapitalOpt         = iK;
 Results.mPolicyWealthNext   = mPolicyWealthNext2;
 Results.vLabourSupply       = iL;
 Results.vHours              = iN;
-%Results.mValue              = mValue;
+Results.mValue              = mValue;
 
 end
 
@@ -324,15 +323,3 @@ end
 %     else
 %     end
 % end
-
-% ARCHIVE OLD VALUE COMPUTATIONS
-% Save the next value function
-% mAp             = mPolicyWealthNext2;
-% mA              = repmat(vGridA2,1,size(vGridZ,1));
-% mPsi            = pMu / 2 * (mAp.^2 ./ mA - 2* mAp + mA);
-% mAAA            = (1+iInterest)*mA - mAp - mPsi;
-% mZ              = repmat(vGridZ',size(vGridA2,1),1);
-% mBBB            = (iWage * mZ).^2 / pEta;
-% mC              = (sqrt(mAAA.^2 + 4* mBBB)+mAAA)/2;
-% mN              = iWage * mZ ./ (mC * pEta);
-% mValue          = log(mC) - pEta * mN.^(1+1/pChi)/(1+1/pChi)

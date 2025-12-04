@@ -13,4 +13,4 @@ addpath _scripts/
 LoadParameters;
 
 %% 2. Solve the model
-Result0             = fnSolveSSIteration(Parameters,Grids);
+Result0             = fnSolveSSIterationVectorised(Parameters,Grids);

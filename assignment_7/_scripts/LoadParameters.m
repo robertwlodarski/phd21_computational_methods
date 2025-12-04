@@ -15,7 +15,7 @@ Parameters.pWealthMin   = 1;
 Parameters.pA           = 1;
 
 % Temporary parameter
-Parameters.pEta         = 1.0;
+Parameters.pEta         = 7.9;
 
 %% 2. Labour endowment grid
 Parameters.pTauchenN    = 3;
