@@ -43,14 +43,21 @@ On top of the required assignments, I've also used the course methods to solve t
 
 # Replications (graded assignments)
 
-# Requirements
+1. Jarosch (2023): Unemployment trap model
+2. Elsby and Michaels (2013): Marginal jobs and heterogeneous firms.
+
+# Other items
+
+## Requirements
 No rocket science here. 
 - `Matlab`: Apart from the standard tools, you need to download the *Global Optimisation Toolbox* for some of my calibration experiments.
 - `LaTeX`: I use the standard VSCode for that. You may need to follow their instructions. 
 - `Julia`: I try to translate the assignments to Julia, as well. I recommend using it with VSCode.
 
-# Bibliography
+## Bibliography
 - S. Rao Aiyagari, "Uninsured Idiosyncratic Risk and Aggregate Saving," *The Quarterly Journal of Economics*, Volume 109, Issue 3, August 1994, Pages 659–684, [https://doi.org/10.2307/2118417]
+- Elsby, Michael W. L., and Ryan Michaels. 2013. "Marginal Jobs, Heterogeneous Firms, and Unemployment Flows." *American Economic Journal: Macroeconomics* 5 (1): 1–48.
+- Jarosch, G. (2023), Searching for Job Security and the Consequences of Job Loss. *Econometrica*, 91: 903-942. [https://doi.org/10.3982/ECTA14008]
 - Krusell, Per, and Anthony A. Smith, Jr. “Income and Wealth Heterogeneity in the Macroeconomy.” *Journal of Political Economy* 106, no. 5 (1998): 867–96. [https://doi.org/10.1086/250034]
 - Lee, Hanbaek. 2025. "Global Nonlinear Solutions in Sequence Space and the Generalized Transition Function." *Working paper*
 - Huggett, Mark, 1993. "The risk-free rate in heterogeneous-agent incomplete-insurance economies," *Journal of Economic Dynamics and Control*, Elsevier, vol. 17(5-6), pages 953-969.
