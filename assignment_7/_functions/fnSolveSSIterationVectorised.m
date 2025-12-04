@@ -352,4 +352,24 @@ end
 % mValue          = log(mC) - pEta * mN.^(1+1/pChi)/(1+1/pChi)
 
 
-% The slope met
+% The slope method
+% % Slope method
+% if iIterNumGE==1
+%     iKtoLNext           = iKtoL .* iWeightOld + iEndoKtoL .* (1-iWeightOld);
+% else
+%     % Computationss
+%     dError              = iDiff - iDiffOld;
+%     dStep               = iKtoL - iKtoLOld;
+%     if abs(dStep)<1e-5
+%         iSlope          = 1;
+%     else
+%         iSlope          = (dError) / (dStep);
+%     end
+%     iUpdate             = -iDiff / iSlope;
+%     iMaxChange          = 0.2*iKtoL;
+%     iUpdate             = max(-iMaxChange,min(iMaxChange,iUpdate));
+%     iKtoLNext           = iKtoL + iUpdate;
+% end
+% iKtoLOld                = iKtoL;
+% iDiffOld                = iDiff;
+% iKtoL                   = max(0.01,iKtoLNext);
