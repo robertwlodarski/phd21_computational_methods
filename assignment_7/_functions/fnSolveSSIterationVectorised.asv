@@ -30,22 +30,19 @@ end
 
 %% 3. Set-up
 % Iterations business: Convergence, acceleration, and GE
-iWeightOld              = 0.95;
+iWeightOld              = 0.975;
 iErrorGE                = 10;
 iTolGE                  = 1e-5;
-iTolPFI                 = 1e-5;
+iTolPFI                 = 1e-3;
 iTolDist                = 1e-5;
 iIterNumGE              = 1;
-iWeightPFI              = 0.65;
+iWeightPFI              = 0.7;
 
 % Initial K guess
-iK                      = 26.6 / sqrt(pEta);
-iL                      = 0.94 / sqrt(pEta) *vGridZ'*vZDist;
-iN                      = 0.94 / sqrt(pEta);
-% Caution: iN = hours, iL = effective hours
+iKtoL                   = ( (pAlpha * pA) / (1 / pBeta -1 + pDelta) ) ^ (1 / (1 - pAlpha));
 
 % Other initialised elements
-mPolicyWealthNext       = repmat(vGridA1,1,size(vGridZ,1));
+mPolicyWealthNext       = repmat(vGridA1,1,size(vGridZ,1))+repmat(vGridZ',size(vGridA1,1),1);
 mPolicyCons             = zeros(size(mPolicyWealthNext));
 mPolicyLabour           = mPolicyWealthNext;
 % Distributions
@@ -57,72 +54,66 @@ iCurrentDistribution    = ones(size(vGridA2,1),size(vGridZ,1)) / sum(sum(ones(si
 % START GE LOOP
 while iErrorGE>iTolGE
     % Derive K-related items
-    iInterest           = pAlpha * pA * (iK / iL)^(pAlpha - 1) - pDelta;
-    iWage               = (1 - pAlpha) * pA * (iK / iL)^(pAlpha);
-    % Prepare for starting VFI loop
-    iErrorPFI           = 10;
-    iNumIterPFI         = 1;
+    iInterest       = pAlpha * pA * (iKtoL)^(pAlpha - 1) - pDelta;
+    iWage           = (1 - pAlpha) * pA * (iKtoL)^(pAlpha);
 
     %% 4.1. START PFI LOOP
-    while iErrorPFI > iTolPFI
+    %while iErrorPFI > iTolPFI
        
-        %% A. Interpolate mApp
-        mA              = repmat(vGridA1,1,size(vGridZ,1));
-        mAp             = mPolicyWealthNext;
-        mApp            = zeros(size(mPolicyWealthNext));
+    %% A. Interpolate mApp
+    mA              = repmat(vGridA1,1,size(vGridZ,1));
+    mAp             = mPolicyWealthNext;
+    mApp            = zeros(size(mPolicyWealthNext));
 
-        % Loop over the labout productivity grid
-        for zzz = 1:1:size(vGridZ,1)
-            mApp(:,zzz)         = interp1(vGridA1,mPolicyWealthNext(:,zzz),mPolicyWealthNext(:,zzz),'linear','extrap');
-        end
-        
-        %% B. Use (Budget) and (Labour) to back out c' 
-        % Remember that you're one period ahead
-        mPsip           = pMu / 2 * (mApp.^2 ./ mAp - 2* mApp + mAp);
-        mAAA            = (1+iInterest)*mAp - mApp - mPsip;
-        mZ              = repmat(vGridZ',size(vGridA1,1),1);
-        mBBB            = (iWage * mZ).^2 / pEta;
-        mCp             = (sqrt(mAAA.^2 + 4* mBBB)+mAAA)/2;
-
-        %% C. Get current optimal c
-        mPsi1           = pMu * (mAp ./ mA -1);
-        mDenominator    = 1 + mPsi1;
-        mPsi2p          = pMu / 2 * (- (mApp./mAp).^2 + 1);
-        mInnerTerm      = mCp.^(-1).*(1+iInterest-mPsi2p);
-        mNumerator      = pBeta * mInnerTerm * mTransitionZ';
-        mC              = (mNumerator ./ mDenominator).^(-1);
-
-        %% D. New labour (things can only get better?)
-        mN              = iWage * mZ ./ (mC * pEta);
-
-        %% E. New policy
-        mPsi            = pMu / 2 * (mAp.^2 ./ mA - 2* mAp + mA);
-        mBudget         = (1+iInterest)*mA + iWage * mZ .* mN;
-        mApNew          = mBudget-mPsi-mC;
-
-        %% F. Update & compute error
-        iErrorPFI           = max(abs(mApNew - mAp),[],"all");
-        mPolicyWealthNext   = iWeightPFI .* mAp + (1-iWeightPFI).*mApNew;
-
-        % Finish PFI here
+    % Loop over the labout productivity grid
+    for zzz = 1:1:size(vGridZ,1)
+        mApp(:,zzz)         = interp1(vGridA1,mPolicyWealthNext(:,zzz),mPolicyWealthNext(:,zzz),'linear','extrap');
     end
+
+    %% B. Use (Budget) and (Labour) to back out c'
+    % Remember that you're one period ahead
+    mPsip           = pMu / 2 * (mApp.^2 ./ mAp - 2* mApp + mAp);
+    mAAA            = (1+iInterest)*mAp - mApp - mPsip;
+    mZ              = repmat(vGridZ',size(vGridA1,1),1);
+    mBBB            = (iWage * mZ).^2 / pEta;
+    mCp             = (sqrt(mAAA.^2 + 4* mBBB)+mAAA)/2;
+
+    %% C. Get current optimal c
+    mPsi1           = pMu * (mAp ./ mA -1);
+    mDenominator    = 1 + mPsi1;
+    mPsi2p          = pMu / 2 * (- (mApp./mAp).^2 + 1);
+    mInnerTerm      = mCp.^(-1).*(1+iInterest-mPsi2p);
+    mNumerator      = pBeta * mInnerTerm * mTransitionZ';
+    mC              = (mNumerator ./ mDenominator).^(-1);
+
+    %% D. New labour (things can only get better?)
+    mN              = iWage * mZ ./ (mC * pEta);
+
+    %% E. New policy
+    mPsi            = pMu / 2 * (mAp.^2 ./ mA - 2* mAp + mA);
+    mBudget         = (1+iInterest)*mA + iWage * mZ .* mN;
+    mApNew          = max(mBudget-mPsi-mC,vGridA1(1));
+    
+
+    %fprintf("PFI error %.8f \n",iErrorPFI);
+    % Finish PFI here
+    %end
 
     %% 4.2. Wealth policy: More granular grid
     mPolicyWealthNext2              = zeros(size(iCurrentDistribution));
 
     % If both are the same
     if (size(vGridA1,1)==size(vGridA2,1))
-        mPolicyWealthNext2          = mPolicyWealthNext;
+        mPolicyWealthNext2          = mApNew;
     else 
     end
 
     % If both of them aren't the same
     for zzz = 1:1:size(vGridZ,1)
-        mPolicyWealthNext2(:,zzz)   = interp1(vGridA1,mPolicyWealthNext(:,zzz),vGridA2,"linear","extrap");
+        mPolicyWealthNext2(:,zzz)   = interp1(vGridA1,mApNew(:,zzz),vGridA2,"linear","extrap");
     end
+   
 
-    % Save the implied value function [useful for transitional dynamics]
- 
     %% 4.3. Iteration method
     
     % Initialise
@@ -159,17 +150,22 @@ while iErrorGE>iTolGE
     iCurrentDistribution=iNextDistribution;
     end
 
+    %% 4.4. Update & compute error
+    iErrorPFI           = max(abs(mApNew - mAp),[],"all");
+    mPolicyWealthNext   = iWeightPFI .* mAp + (1-iWeightPFI).*mApNew;
+    mPolicyLabour       = mN;
+
     % Update other elements
     mPolicyLabour2      = interp1(vGridA1, mPolicyLabour, vGridA2, 'linear', 'extrap');
     iEndoL              = vGridZ' * sum(iCurrentDistribution.*mPolicyLabour2,1)';
-    iEndoN              = sum(iCurrentDistribution.*mPolicyLabour2,"all");
+    iEndoN              = sum(iCurrentDistribution.*mPolicyLabour2,1)';
     iMarginalDist       = sum(iCurrentDistribution,2);
     iEndoK              = vGridA2' * iMarginalDist;
-    iErrorGE            = max(abs(iEndoK - iK),abs(iEndoL - iL));
-    iK                  = iK .* iWeightOld + iEndoK .* (1-iWeightOld);
-    iN                  = iN .* iWeightOld + iEndoN .* (1-iWeightOld);
-    iL                  = iL .* iWeightOld + iEndoL .* (1-iWeightOld);
-    
+    iEndoKtoL           = iEndoK/iEndoL;
+    iDiff               = iEndoKtoL- iKtoL;
+    iErrorK             = max(abs(iDiff));
+    iErrorGE            = max(iErrorPFI,iErrorK);
+
     
     % Print cute messages 
     if (pVerbose == true && floor((iIterNumGE-1) / 25) == ((iIterNumGE-1) / 25) || iErrorGE < iTolGE)
@@ -181,29 +177,26 @@ while iErrorGE>iTolGE
         fprintf('Iterest rate:      %.3f \n', iInterest);
         fprintf('Wage:              %.3f \n', iWage);
         fprintf('IMPLIED VALUES \n')
-        fprintf('K:                 %.3f \n', iEndoK);
-        fprintf('L:                 %.3f \n', iEndoL);
-        fprintf('N:                 %.3f \n', iEndoN);
+        fprintf('K-to-L:            %.3f \n', iEndoKtoL);
         fprintf('NEW VALUES \n')
-        fprintf('K:                 %.3f \n', iK);
-        fprintf('L:                 %.3f \n', iL);
-        fprintf('N:                 %.3f \n', iN);
+        fprintf('K-to-L:            %.3f \n', iKtoL);
         toc;
     else 
     end
     % END GE LOOP
     iIterNumGE          = iIterNumGE + 1;
+
 end
 
 %% Save results
 Results.mDistribution       = iCurrentDistribution;
 Results.vWage               = iWage;
 Results.vInterest           = iInterest;
-Results.vCapitalOpt         = iK;
+Results.vCapitalOpt         = iEndoK;
 Results.mPolicyWealthNext   = mPolicyWealthNext2;
-Results.vLabourSupply       = iL;
-Results.vHours              = iN;
-Results.mValue              = mValue;
+Results.vLabourSupply       = iEndoL;
+Results.vHours              = iEndoN;
+%Results.mValue              = mValue;
 
 end
 
@@ -323,3 +316,38 @@ end
 %     else
 %     end
 % end
+
+% ARCHIVE OLD VALUE COMPUTATIONS
+% Save the next value function
+% mAp             = mPolicyWealthNext2;
+% mA              = repmat(vGridA2,1,size(vGridZ,1));
+% mPsi            = pMu / 2 * (mAp.^2 ./ mA - 2* mAp + mA);
+% mAAA            = (1+iInterest)*mA - mAp - mPsi;
+% mZ              = repmat(vGridZ',size(vGridA2,1),1);
+% mBBB            = (iWage * mZ).^2 / pEta;
+% mC              = (sqrt(mAAA.^2 + 4* mBBB)+mAAA)/2;
+% mN              = iWage * mZ ./ (mC * pEta);
+% mValue          = log(mC) - pEta * mN.^(1+1/pChi)/(1+1/pChi)
+
+
+% The slope method
+    % Slope method
+    if iIterNumGE==1
+        iKtoLNext           = iKtoL .* iWeightOld + iEndoKtoL .* (1-iWeightOld);
+    else 
+        % Computationss 
+        dError              = iDiff - iDiffOld;
+        dStep               = iKtoL - iKtoLOld;
+        if abs(dStep)<1e-5
+            iSlope          = 1;
+        else 
+            iSlope          = (dError) / (dStep);
+        end
+        iUpdate             = -iDiff / iSlope;
+        iMaxChange          = 0.2*iKtoL;
+        iUpdate             = max(-iMaxChange,min(iMaxChange,iUpdate));
+        iKtoLNext           = iKtoL + iUpdate;
+    end 
+    iKtoLOld                = iKtoL;
+    iDiffOld                = iDiff;
+    iKtoL                   = max(0.01,iKtoLNext);
