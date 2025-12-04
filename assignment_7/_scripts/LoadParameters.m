@@ -28,9 +28,9 @@ Parameters.pTauchenM    = 7;
 
 %% 3. Other grids 
 Parameters.pGridAMin    = Parameters.pWealthMin;
-Parameters.pGridAMax    = 150;
-Parameters.pNumGridA1   = 50;
-Parameters.pNumGridA2   = 100;
+Parameters.pGridAMax    = 300;
+Parameters.pNumGridA1   = 100;
+Parameters.pNumGridA2   = 150;
 % Wealth grids
 Grids.vGridA1           = fnWealthGridMMV(Parameters.pGridAMin, Parameters.pGridAMax, Parameters.pNumGridA1);
 Grids.vGridA2           = fnWealthGridMMV(Parameters.pGridAMin, Parameters.pGridAMax, Parameters.pNumGridA2);

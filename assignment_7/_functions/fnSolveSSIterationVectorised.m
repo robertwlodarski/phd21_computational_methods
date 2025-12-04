@@ -184,7 +184,7 @@ while (iErrorGE>iTolGE && iErrorPFI > iTolPFI)
 
     
     % Print cute messages 
-    if (pVerbose == true && floor((iIterNumGE-1) / 25) == ((iIterNumGE-1) / 25) || iErrorGE < iTolGE)
+    if (pVerbose == true && floor((iIterNumGE-1) / 100) == ((iIterNumGE-1) / 100) || iErrorGE < iTolGE)
         fprintf('======================================== \n')
         fprintf('             Iteration %.0f              \n',iIterNumGE);
         fprintf('======================================== \n')
@@ -214,6 +214,11 @@ Results.mPolicyWealthNext   = mPolicyWealthNext2;
 Results.vLabourSupply       = iEndoL;
 Results.vHours              = iEndoN;
 %Results.mValue              = mValue;
+
+save("_results/DistributionSS","iCurrentDistribution");
+save("_results/Policy1SS","mApNew");
+save("_results/Policy2SS","mPolicyWealthNext2");
+save("_results/KtoLSS","iKtoL");
 
 end
 
@@ -347,24 +352,4 @@ end
 % mValue          = log(mC) - pEta * mN.^(1+1/pChi)/(1+1/pChi)
 
 
-% The slope method
-% % Slope method
-% if iIterNumGE==1
-%     iKtoLNext           = iKtoL .* iWeightOld + iEndoKtoL .* (1-iWeightOld);
-% else
-%     % Computationss
-%     dError              = iDiff - iDiffOld;
-%     dStep               = iKtoL - iKtoLOld;
-%     if abs(dStep)<1e-5
-%         iSlope          = 1;
-%     else
-%         iSlope          = (dError) / (dStep);
-%     end
-%     iUpdate             = -iDiff / iSlope;
-%     iMaxChange          = 0.2*iKtoL;
-%     iUpdate             = max(-iMaxChange,min(iMaxChange,iUpdate));
-%     iKtoLNext           = iKtoL + iUpdate;
-% end
-% iKtoLOld                = iKtoL;
-% iDiffOld                = iDiff;
-% iKtoL                   = max(0.01,iKtoLNext);
+% The slope met
