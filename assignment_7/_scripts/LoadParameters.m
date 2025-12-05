@@ -34,3 +34,4 @@ Parameters.pNumGridA2   = 150;
 % Wealth grids
 Grids.vGridA1           = fnWealthGridMMV(Parameters.pGridAMin, Parameters.pGridAMax, Parameters.pNumGridA1);
 Grids.vGridA2           = fnWealthGridMMV(Parameters.pGridAMin, Parameters.pGridAMax, Parameters.pNumGridA2);
+
