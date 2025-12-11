@@ -213,6 +213,8 @@ Results.vCapitalOpt         = iEndoK;
 Results.mPolicyWealthNext   = mPolicyWealthNext2;
 Results.vLabourSupply       = iEndoL;
 Results.vHours              = iEndoN;
+Results.mC                  = mC;
+Results.mN                  = mN;
 %Results.mValue              = mValue;
 
 save("_results/DistributionSS","iCurrentDistribution");

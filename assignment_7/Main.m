@@ -13,6 +13,6 @@ addpath _scripts/
 LoadParameters;
 
 %% 2. Solve the steady state model
-Result0             = fnSolveSSIterationVectorised(Parameters,Grids);
+Results0            = fnSolveSSIterationVectorised(Parameters,Grids);
 
 %% 3. Transitional dynamics

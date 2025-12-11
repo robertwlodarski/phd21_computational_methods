@@ -45,24 +45,21 @@ end
 
 %% 2. Initial guesses
 
-% Initial guesses (Change to mimic Hanbaek's code)
-% mDistribution       = repmat(Results0.mDistribution,1,1,pRequiredTime);
-% mATemp              = (1+ Results0.vInterest)*repmat(vGridA2,1,size(vGridZ,1))-Results0.mPolicyWealthNext-pMu / 2 * ((Results0.mPolicyWealthNext ./ repmat(vGridA2,1,size(vGridZ,1))).^2 - 2 * Results0.mPolicyWealthNext+repmat(vGridA2,1,size(vGridZ,1)));
-% mBTemp              = (Results0.vWage * repmat(vGridZ',size(vGridA2,1),1)).^2 / pEta;
-% mCTemp              = (sqrt(mATemp.^2 + 4*mBTemp)+mATemp) / 2;
-% mNTemp              = (Results0.vWage * repmat(vGridZ',size(vGridA2,1),1)) ./ (mCTemp * pEta);
-% mVTemp              = (log(mCTemp) - pEta * mNTemp.^(1 + 1/pChi)/ (1 + 1/pChi)) / (1 - pBeta);
-% mV                  = repmat(mVTemp,1,1,pRequiredTime);
-% vWage               = repmat(Results0.vWage,1,1,pRequiredTime);
-% vInterest           = repmat(Results0.vInterest,1,1,pRequiredTime);
+% Initial guesses
+mDistribution       = repmat(Results0.mDistribution,1,1,pRequiredTime);
+mATemp              = (1+ Results0.vInterest)*repmat(vGridA2,1,size(vGridZ,1))-Results0.mPolicyWealthNext-pMu / 2 * ((Results0.mPolicyWealthNext ./ repmat(vGridA2,1,size(vGridZ,1))).^2 - 2 * Results0.mPolicyWealthNext+repmat(vGridA2,1,size(vGridZ,1)));
+mBTemp              = (Results0.vWage * repmat(vGridZ',size(vGridA2,1),1)).^2 / pEta;
+mCTemp              = (sqrt(mATemp.^2 + 4*mBTemp)+mATemp) / 2;
+mNTemp              = (Results0.vWage * repmat(vGridZ',size(vGridA2,1),1)) ./ (mCTemp * pEta);
+mVTemp              = (log(mCTemp) - pEta * mNTemp.^(1 + 1/pChi)/ (1 + 1/pChi)) / (1 - pBeta);
+mV                  = repmat(mVTemp,1,1,pRequiredTime);
+vWage               = repmat(Resu)
 
 %% 3. Start running the loop
 
 % Start the outer loop
 tic;
 while iError2 > pErrorTol
-
-
 
 
 % End the outer loops
