@@ -45,16 +45,14 @@ end
 
 %% 2. Initial guesses
 
-% Initial guesses (Change to mimic Hanbaek's code)
-% mDistribution       = repmat(Results0.mDistribution,1,1,pRequiredTime);
-% mATemp              = (1+ Results0.vInterest)*repmat(vGridA2,1,size(vGridZ,1))-Results0.mPolicyWealthNext-pMu / 2 * ((Results0.mPolicyWealthNext ./ repmat(vGridA2,1,size(vGridZ,1))).^2 - 2 * Results0.mPolicyWealthNext+repmat(vGridA2,1,size(vGridZ,1)));
-% mBTemp              = (Results0.vWage * repmat(vGridZ',size(vGridA2,1),1)).^2 / pEta;
-% mCTemp              = (sqrt(mATemp.^2 + 4*mBTemp)+mATemp) / 2;
-% mNTemp              = (Results0.vWage * repmat(vGridZ',size(vGridA2,1),1)) ./ (mCTemp * pEta);
-% mVTemp              = (log(mCTemp) - pEta * mNTemp.^(1 + 1/pChi)/ (1 + 1/pChi)) / (1 - pBeta);
-% mV                  = repmat(mVTemp,1,1,pRequiredTime);
-% vWage               = repmat(Results0.vWage,1,1,pRequiredTime);
-% vInterest           = repmat(Results0.vInterest,1,1,pRequiredTime);
+% Initial guesses 
+% Aggregate
+vL                  = ones(pRequiredTime,1)*Results0.vLabourSupply;
+vK                  = max(ones(pRequiredTime,1)*Results0.vCapitalOpt + normrnd(0,1e-8,pRequiredTime,1),1e-8);
+
+% Policy function (C, Ap, and N)
+mPolicyC                  = repmat(Results0.mC,1,1,pRequiredTime);
+mPolicyN                  = repmat(Results0.mN,1,1,pRequiredTime);
 
 %% 3. Start running the loop
 
@@ -62,7 +60,68 @@ end
 tic;
 while iError2 > pErrorTol
 
+    %% 4. Compute the price guesses
+    vKtoL               = vK ./ vL;
+    vInterest           = - pDelta + pAlpha * vA .* vKtoL.^(pAlpha-1);
+    vWage               = (1-pAlpha) * vA .* vKtoL.^(pAlpha);
+    vKp                 = [vK(2:end);vK(1)];
 
+    %% 5. Backward simulation
+    % Set the space
+    mEV                 = zeros(size(vGridA2,1),size(vGridZ,1),size(vGridA,1));
+
+    % Open the TFP loop
+    for iApIndex                = 1:1:size(vGridA,1)
+
+        %% 5.1. Find the "neighbours"
+        % A. Look for candidates
+        Ap                                      = vGridA(iApIndex);
+        iCandidateLoc                           = find(vA == Ap);
+
+        % B. Clean "forbidden" candidates & sort
+        iCandidateLoc(iCandidateLoc<pBurnIn)    = [];
+        iCandidateLoc(iCandidateLoc>pT)         = [];
+        iCandidate                              = vK(iCandidateLoc);
+        [iCandidate, iIndex]                    = sort(iCandidate);
+        iCandidateLoc                           = iCandidateLoc(iIndex);
+
+        % C. Extrapolation setting
+        iEdges                                  = [-Inf; iCandidate; Inf];
+        iBinIndices                             = discretize(vKp, iEdges);
+        iKLow                                   = iBinIndices -1;
+        iKLow(iKLow < 1)                        = 1;
+        iKLow(iKLow >= length(iIndex))          = length(iIndex)-1;
+        iKHigh                                  = iKLow + 1;
+        iIndLow                                 = iCandidateLoc(iKLow);
+        iIndHigh                                = iCandidateLoc(iKHigh);
+        iWeightLow                              = (vK(iIndLow) - vKp) ./ (vK(iIndHigh) - vK(iIndLow));
+        iWeightLow(iWeightLow < 0)              = 0;
+        iWeightLow(iWeightLow > 1)              = 1;
+
+        % D. Extrapolate interest rates
+        iRLow                                   = pAlpha * Ap * vKtoL(iIndLow).^(pAlpha-1)-pDelta;
+        iRHigh                                  = pAlpha * Ap * vKtoL(iIndHigh).^(pAlpha-1)-pDelta;
+
+        % Open the skill shock loop
+        for iZIndex             = 1:1:size(vGridZ,1)
+            
+            %% 5.2. Obtain the EV
+            % Labour shock
+            iZ                  = vGridZ(iZIndex);
+            
+            % Policy functions: Initial guesses
+            vCLow               = mPolicyC(:,iZIndex,iIndLow);
+            vCHigh              = 
+
+            % Generate labour response
+            iNLow               = (((1-pAlpha)*Ap *vKtoL(iIndLow).^(pAlpha) * iZ) ./ (vC * pEta)).^(pChi);
+            iNHigh              = (((1-pAlpha)*Ap *vKtoL(iIndHigh).^(pAlpha) * iZ) ./ (vC * pEta)).^(pChi);
+            
+
+        % Close the skill shock loop
+        end
+        % Close the TFP loop
+    end
 
 
 % End the outer loops

@@ -205,6 +205,12 @@ while (iErrorGE>iTolGE && iErrorPFI > iTolPFI)
 
 end
 
+% Generate policy functions to be saved
+A       = (1 + iInterest) * repmat(vGridA2,1,size(vGridZ,1)) - mPolicyWealthNext2 - pMu / 2 * (mPolicyWealthNext2.^2 ./ repmat(vGridA2,1,size(vGridZ,1))- 2 * mPolicyWealthNext2+ repmat(vGridA2,1,size(vGridZ,1)));
+B       = (iWage * repmat(vGridZ',size(vGridA2,1),1)).^2 ./ pEta;
+mC      = (sqrt(A.^2 + 4*B)+A)/2;
+mN      = iWage * repmat(vGridZ',size(vGridA2,1),1) ./ (mC * pEta);
+
 %% Save results
 Results.mDistribution       = iCurrentDistribution;
 Results.vWage               = iWage;
