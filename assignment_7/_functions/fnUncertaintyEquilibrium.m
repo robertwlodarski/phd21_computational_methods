@@ -66,10 +66,13 @@ while iError2 > pErrorTol
     vInterest           = - pDelta + pAlpha * vA .* vKtoL.^(pAlpha-1);
     vWage               = (1-pAlpha) * vA .* vKtoL.^(pAlpha);
     vKp                 = [vK(2:end);vK(1)];
+    vLp                 = [vL(2:end);vL(1)];
+    vKptoLp             = vKp./vLp;
+    vInterestFuture     = - pDelta + pAlpha * vAp .* vKptoLp.^(pAlpha-1);
 
     %% 5. Backward simulation
     % Set the space
-    mEV                 = zeros(size(vGridA2,1),size(vGridZ,1),size(vGridA,1));
+    mEV1                = zeros(size(vGridA2,1),size(vGridZ,1),pRequiredTime);
 
     % Open the TFP loop
     for iApIndex                = 1:1:size(vGridA,1)
@@ -103,39 +106,54 @@ while iError2 > pErrorTol
         iRLow                                   = pAlpha * Ap * vKtoL(iIndLow).^(pAlpha-1)-pDelta;
         iRHigh                                  = pAlpha * Ap * vKtoL(iIndHigh).^(pAlpha-1)-pDelta;
 
-        % E. Open the skill shock loop (dimensions: wealth, time)
-        iKtoLLow                                = repmat(vKtoL(iIndLow)',size(vGridA2,1),1);
-        iKtoLHigh                               = repmat(vKtoL(iIndHigh)',size(vGridA2,1),1);
-
         for iZIndex             = 1:1:size(vGridZ,1)
             
             %% 5.2. Obtain the EV components
-            % A. Labour shock
-            iZ                  = repmat(vGridZ(iZIndex),size(vGridA2,1),pRequiredTime);
-
-            % B. Policy functions
+            % A. Policy functions
             iCLow               = squeeze(mPolicyC(:,iZIndex,iIndLow));
             iCHigh              = squeeze(mPolicyC(:,iZIndex,iIndHigh));
             iapLow              = squeeze(mPolicyA2(:,iZIndex,iIndLow));
             iapHigh             = squeeze(mPolicyA2(:,iZIndex,iIndHigh));
 
+            % B. Generate labour responses and adjustment costs
+            iPsi2Low            = pMu / 2 * (1 - (iapLow.^2./vGridA2.^2));
+            iPsi2High           = pMu / 2 * (1 - (iapHigh.^2./vGridA2.^2));
 
-            % C. Generate labour responses and adjustment costs
-            iNLow               = (((1-pAlpha)*Ap *iKtoLLow.^(pAlpha) .* iZ) ./ (iCLow * pEta)).^(pChi);
-            iNHigh              = (((1-pAlpha)*Ap *iKtoLHigh.^(pAlpha) .* iZ) ./ (iCHigh * pEta)).^(pChi);
-            iPsi2Low            = pMu / 2 * (1 - (iapLow.^2./repmat(vGridA2,1,pRequiredTime)));
-            iPsi2High           = pMu / 2 * (1 - (iapHigh.^2./repmat(vGridA2,1,pRequiredTime)));
-
-            % D. Generate the lower and upper expected value function
-            iEVLow              = (1 + repmat(iRLow',size(vGridA2,1),1)-iPsi2Low);
-            iEVHigh             = (1 + repmat(iRHigh',size(vGridA2,1),1)-iPsi2High);
+            % C. Generate the lower and upper expected value function
+            iEVLow              = (1 + repmat(iRLow',size(vGridA2,1),1)-iPsi2Low) ./ iCLow;
+            iEVHigh             = (1 + repmat(iRHigh',size(vGridA2,1),1)-iPsi2High) ./ iCHigh;
+            iEVInterpolated     = repmat(iWeightLow',size(vGridA2,1),1) .* iEVLow + (1 - repmat(iWeightLow',size(vGridA2,1),1)) .* iEVHigh;
             
+            % D. Obtain the value 
+            mEV1(:,iZIndex,:)   = squeeze(mEV1(:,iZIndex,:)) + pBeta * repmat(((vAp ~= Ap) .* mTransitionA(vAIndex,iApIndex))',size(vGridA2,1),1) .* iEVInterpolated;
 
         % Close the skill shock loop
         end
         % Close the TFP loop
     end
 
+    % E. Add the realised path
+    iCFuture                    = mPolicyC(:,:,[2:end,1]);
+    iPsi2Future                 = pMu / 2 * (1 - (mPolicyA2.^2 ./ vGridA2.^2));
+    iPsi2Future                 = iPsi2Future(:,:,[2:end,1]);
+    iVFuture                    = (1+ repmat(permute(vInterestFuture,[2,3,1]),size(vGridA2,1),size(vGridZ,1),1) - iPsi2Future)./iCFuture;
+    mEV1                        = mEV1 + pBeta *  repmat(permute(vRealisedP,[2,3,1]),size(vGridA2,1),size(vGridZ,1),1) .* iVFuture;
+
+    %% 5.3. Update the allocations
+    % A. New, temporary consumption level
+    iPsi1                       = pMu * ((mPolicyA2 ./ vGridA2-1));
+    mCTempUnc                   = (1 + iPsi1) ./ mEV1;
+    mPolicyCUpdated             = max(1e-3,mCTempUnc);
+
+    % B. Updated labour and asset policies 
+    mPolicyNUpdated             =  (repmat(permute(vWage,[2,3,1]),size(vGridA2,1),size(vGridZ,1),1) .* repmat(vGridZ',size(vGridA2,1),1,pRequiredTime) ./ (pEta * mPolicyCUpdated));
+    mPsi                        = pMu / 2 * (mPolicyA2.^2 - 2 * mPolicyA2 .* repmat(vGridA2,1,size(vGridZ,1),pRequiredTime) + repmat(vGridA2,1,size(vGridZ,1),pRequiredTime).^2) ./repmat(vGridA2,1,size(vGridZ,1),pRequiredTime);
+    mPolicyA2Updated            = (1+repmat(permute(vInterest,[2,3,1]),size(vGridA2,1),size(vGridZ,1),1)).* repmat(vGridA2,1,size(vGridZ,1),pRequiredTime)...                   %Interest income
+                                    +mPolicyNUpdated.*repmat(permute(vWage,[2,3,1]),size(vGridA2,1),size(vGridZ,1),1) .* repmat(vGridZ',size(vGridA2,1),1,pRequiredTime)...     %Labour income
+                                    -mPolicyCUpdated-mPsi;
+    
+
+    %% 6. Non-stochastic simulation
 
 % End the outer loops
 end 
