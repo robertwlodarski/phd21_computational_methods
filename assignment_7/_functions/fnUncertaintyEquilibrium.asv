@@ -106,6 +106,7 @@ while iError2 > pErrorTol
         % E. Open the skill shock loop (dimensions: wealth, time)
         iKtoLLow                                = repmat(vKtoL(iIndLow)',size(vGridA2,1),1);
         iKtoLHigh                               = repmat(vKtoL(iIndHigh)',size(vGridA2,1),1);
+        ia                                      = repmat(vGridA2,1,pRequiredTime);
 
         for iZIndex             = 1:1:size(vGridZ,1)
             
@@ -113,22 +114,17 @@ while iError2 > pErrorTol
             % A. Labour shock
             iZ                  = repmat(vGridZ(iZIndex),size(vGridA2,1),pRequiredTime);
 
-            % B. Policy functions
-            iCLow               = squeeze(mPolicyC(:,iZIndex,iIndLow));
-            iCHigh              = squeeze(mPolicyC(:,iZIndex,iIndHigh));
-            iapLow              = squeeze(mPolicyA2(:,iZIndex,iIndLow));
-            iapHigh             = squeeze(mPolicyA2(:,iZIndex,iIndHigh));
-
+            % B. Policy functions: Initial guesses
+            vCLow               = squeeze(mPolicyC(:,iZIndex,iIndLow,:));
+            vCHigh              = squeeze(mPolicyC(:,iZIndex,iIndHigh,:));
 
             % C. Generate labour responses and adjustment costs
-            iNLow               = (((1-pAlpha)*Ap *iKtoLLow.^(pAlpha) .* iZ) ./ (iCLow * pEta)).^(pChi);
-            iNHigh              = (((1-pAlpha)*Ap *iKtoLHigh.^(pAlpha) .* iZ) ./ (iCHigh * pEta)).^(pChi);
-            iPsi2Low            = pMu / 2 * (1 - (iapLow.^2./repmat(vGridA2,1,pRequiredTime)));
-            iPsi2High           = pMu / 2 * (1 - (iapHigh.^2./repmat(vGridA2,1,pRequiredTime)));
+            iNLow               = (((1-pAlpha)*Ap *iKtoLLow.^(pAlpha) .* iZ) ./ (vCLow * pEta)).^(pChi);
+            iNHigh              = (((1-pAlpha)*Ap *iKtoLHigh.^(pAlpha) .* iZ) ./ (vCHigh * pEta)).^(pChi);
+            iPsi2Low            = pMu / 2 * (1 - (iap.^2./ia));
 
             % D. Generate the lower and upper expected value function
-            iEVLow              = (1 + repmat(iRLow',size(vGridA2,1),1)-iPsi2Low);
-            iEVHigh             = (1 + repmat(iRHigh',size(vGridA2,1),1)-iPsi2High);
+            iEVLow              = (1 + repmat(iRLow',size(vGridA2,1),1)-
             
 
         % Close the skill shock loop
