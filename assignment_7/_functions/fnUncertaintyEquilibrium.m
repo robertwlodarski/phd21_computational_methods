@@ -25,8 +25,7 @@ pBurnIn             = 500;
 pRequiredTime       = pT + pBurnIn;
 iError2             = 10;
 pErrorTol           = 1e-8;
-pStepSize           = 0.95;
-pStepSizeL          = 0.5;
+pStepSize           = 0.98;
 iIterationNum       = 1;
 
 % Set up productivity shocks
@@ -63,6 +62,7 @@ mPolicyA2                   = repmat(Results0.mPolicyWealthNext,1,1,pRequiredTim
 % Start the outer loop
 tic;
 while iError2 > pErrorTol
+    fprintf('Iteration:             %.0f \n', iIterationNum);
 
     %% 4. Compute the price guesses
     vKtoL               = vK ./ vL;
@@ -218,7 +218,7 @@ while iError2 > pErrorTol
 
     % Update the aggregate values
     vK                          = pStepSize * vK + (1-pStepSize) * vKNew;
-    vL                          = pStepSizeL * vL + (1-pStepSizeL) * vLNew;
+    vL                          = pStepSize * vL + (1-pStepSize) * vLNew;
     
     % Update the policies
     mPolicyC                    = pStepSize * mPolicyC + (1-pStepSize) * mPolicyCUpdated;

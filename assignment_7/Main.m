@@ -16,4 +16,4 @@ LoadParameters;
 Results0            = fnSolveSSIterationVectorised(Parameters,Grids);
 
 %% 3. Transitional dynamics
-ResultsUnc          = fnUncertaintyEquilibrium(Parameters, Grids,Results0);
+ResultsUnc          = fnUncertaintyEquilibrium(Parameters, Grids,Results0); 
