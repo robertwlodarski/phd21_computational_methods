@@ -226,7 +226,7 @@ while iError2 > pErrorTol
 
     %% 7. Optional reports
     % Print out
-    if (floor((iIterationNum-1)/50) == (iIterationNum-1)/50)
+    if (floor((iIterationNum-1)/5) == (iIterationNum-1)/5)
         fprintf('====================================== \n');
         fprintf('====================================== \n');
         fprintf('Convergence: \n');
