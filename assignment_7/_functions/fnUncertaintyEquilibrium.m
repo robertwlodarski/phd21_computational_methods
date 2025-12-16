@@ -16,6 +16,7 @@ vGridA              = Grids.vGridTFP;
 mTransitionA        = Grids.mTransitionTFP;
 vGridZ              = Grids.vGridZ;
 vGridA2             = Grids.vGridA2;
+mTransitionZ        = Grids.mTransitionZ;
 
 % Set-up elements
 rng(1997);
@@ -24,8 +25,8 @@ pBurnIn             = 500;
 pRequiredTime       = pT + pBurnIn;
 iError2             = 10;
 pErrorTol           = 1e-8;
-vFuture             = [(2:pRequiredTime)'; pRequiredTime];
 pStepSize           = 0.95;
+pStepSizeL          = 0.5;
 iIterationNum       = 1;
 
 % Set up productivity shocks
@@ -43,6 +44,9 @@ for ttt = 1:1:pRequiredTime
     vRealisedP(ttt) = mTransitionA(vAIndex(ttt),vApIndex(ttt));
 end
 
+% Starting distribution [steady state]
+mStartingDist       = Results0.mDistribution;
+
 %% 2. Initial guesses
 
 % Initial guesses 
@@ -52,7 +56,6 @@ vK                  = max(ones(pRequiredTime,1)*Results0.vCapitalOpt + normrnd(0
 
 % Policy function (C, Ap, and N)
 mPolicyC                    = repmat(Results0.mC,1,1,pRequiredTime);
-mPolicyN                    = repmat(Results0.mN,1,1,pRequiredTime);
 mPolicyA2                   = repmat(Results0.mPolicyWealthNext,1,1,pRequiredTime);
 
 %% 3. Start running the loop
@@ -154,12 +157,95 @@ while iError2 > pErrorTol
     
 
     %% 6. Non-stochastic simulation
+    mEffLabourNew               = zeros(size(mStartingDist));
+    mLabour                     = mEffLabourNew;
+    vKNew                       = zeros(pRequiredTime,1);
+    vLNew                       = vKNew;
+    vN                          = vLNew;
+    iCurrentDistribution        = mStartingDist;
+
+    for ttt = 1:1:pRequiredTime
+
+        % A. Initialise distributions
+        iNextDistribution       = zeros(size(iCurrentDistribution));
+
+        % B. Start iterating over z and a
+        for zzz = 1:1:size(vGridZ,1)
+            
+            % Obtain the new effective labour supply
+            mEffLabourNew(:,zzz)    = repmat(vGridZ(zzz),size(vGridA2,1),1) .* mPolicyNUpdated(:,zzz,ttt);
+            mLabour(:,zzz)          = mPolicyNUpdated(:,zzz,ttt);
+
+            for aaa = 1:1:size(vGridA2,1)
+                
+                % C. Set up
+                iWealthNext                     = mPolicyA2Updated(aaa,zzz,ttt);
+                iLB                             = sum(vGridA2<iWealthNext);
+                iLB(iLB<=0)                     = 1;
+                iLB(iLB>=size(vGridA2,1))       = size(vGridA2,1)-1;
+                iUB                             = iLB + 1;
+                iWeightLB                       = (vGridA2(iUB)-iWealthNext) / (vGridA2(iUB)-vGridA2(iLB));
+                iWeightLB(iWeightLB<0)          = 0;
+                iWeightLB(iWeightLB>1)          = 1;
+                iWeightUB                       = 1 - iWeightLB;
+                iMass                           = iCurrentDistribution(aaa,zzz);
+
+                % D. Iterate over future labour
+                for zzp = 1:1:size(vGridZ,1)
+
+                    % Upper
+                    iNextDistribution(iUB,zzp)  = iNextDistribution(iUB,zzp) + iMass * mTransitionZ(zzz,zzp) * iWeightUB;
+                    
+                    % Lower
+                    iNextDistribution(iLB,zzp)  = iNextDistribution(iLB,zzp) + iMass * mTransitionZ(zzz,zzp) * iWeightLB;
+                end
+            end
+        end
+        
+        % E. Update aggregate capital, effective labour, and others
+        vKNew(ttt)              = sum(sum(iCurrentDistribution,2).*vGridA2);
+        vLNew(ttt)              = sum(iCurrentDistribution.*mEffLabourNew,"all");
+        vN(ttt)                 = sum(iCurrentDistribution.*mLabour,"all");
+        iCurrentDistribution    =iNextDistribution;
+        % Finish the time loop 
+    end
+
+    %% 6. Convergence checking
+    % Error
+    vKtoLNew                    = vKNew ./ vLNew;
+    iError2                     = max(abs(vKtoLNew-vKtoL));
+    iIterationNum               = iIterationNum+1;
+
+    % Update the aggregate values
+    vK                          = pStepSize * vK + (1-pStepSize) * vKNew;
+    vL                          = pStepSizeL * vL + (1-pStepSizeL) * vLNew;
+    
+    % Update the policies
+    mPolicyC                    = pStepSize * mPolicyC + (1-pStepSize) * mPolicyCUpdated;
+    mPolicyA2                   = pStepSize * mPolicyA2 + (1-pStepSize) *mPolicyA2Updated;
+
+    %% 7. Optional reports
+    % Print out
+    if (floor((iIterationNum-1)/50) == (iIterationNum-1)/50)
+        fprintf('====================================== \n');
+        fprintf('====================================== \n');
+        fprintf('Convergence: \n');
+        fprintf('Iteration:             %.0f \n', iIterationNum);
+        fprintf('Error:                 %.8f \n', iError2);
+        fprintf('------------------------------------- \n');
+        fprintf('Mean capital:          %.2f \n', mean(vK));
+        fprintf('Mean effective labour: %.2f \n', mean(vL));
+    else
+    end
 
 % End the outer loops
 end 
 toc;
 
 %% Save the results
-
+TimeToSave                      = [pBurnIn:pRequiredTime-pBurnIn];
+Results.vK                      = vK(TimeToSave);
+Results.vL                      = vL(TimeToSave);
+Results.vN                      = vN(TimeToSave);
 
 end 
