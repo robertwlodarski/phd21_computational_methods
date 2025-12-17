@@ -203,8 +203,11 @@ while iError2 > pErrorTol
                 iAddUB                      = accumarray(iUB,iMassUB,[size(vGridA2,1),1]);
                 iAddLB                      = accumarray(iLB,iMassLB,[size(vGridA2,1),1]);
 
-                % Update the distribution
-                iNextDistribution(:,zzp)  = iNextDistribution(:,zzp) + iAddUB + iAddLB;
+                % Upper
+                iNextDistribution(:,zzp)  = iNextDistribution(iUB,zzp) + iMass * mTransitionZ(zzz,zzp) * iWeightUB;
+
+                % Lower
+                iNextDistribution(iLB,zzp)  = iNextDistribution(iLB,zzp) + iMass * mTransitionZ(zzz,zzp) * iWeightLB;
             end
         end
         
