@@ -25,7 +25,7 @@ pBurnIn             = 500;
 pRequiredTime       = pT + pBurnIn;
 iError2             = 10;
 pErrorTol           = 1e-4;
-pStepSize           = 0.95;
+pStepSize           = 0.99;
 pStepSizeL          = 0.6;
 iIterationNum       = 1;
 
@@ -52,7 +52,7 @@ mStartingDist       = Results0.mDistribution;
 % Initial guesses 
 % Aggregate
 vL                  = ones(pRequiredTime,1)*Results0.vLabourSupply;
-vK                  = max(ones(pRequiredTime,1) * Results0.vCapitalOpt + normrnd(0,1e-8,pRequiredTime,1),1e-8);
+vK                  = max(ones(pRequiredTime,1) * Results0.vCapitalOpt  + normrnd(0,1e-8,pRequiredTime,1),1e-8);
 
 % Policy function (C, Ap, and N)
 mPolicyC                    = repmat(Results0.mC,1,1,pRequiredTime);
