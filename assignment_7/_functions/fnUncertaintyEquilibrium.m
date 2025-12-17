@@ -25,8 +25,8 @@ pBurnIn             = 500;
 pRequiredTime       = pT + pBurnIn;
 iError2             = 10;
 pErrorTol           = 1e-4;
-pStepSize           = 0.99;
-pStepSizeL          = 0.6;
+pStepSize           = 0.995;
+pStepSizeL          = 0.8;
 iIterationNum       = 1;
 
 % Set up productivity shocks
