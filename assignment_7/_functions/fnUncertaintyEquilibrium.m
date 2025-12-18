@@ -49,10 +49,10 @@ mStartingDist       = Results0.mDistribution;
 
 %% 2. Initial guesses
 
-% Initial guesses 
+% Initial guesses
 % Aggregate
 vL                  = ones(pRequiredTime,1)*Results0.vLabourSupply;
-vK                  = max(ones(pRequiredTime,1) * Results0.vCapitalOpt  + normrnd(0,1e-8,pRequiredTime,1),1e-8);
+vK                  = max(ones(pRequiredTime,1) * 11.75  + normrnd(0,1e-8,pRequiredTime,1),1e-8);
 
 % Policy function (C, Ap, and N)
 mPolicyC                    = repmat(Results0.mC,1,1,pRequiredTime);
@@ -218,8 +218,9 @@ while iError2 > pErrorTol
 
     %% 6. Convergence checking
     % Error
-    vKtoLNew                    = vKNew ./ vLNew;
-    iError2                     = max(abs(vKtoLNew-vKtoL));
+    errK                        = max(abs(vKNew - vK) ./ max(abs(vK), 1e-8));
+    errL                        = max(abs(vLNew - vL) ./ max(abs(vL), 1e-8));
+    iError2                     = max(errK, errL);
     iIterationNum               = iIterationNum+1;
 
     % Update the aggregate values
