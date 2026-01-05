@@ -13,4 +13,4 @@ addpath _scripts/
 LoadParameters;
 
 %% 2. Solve the steady state model
-ResultSS            = fnSteadyState(Parameters,Grids);
+ResultSS            = fnSteadyState(Parameters);
