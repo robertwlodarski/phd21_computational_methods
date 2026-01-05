@@ -1,4 +1,4 @@
-function [N,K,Y,C,W]    = fnSteadyState(Parameters)
+function Results    = fnSteadyState(Parameters)
 
 %% 1. Unpack parameters to be used
 pBeta               = Parameters.pBeta;
@@ -16,10 +16,10 @@ vW                  = pGamma * vY / vN;
 vC                  = 1 / pEta * vW;
 
 %% 3. Save the results
-N                   = vN;
-K                   = vK; 
-Y                   = vY; 
-C                   = vC; 
-W                   = vW;
+Results.N           = vN;
+Results.K           = vK; 
+Results.Y           = vY; 
+Results.C           = vC; 
+Results.W           = vW;
 
 end 
