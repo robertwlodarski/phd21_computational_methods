@@ -1,7 +1,6 @@
 function Results        = fnUncertaintyEquilibrium(Parameters,Grids, ResultSS)
 
 %% 1. Prepare the setting
-
 % Parameters
 pEta                = Parameters.pEta;
 pAlpha              = Parameters.pAlpha;
@@ -47,6 +46,9 @@ vK                  = max(ResultSS.K * ones(pRequiredTime,1) + normrnd(0,1e-8,pR
 vC                  = ResultSS.C * ones(pRequiredTime,1);
 vIMin               = pPhi * pDelta * ResultSS.K;
 
+% Steady state value function
+vInnerTerm          = pBeta / ResultSS.C * repmat(pAlpha * ResultSS.Y / ResultSS.K + 1 - pDelta,pRequiredTime,1);
+
 %% 3. Start running the loop
 tic;
 while iError > pErrorTol
@@ -56,13 +58,11 @@ while iError > pErrorTol
     vW                          = pEta * vC;
     vKp                         = [vK(2:end);vK(1)];
     vN                          = ((pGamma * vA .* vK.^(pAlpha))./vW).^(1 / (1-pGamma));
-    vNp                         = [vN(2:end);vN(1)];
-    vCp                         = [vC(2:end);vC(1)];
 
     %% 4. Backward simulation begins
     
     % 4.1. Initialise the expected marginal value
-    mEJ1                        = 0.0;
+    vEJ1                        = 0.0;
 
     % 4.2. Open the TFP loop
     for iApIndex = 1:1:size(vGridA,1)
@@ -93,34 +93,68 @@ while iError > pErrorTol
         iWeightLow(iWeightLow > 1)              = 1;
 
         % D. Get MPK values for unconstrained solution
-        iInnerTermLow                           = 1; %Replace with a guess
-        iInnerTermHigh                          = 1; %Replace with a guess
+        iInnerTermLow                           = vInnerTerm(iIndLow); 
+        iInnerTermHigh                          = vInnerTerm(iIndHigh); 
         iInnerInterpolated                      = iWeightLow .* iInnerTermLow + (1 - iWeightLow) .* iInnerTermHigh;
-        mEJ1                                    = mEJ1 + (vAp ~= Ap) .* mTransitionA(vAIndex,iApIndex) .* iInnerInterpolated;
+        vEJ1                                    = vEJ1 +  mTransitionA(vAIndex,iApIndex) .* iInnerInterpolated;
 
         % Close the TFP loop
     end 
-
-    % E. Add the realised path
-    mEJ1                        = mEJ1 + vRealisedP .* iInner;
     
     %% 6. Update the allocations
 
     % 6.1. Unconstrained allocation
     vY                          = vA .* vK.^(pAlpha) .* vN.^(pGamma);
-    vCUnc                       = 1 ./ mEJ1;
+    vCUnc                       = 1 ./ vEJ1;
     vKpUnc                      = vY + (1 - pDelta) .* vK - vCUnc;
 
     % 6.2. Add constraints and obtain implied K and C
     vKpMin                      = vIMin + (1-pDelta)*vK;
     vKpImplied                  = max(vKpMin,vKpUnc);
     vCImplied                   =  vY + (1 - pDelta) .* vK - vKpImplied;
-    
-    % 6.3. Compute the inner term
+    vWImplied                   = pEta * vCImplied;
+    vNImplied                   = (pGamma * vA .* vK.^(pAlpha) ./ vWImplied).^(1 / (1 - pGamma));
+    vYImplied                   = vA .* vK.^(pAlpha) .* vNImplied.^(pGamma);
+
+    % 6.3. Compute the inner term for the next iteration
+    vCpImplied                  = [vCImplied(2:end);vCImplied(1)];
+    vShadowPrice                = min(vCImplied .* vEJ1,1.0);
+    vInnerTerm                  = pBeta ./ vCImplied .* (pAlpha * vYImplied ./ vK + (1-pDelta) .* vShadowPrice);
 
     %% 7. Finalise the loop
 
+    % Adjust vK
+    vKImplied                   = [vKpImplied(end);vKpImplied(1:end-1)];
+
+    % Compute errror
+    iError                      = mean([vC-vCImplied;vK-vKImplied].^2,"all");
+    iErrorK                     = mean((vK-vKImplied).^2,"all");
+    iErrorC                     = mean((vC-vCImplied).^2,"all");
+
+    % Update the logic
+    vK                          = pStepSize * vK + (1 - pStepSize)*vKImplied;
+    vC                          = pStepSize * vC + (1 - pStepSize)*vCImplied;
+    
+     %% 8. Optional reports
+     % Print out
+     if (floor((iIterationNum-1)/20) == (iIterationNum-1)/20)
+         fprintf('====================================== \n');
+         fprintf('====================================== \n');
+         fprintf('Convergence: \n');
+         fprintf('Iteration:         %.0f \n', iIterationNum);
+         fprintf('Error:             %.8f \n', iError);
+         fprintf('Capital error:     %.8f \n', iErrorK);
+         fprintf('Consumption error: %.8f \n', iErrorC);
+     else
+     end
     iIterationNum               = iIterationNum + 1;
     % Close the outer loop
 end 
 toc;
+
+%% 9. Save the results
+Results.vK                      = vK;
+Results.vC                      = vC;
+Results.vA                      = vA;
+Results.vY                      = vYImplied;
+Results.vShadowPrice            = vShadowPrice;

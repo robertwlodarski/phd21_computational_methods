@@ -8,6 +8,7 @@ pAlpha              = Parameters.pAlpha;
 pDelta              = Parameters.pDelta;
 pGamma              = Parameters.pGamma;
 pBeta               = Parameters.pBeta;
+pPhi                = Parameters.pPhi;
 
 % Grids
 vGridA              = Grids.vGridTFP;
@@ -44,7 +45,10 @@ end
 % Guess capital (with minor pertubation) and consumption
 vK                  = max(ResultSS.K * ones(pRequiredTime,1) + normrnd(0,1e-8,pRequiredTime,1),1e-8);
 vC                  = ResultSS.C * ones(pRequiredTime,1);
+vIMin               = pPhi * pDelta * ResultSS.K;
 
+% Steady state value function
+vJ1SS               = pAlpha * Results 
 
 %% 3. Start running the loop
 tic;
@@ -92,10 +96,8 @@ while iError > pErrorTol
         iWeightLow(iWeightLow > 1)              = 1;
 
         % D. Get MPK values for unconstrained solution
-        iMPKLow                                  = pAlpha * Ap * vK(iIndLow).^(pAlpha - 1) .* vN(iIndLow).^(pGamma) + 1 - pDelta;
-        iJ1High                                 = pAlpha * Ap * vK(iIndHigh).^(pAlpha - 1) .* vN(iIndHigh).^(pGamma) + 1 - pDelta;
-        iInnerTermLow                           = pBeta * 1 ./ vC(iIndLow) .* iMPKLow;
-        iInnerTermHigh                          = pBeta * 1 ./ vC(iIndHigh) .* iJ1High;
+        iInnerTermLow                           = 1; %Replace with a guess
+        iInnerTermHigh                          = 1; %Replace with a guess
         iInnerInterpolated                      = iWeightLow .* iInnerTermLow + (1 - iWeightLow) .* iInnerTermHigh;
         mEJ1                                    = mEJ1 + (vAp ~= Ap) .* mTransitionA(vAIndex,iApIndex) .* iInnerInterpolated;
 
@@ -103,11 +105,23 @@ while iError > pErrorTol
     end 
 
     % E. Add the realised path
-    iJFuture                    = pAlpha * Ap * vKp.^(pAlpha - 1) .* vNp.^(pGamma) + 1 - pDelta;
-    iInner                      = pBeta * 1 ./ vCp .* iJFuture;
     mEJ1                        = mEJ1 + vRealisedP .* iInner;
     
-    %% 6. Update the allocations [unconstrained]
+    %% 6. Update the allocations
+
+    % 6.1. Unconstrained allocation
+    vY                          = vA .* vK.^(pAlpha) .* vN.^(pGamma);
+    vCUnc                       = 1 ./ mEJ1;
+    vKpUnc                      = vY + (1 - pDelta) .* vK - vCUnc;
+
+    % 6.2. Add constraints and obtain implied K and C
+    vKpMin                      = vIMin + (1-pDelta)*vK;
+    vKpImplied                  = max(vKpMin,vKpUnc);
+    vCImplied                   =  vY + (1 - pDelta) .* vK - vKpImplied;
+    
+    % 6.3. Compute the inner term
+
+    %% 7. Finalise the loop
 
     iIterationNum               = iIterationNum + 1;
     % Close the outer loop

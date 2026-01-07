@@ -14,3 +14,6 @@ LoadParameters;
 
 %% 2. Solve the steady state model
 ResultSS            = fnSteadyState(Parameters);
+
+%% 3. Run the uncertainty equilibrium
+Results             = fnUncertaintyEquilibrium(Parameters,Grids, ResultSS);
