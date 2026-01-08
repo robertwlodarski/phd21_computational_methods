@@ -3,6 +3,7 @@
 #           Content:
 #           1.      Next period's wealth optimsation 
 #           2.      Interpolate value function
+#           3.      Interpolation with the basis matrix method
 
 
 ##################################################
@@ -49,3 +50,36 @@ function        fnInterpolateValueFunction(iWealthNext,iBudget,iExpValueZ,p,g)
     return (log(iBudget - iWealthNext) + β * EV)
 
 end 
+
+##################################################
+##          3. Basis matrix method              ##
+##################################################
+
+function        fnBasisMethodInterpolation(mOld,mNew)
+
+    ## 1.       Numbers of elements & preallocation indices
+    nOld        = length(mOld)
+    nNew        = length(mNew)
+    I           = zeros(Int, nNew * 2)
+    J           = zeros(Int, nNew * 2)
+    V           = zeros(Float64, nNew * 2)
+
+    ## 2.       Loop 
+    Count       = 0
+    for (i,val) in enumerate(mNew)
+
+        # A.    Find the old grid's index
+        idx     = searchsortedlast(mOld,val)
+        idx     = clamps(idx, 1, nOld - 1)
+
+        # B.    Weights
+        w       = (val - mOld[idx]) / (mOld[idx+1]-mOld[idx])
+
+        # C.    Store weights 
+        Count   += 1;   I[Count] = i;   J[Count] = idx;     V[Count] = 1 - w 
+        Count   += 1;   I[Count] = i;   J[Count] = idx+1;   V[Count] = w
+    end 
+
+    ## 3.       Store results
+    return  sparse(I,J,V,nNew,nOld)
+end
