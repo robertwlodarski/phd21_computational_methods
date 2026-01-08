@@ -95,7 +95,7 @@ function        fnIterationMethod(iCurrentDistribution,mPolicyWealthNext2,g)
     @unpack vGridA2, vGridZ,mTransitionZ = g
 
     # B.                Start looping
-    Res                 = zeros(mPolicyWealthNext2)
+    Res                 = zeros(size(mPolicyWealthNext2))
     for iz in eachindex(vGridZ)
         for ia in eachindex(vGridA2)
 
