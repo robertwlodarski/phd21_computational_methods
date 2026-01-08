@@ -144,12 +144,15 @@ function fnSolveAiyagari1994(p,g)
                 iK              = iWeightOld * iK + (1 - iWeightOld) * iEndoK
 
                 # 7. Print cute messages 
+                
                 if (pVerbose && (iIterNumGE - 1) % 50 == 0) || iErrorGE < iTolGE
                         println("SUMMARY")
-                        @printf("Maximum error:     %.3f \n", iErrorGE)
+                        @printf("Iteration number:  %.0f \n", iIterNumGE)
+                        @printf("Maximum error:     %.6f \n", iErrorGE)
                         @printf("Interest rate:     %.3f \n", iInterest)
                         @printf("Wage:              %.3f \n", iWage)
                         @printf("Elapsed time:      %.3f \n", time() - t0) 
+                        flush(stdout)
                 end
                 iIterNumGE += 1
                 #       CLOSE THE GE LOOP
