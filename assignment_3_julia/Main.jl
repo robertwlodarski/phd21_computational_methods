@@ -12,6 +12,7 @@ using Infiltrator
 using QuadGK
 using Parameters
 using Pkg
+using SparseArrays
 
 ## 2.       Load functions 
 include("_functions/GridFunctions.jl")
