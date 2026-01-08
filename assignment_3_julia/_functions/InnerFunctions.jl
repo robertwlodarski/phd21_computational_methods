@@ -4,6 +4,7 @@
 #           1.      Next period's wealth optimsation 
 #           2.      Interpolate value function
 #           3.      Interpolation with the basis matrix method
+#           4.      Iteration method function
 
 
 ##################################################
@@ -70,7 +71,7 @@ function        fnBasisMethodInterpolation(mOld,mNew)
 
         # A.    Find the old grid's index
         idx     = searchsortedlast(mOld,val)
-        idx     = clamps(idx, 1, nOld - 1)
+        idx     = clamp(idx, 1, nOld - 1)
 
         # B.    Weights
         w       = (val - mOld[idx]) / (mOld[idx+1]-mOld[idx])
@@ -82,4 +83,38 @@ function        fnBasisMethodInterpolation(mOld,mNew)
 
     ## 3.       Store results
     return  sparse(I,J,V,nNew,nOld)
+end
+
+##################################################
+##          4. Iteration method function        ##
+##################################################
+
+function        fnIterationMethod(iCurrentDistribution,mPolicyWealthNext2,g)
+
+    # A.                Unpacking
+    @unpack vGridA2, vGridZ,mTransitionZ = g
+
+    # B.                Start looping
+    Res                 = zeros(mPolicyWealthNext2)
+    for iz in eachindex(vGridZ)
+        for ia in eachindex(vGridA2)
+
+            # C.        Find weights 
+            ap          = mPolicyWealthNext2[ia]
+            ib          = searchsortedlast(vGridA2, ap)
+            ib          = clamp(ib, 1, length(vGridA2)-1)
+            iu          = ib + 1
+            w           = (vGridA2[iu] - ap) / (vGridA2[iu] - vGridA2[ib])
+            w           = clamp(w, 0,1)
+
+            # D.        Iterate over future labour
+            Mass        = iCurrentDistribution[ia,iz]
+             for izp in eachindex(vGridZ)
+                Res[iu,izp] += Mass * mTransitionZ[iz,izp] * (1 - w)
+                Res[ib,izp] += Mass *  mTransitionZ[iz,izp] * w
+             end
+        end
+    end
+    # E.                Done :)
+    return Res
 end
