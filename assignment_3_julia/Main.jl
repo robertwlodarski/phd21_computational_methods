@@ -13,6 +13,7 @@ using QuadGK
 using Parameters
 using Pkg
 using SparseArrays
+using Printf
 
 ## 2.       Load functions 
 include("_functions/GridFunctions.jl")
@@ -21,7 +22,7 @@ include("_functions/Functions.jl")
 
 ## 3.       Set parameters and grids
 #           Parameters
-Base.@kwdef struct Parameters{T <: Real}
+Base.@kwdef struct ModelParameters{T <: Real}
     α::T     = 0.36
     σ::T     = 0.20
     ρ::T     = 0.90
@@ -29,7 +30,7 @@ Base.@kwdef struct Parameters{T <: Real}
     δ::T     = 0.08
     A::T     = 1.00
 end 
-p           = Parameters()
+p           = ModelParameters()
 #           Grids
 struct Grids
     vGridZ      ::Vector{Float64}
@@ -38,3 +39,7 @@ struct Grids
     vGridA2     ::Vector{Float64}
 end 
 g           = Grids(fnTauchenLogNormal(p,3.0,7)..., fnGridMMV(0.0,150.0,50), fnGridMMV(0.0,150.0,100))
+
+
+## 4.       Run the model 
+ K          = fnSolveAiyagari1994(p,g)
