@@ -100,12 +100,12 @@ function        fnIterationMethod(iCurrentDistribution,mPolicyWealthNext2,g)
         for ia in eachindex(vGridA2)
 
             # C.        Find weights 
-            ap          = mPolicyWealthNext2[ia]
+            ap          = mPolicyWealthNext2[ia,iz]
             ib          = searchsortedlast(vGridA2, ap)
             ib          = clamp(ib, 1, length(vGridA2)-1)
             iu          = ib + 1
             w           = (vGridA2[iu] - ap) / (vGridA2[iu] - vGridA2[ib])
-            w           = clamp(w, 0,1)
+            w           = clamp(w, 0.0,1.0)
 
             # D.        Iterate over future labour
             Mass        = iCurrentDistribution[ia,iz]
