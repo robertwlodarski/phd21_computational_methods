@@ -17,7 +17,7 @@ function        fnPlainDMPSteadyStateNaive(A,p)
     # B.                Loop settings 
     iWeightOld          = 0.95
     iErrorGE            = 10.0
-    iTolGE              = 1e-3
+    iTolGE              = 1e-12
     θ                   = 0.0
     w                   = 0.0
 
