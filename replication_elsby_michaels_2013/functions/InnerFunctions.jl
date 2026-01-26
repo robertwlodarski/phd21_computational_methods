@@ -3,12 +3,11 @@
 # Content
 # 1. Endogenous labour grid 
 # 2. Bargained wage
-# 3. Flow profit 
-# 4. Initial profit guess 
+# 3. Initial value function guest  
 
 # 1. Endogenous labour grid 
 
-function fnEndogenousLabourGrid(params::ModelParameters,p,f,q)
+function fn⃗(params::ModelParameters,p,f,q)
     # A. Unpacking business 
     @unpack η, α, x̲, b, β, c, x̅, s̅ₙ, s̲ₙ, Δₙ = params
 
@@ -22,9 +21,9 @@ end
 
 # 2. Bargained wage
 
-function fnBargainedWage(params::ModelParameters,p,f,q,n⃗,x⃗)
+function fW(params::ModelParameters,p,f,q,n⃗)
     # A. Unpacking business 
-    @unpack η, α, b, β, c = params 
+    @unpack η, α, b, β, c, x⃗ = params 
 
     # B. Compute wage 
     W    = η * ( p .* x⃗ .* α .* n⃗'.^(α - 1) ./ (1 - η * (1 - α)) + β * f * c / q) + (1 - η) * b 
@@ -33,15 +32,31 @@ function fnBargainedWage(params::ModelParameters,p,f,q,n⃗,x⃗)
     return W
 end 
 
-# 3. Flow profit 
+# 3. Initial value function guess 
 
-function fnFlowProfit(params::ModelParameters,p,n⃗,x⃗,W)
+function fΠ⁰!(params::ModelParameters,endo::EndogenousVariables,p,n⃗,W,q)
     # A. Unpacking business 
-    @unpack α, Nₓ = params 
+    @unpack α, Nₓ, x⃗, πˢᶜᵃˡᵉ, β, c, λ, W⃗ₓ = params 
 
-    # B. Compute flow profit 
-    Πᶠˡᵒʷ   = p .* x⃗ .* (n⃗' .^(α)) .- W .*  n⃗'
-    return  p .* x⃗ .* (n⃗' .^(α)) .- W .*  n⃗'
+    # B. Compute flow profit & initial guess 
+    Πᶠˡᵒʷ           = p .* x⃗ .* (n⃗' .^(α)) .- W .*  n⃗'
+    Πᶜ              = πˢᶜᵃˡᵉ * (1 / (1 - β)) .* Πᶠˡᵒʷ
+
+    # C. Loop for every x 
+    vⁿᵉʷ            = zeros(Nₓ)
+    nˣ              = zeros(Nₓ)
+    for i in 1:Nₓ
+        val, id     = findmax(view(Πᶜ,i,:))
+        vⁿᵉʷ[i]     = val 
+        nˣ[i]       = n⃗[id]
+    end 
+
+    # D. Firing and hiring functions 
+    Πᶠ              = vⁿᵉʷ .* (nˣ < n⃗') - 1e8 * (nˣ > n⃗')
+    Πʰ              = (vⁿᵉʷ .- c / q .* (nˣ - n⃗')) .* (nˣ > n⃗') - 1e8 * (nˣ < n⃗')
+
+    # E. Update the key value functions 
+    endo.Π          .= max.(Πᶠ,max.(Πʰ,Πᶜ))
+    endo.𝔼Π         .= (1 - λ) .* endo.Π + λ .* W⃗ₓ' * endo.Π 
 end 
 
-# 4. Initial profit guess 
