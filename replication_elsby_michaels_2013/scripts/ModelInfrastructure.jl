@@ -36,7 +36,11 @@ using Parameters, FastGaussQuadrature, LinearAlgebra
     L::Float64      = 3.5087        # Labour force
     b::Float64      = 0.38735       # Unemployment flow
     c::Float64      = 0.1327        # Vacancy cost
-    pₛₛ::Float64    = 1             # Steady state productivity 
+    pₛₛ::Float64    = 1             # Steady state productivity
+    
+    # C. VFI-related parameters
+    πˢᶜᵃˡᵉ::Float64 = 0.01          # Scale for the initial value function guess
+
 end
 
 # 1. The constructor 
@@ -80,8 +84,9 @@ UsedParameters = setup_parameters()
     E::Float64      = 1         # Mass of employed 
 
     # B. Value functions 
-    J::AbstractArray{Float64,2}     # Value function of a marginal job 
-    Π::AbstractArray{Float64,2}     # Total firm value function 
-    Υ::Float64                      # Unemployment flow value 
+    J::Matrix{Float64}          # Value function of a marginal job 
+    Π::Matrix{Float64}          # Total firm value function
+    Υ::Float64                  # Unemployment flow value 
+    𝔼Π::Matrix{Float64}         # Expected value of firm value function 
 
 end
