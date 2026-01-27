@@ -3,7 +3,6 @@
 # January 2026
 
 ## 1. Packages
-Pkg.status()
 using Preferences, Parameters, Accessors, StaticArrays, Adapt
 using Base.Cartesian, LinearAlgebra, SparseArrays, LoopVectorization, Interpolations
 using Distributions, Random, StatsBase, FastGaussQuadrature, Optim

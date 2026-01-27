@@ -4,6 +4,7 @@
 # 1. Endogenous labour grid 
 # 2. Bargained wage
 # 3. Initial value function guest  
+# 4. Value function iteration 
 
 # 1. Endogenous labour grid 
 
@@ -39,8 +40,8 @@ function fΠ⁰!(params::ModelParameters,endo::EndogenousVariables,p,n⃗,W,q)
     @unpack α, Nₓ, x⃗, πˢᶜᵃˡᵉ, β, c, λ, W⃗ₓ = params 
 
     # B. Compute flow profit & initial guess 
-    Πᶠˡᵒʷ           = p .* x⃗ .* (n⃗' .^(α)) .- W .*  n⃗'
-    Πᶜ              = πˢᶜᵃˡᵉ * (1 / (1 - β)) .* Πᶠˡᵒʷ
+    endo.Πᶠˡᵒʷ           = p .* x⃗ .* (n⃗' .^(α)) .- W .*  n⃗'
+    endo.Πᶜ         = πˢᶜᵃˡᵉ * (1 / (1 - β)) .* Πᶠˡᵒʷ
 
     # C. Loop for every x 
     vⁿᵉʷ            = zeros(Nₓ)
@@ -60,3 +61,91 @@ function fΠ⁰!(params::ModelParameters,endo::EndogenousVariables,p,n⃗,W,q)
     endo.𝔼Π         .= (1 - λ) .* endo.Π + λ .* W⃗ₓ' * endo.Π 
 end 
 
+# 4. Value function iteration 
+function fVFI!(params::ModelParameters,endo::EndogenousVariables,p,f,q)
+
+    # A. Unpacking business
+    @unpack Nₓ, β, c, λ, W⃗ₓ, n̅ˢ = params
+
+    # B. Construct the employment grid, n⃗, and matrix of wages 
+    n⃗       = fn⃗(params,p,f,q)
+    W       = fW(params,p,f,q,n⃗)
+
+    # C. Initial value function guesses
+    fΠ⁰!(params,endo,p,n⃗,W,q)
+    Πᵒˡᵈ    = endo.Π
+    𝔼Π      = endo.𝔼Π
+    Πᶠˡᵒʷ   = endo.Πᶠˡᵒʷ
+
+    # D. Initialise values and start the loop
+    Πᶠ      = zeros(size(Πᵒˡᵈ)) 
+    Πʰ      = zeros(size(Πᵒˡᵈ))
+    Πⁿᵉʷ    = zeros(size(Πᵒˡᵈ))
+    vⁿᵉʷ    = zeros(Nₓ)
+    nˣ      = zeros(Nₓ)
+    vᶠ      = zeros(Nₓ)
+    nᶠ      = zeros(Nₓ)
+    vʰ      = zeros(Nₓ)
+    nʰ      = zeros(Nₓ)
+    𝕀ˢᵗᵒᵖ   = false 
+    𝕀ᶠᵃˢᵗ   = true 
+    nᵛ      = 1
+    nˢ      = 1
+    while 𝕀ˢᵗᵒᵖ == false 
+        Πᶜ  = Πᶠˡᵒʷ .+ β .* 𝔼Π
+
+        # E. Coarse updating 
+        if 𝕀ᶠᵃˢᵗ   == true 
+
+                # i. Compute the values of firing and hiring
+                for i in 1:Nₓ
+                    val, id     = findmax(view(Πᶜ,i,:))
+                    vⁿᵉʷ[i]     = val 
+                    nˣ[i]       = n⃗[id]
+                end 
+                Πᶠ              .= vⁿᵉʷ .* (nˣ < n⃗') - 1e8 * (nˣ > n⃗')
+                Πʰ              .= (vⁿᵉʷ .- c / q .* (nˣ - n⃗')) .* (nˣ > n⃗') - 1e8 * (nˣ < n⃗')
+                
+                # ii. Update values and error terms 
+                Πⁿᵉʷ            .= max.(Πᶠ,max.(Πʰ,Πᶜ))
+                𝔼Π              .= (1 - λ) .* Πⁿᵉʷ + λ .* W⃗ₓ' * Πⁿᵉʷ 
+                εᵛᶠⁱ            = maximum(abs.((Πⁿᵉʷ-Πᵒˡᵈ)./Πᵒˡᵈ))
+                nᵛ              +=1
+                Πᵒˡᵈ            .= Πⁿᵉʷ
+        end 
+
+        # F. Refined updating
+        if 𝕀ᶠᵃˢᵗ   == false 
+            
+            # i. Compute values of firing and hiring 
+            for i in 1:Nₓ
+                # Fire 
+                ℑᶠ              = CubicSplineInterpolation(n⃗,view(Πᶜ,i,:))
+                ℜᶠ              = optimize(n -> -ℑᶠ(n),n⃗[1],n⃗[end])
+                nᶠ[i]           = Optim.minimizer(ℜᶠ)
+                vᶠ[i]           = -Optim.minimum(ℜᶠ)
+                # Hire 
+                ℑʰ              = CubicSplineInterpolation(n⃗,view(Πᶜ,i,:))
+                ℜʰ              = optimize(n -> -ℑʰ(n)+(c/q)*n,n⃗[1],n⃗[end])
+                nʰ[i]           = Optim.minimizer(ℜʰ)
+                vʰ[i]           = -Optim.minimum(ℜʰ)
+            end 
+            # Compute 
+            Πᶠ                  .= vᶠ .* (nᶠ < n⃗') - 1e8 * (nᶠ > n⃗')
+            Πʰ                  .= (vʰ .- c / q .* (nʰ - n⃗')) .* (nʰ > n⃗') - 1e8 * (nʰ < n⃗')
+            
+            # ii. Update values and error terms 
+            Πⁿᵉʷ                .= max.(Πᶠ,max.(Πʰ,Πᶜ))
+            𝔼Π                  .= (1 - λ) .* Πⁿᵉʷ + λ .* W⃗ₓ' * Πⁿᵉʷ 
+            εᵛᶠⁱ                = maximum(abs.((Πⁿᵉʷ-Πᵒˡᵈ)./Πᵒˡᵈ))
+            # Stop when too many splines 
+            if nˢ == n̅ˢ  
+                𝕀ˢᵗᵒᵖ = true 
+            end 
+            nᵛ                  +=1
+            nˢ                  +=1
+            Πᵒˡᵈ                .= Πⁿᵉʷ
+        end 
+    end  
+
+end 

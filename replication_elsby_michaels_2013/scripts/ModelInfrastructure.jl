@@ -40,6 +40,8 @@ using Parameters, FastGaussQuadrature, LinearAlgebra
     
     # C. VFI-related parameters
     πˢᶜᵃˡᵉ::Float64 = 0.01          # Scale for the initial value function guess
+    δʳᵉᶠ::Float64   = 0.01          # Tolerance for refining the grid
+    n̅ˢ::Int         = 15            # The maximum number of spline interpolations  
 
 end
 
@@ -86,6 +88,8 @@ UsedParameters = setup_parameters()
     # B. Value functions 
     J::Matrix{Float64}          # Value function of a marginal job 
     Π::Matrix{Float64}          # Total firm value function
+    Πᶜ::Matrix{Float64}         # Continuation value function
+    Πᶠˡᵒʷ ::Matrix{Float64}     # Flow profit 
     Υ::Float64                  # Unemployment flow value 
     𝔼Π::Matrix{Float64}         # Expected value of firm value function 
 
