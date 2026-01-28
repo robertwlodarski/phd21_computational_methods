@@ -10,7 +10,7 @@
 
 function fn⃗(params::ModelParameters,p,f,q)
     # A. Unpacking business 
-    @unpack η, α, x̲, b, β, c, x̅, s̅ₙ, s̲ₙ, Δₙ = params
+    @unpack η, α, x̲, b, β, c, x̅, s̅ₙ, s̲ₙ, Δₙ,N₁,N₂,N₃,N₄= params
 
     # B. Define n̲ and n̅
     n̲       =  s̲ₙ * ( ((1 - η*(1-α)) / (p*x̲*α)) * (b + (1/(1-η)) * (η*β*c*(f/q) + (1 - η*(1-α))*c/q)) )^(-1/(1-α))
@@ -40,7 +40,7 @@ function fΠ⁰!(params::ModelParameters,endo::EndogenousVariables,p,n⃗,W,q)
     @unpack α, Nₓ, x⃗, πˢᶜᵃˡᵉ, β, c, λ, W⃗ₓ = params 
 
     # B. Compute flow profit & initial guess 
-    endo.Πᶠˡᵒʷ           = p .* x⃗ .* (n⃗' .^(α)) .- W .*  n⃗'
+    endo.Πᶠˡᵒʷ      = p .* x⃗ .* (n⃗' .^(α)) .- W .*  n⃗'
     endo.Πᶜ         = πˢᶜᵃˡᵉ * (1 / (1 - β)) .* Πᶠˡᵒʷ
 
     # C. Loop for every x 
@@ -81,8 +81,6 @@ function fVFI!(params::ModelParameters,endo::EndogenousVariables,p,f,q)
     Πᶠ      = zeros(size(Πᵒˡᵈ)) 
     Πʰ      = zeros(size(Πᵒˡᵈ))
     Πⁿᵉʷ    = zeros(size(Πᵒˡᵈ))
-    vⁿᵉʷ    = zeros(Nₓ)
-    nˣ      = zeros(Nₓ)
     vᶠ      = zeros(Nₓ)
     nᶠ      = zeros(Nₓ)
     vʰ      = zeros(Nₓ)
@@ -99,12 +97,18 @@ function fVFI!(params::ModelParameters,endo::EndogenousVariables,p,f,q)
 
                 # i. Compute the values of firing and hiring
                 for i in 1:Nₓ
-                    val, id     = findmax(view(Πᶜ,i,:))
-                    vⁿᵉʷ[i]     = val 
-                    nˣ[i]       = n⃗[id]
+                    # Fire 
+                    valᶠ, idᶠ   = findmax(view(Πᶜ,i,:))
+                    vᶠ[i]       = valᶠ 
+                    nᶠ[i]       = n⃗[idᶠ]
+                    # Hire 
+                    valʰ, idʰ   = findmax(view(Πᶜ,i,:).-(c/q).*n⃗)
+                    vʰ[i]       = valʰ 
+                    nʰ[i]       = n⃗[idʰ]
                 end 
-                Πᶠ              .= vⁿᵉʷ .* (nˣ < n⃗') - 1e8 * (nˣ > n⃗')
-                Πʰ              .= (vⁿᵉʷ .- c / q .* (nˣ - n⃗')) .* (nˣ > n⃗') - 1e8 * (nˣ < n⃗')
+                Πᶠ              .= vᶠ .* (nᶠ < n⃗') - 1e8 * (nᶠ > n⃗')
+                Πʰ              .= (vʰ .+ c / q .* n⃗') .* (nʰ > n⃗') - 1e8 * (nʰ < n⃗')
+
                 
                 # ii. Update values and error terms 
                 Πⁿᵉʷ            .= max.(Πᶠ,max.(Πʰ,Πᶜ))
@@ -132,7 +136,7 @@ function fVFI!(params::ModelParameters,endo::EndogenousVariables,p,f,q)
             end 
             # Compute 
             Πᶠ                  .= vᶠ .* (nᶠ < n⃗') - 1e8 * (nᶠ > n⃗')
-            Πʰ                  .= (vʰ .- c / q .* (nʰ - n⃗')) .* (nʰ > n⃗') - 1e8 * (nʰ < n⃗')
+            Πʰ                  .= (vʰ .+ c / q .* n⃗') .* (nʰ > n⃗') - 1e8 * (nʰ < n⃗')
             
             # ii. Update values and error terms 
             Πⁿᵉʷ                .= max.(Πᶠ,max.(Πʰ,Πᶜ))
@@ -145,6 +149,44 @@ function fVFI!(params::ModelParameters,endo::EndogenousVariables,p,f,q)
             nᵛ                  +=1
             nˢ                  +=1
             Πᵒˡᵈ                .= Πⁿᵉʷ
+        end 
+
+        # G. Grid refinement 
+        if (εᵛᶠⁱ<δʳᵉᶠ && 𝕀ᶠᵃˢᵗ == true)
+            # i. Save the old value  
+            n⃗ᵒˡᵈ                = copy(n⃗) 
+
+            # ii. Define grid boundaries 
+            n̲₁                  = nʰ[1]
+            n̲₂                  = 0.975*nᶠ[1]
+            n̅₁                  = 1.025*nʰ[Nₓ]
+            n̅₂                  = nᶠ[Nₓ]
+
+            # ii. Grids 
+            ñ⃗₁                  = 10 .^ range(log10(n̲₁),log10(n̲₂),length=N₁)
+            ñ⃗₂                  = 10 .^ range(log10(n̲₂),log10(1.25*n̲₂),length=N₂)
+            ñ⃗₃                  = 10 .^ range(log10(1.25*n̲₂),log10(n̅₁),length=N₃)
+            ñ⃗₄                  = 10 .^ range(log10(n̅₁),log10(n̅₂),length=N₃)
+            n⃗                   = unique([ñ⃗₁;ñ⃗₂;ñ⃗₃;ñ⃗₄])
+            Nₙ                  = length(n⃗)
+
+            # iv. Interpolation station
+            W                   = fW(params,p,f,q,n⃗)
+            Πᶠˡᵒʷ               = p .* x⃗ .* (n⃗' .^(α)) .- W .*  n⃗'
+            𝔼Πⁿᵉʷ               = zeros(Nₓ,length(n⃗))
+            for i in 1:Nₓ
+                ℑʳ              = CubicSplineInterpolation(n⃗ᵒˡᵈ,view(𝔼Π,i,:))
+                𝔼Πⁿᵉʷ[i,:]      = ℑʳ(n⃗)
+            end
+            𝔼Π                  = 𝔼Πⁿᵉʷ
+
+            # v. Settings 
+            𝕀ᶠᵃˢᵗ               = false 
+            nˢ                  += 1
+            Πᵒˡᵈ = copy(Πᶠˡᵒʷ) 
+            Πᶠ   = zeros(Nₓ, Nₙ)
+            Πʰ   = zeros(Nₓ, Nₙ)
+            Πⁿᵉʷ = zeros(Nₓ, Nₙ)
         end 
     end  
 

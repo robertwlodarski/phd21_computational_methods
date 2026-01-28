@@ -41,7 +41,11 @@ using Parameters, FastGaussQuadrature, LinearAlgebra
     # C. VFI-related parameters
     πˢᶜᵃˡᵉ::Float64 = 0.01          # Scale for the initial value function guess
     δʳᵉᶠ::Float64   = 0.01          # Tolerance for refining the grid
-    n̅ˢ::Int         = 15            # The maximum number of spline interpolations  
+    n̅ˢ::Int         = 15            # The maximum number of spline interpolations
+    N₁::Int         = 11            # First, sparse. segment of the grid, number of elements
+    N₂::Int         = 175           # Second, super dense, segment of the grid, number of elements 
+    N₃::Int         = 101           # Third, medium density, segment of the grid, number of elements 
+    N₄::Int         = 16            # Fourth, sparse, segment of the grid, number of elements 
 
 end
 
