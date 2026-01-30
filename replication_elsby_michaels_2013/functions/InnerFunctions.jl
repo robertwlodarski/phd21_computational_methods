@@ -5,6 +5,7 @@
 # 2. Bargained wage
 # 3. Initial value function guest  
 # 4. Value function iteration 
+# 5. Aggregation 
 
 # 1. Endogenous labour grid 
 
@@ -65,7 +66,7 @@ end
 function fVFI!(params::ModelParameters,endo::EndogenousVariables,p,f,q)
 
     # A. Unpacking business
-    @unpack Nₓ, β, c, λ, W⃗ₓ, n̅ˢ = params
+    @unpack Nₓ, β, c, λ, W⃗ₓ, n̅ˢ,N₁,N₂,N₃,N₄, x⃗, x̲, N̅₁, N̅₂, x̅ = params
 
     # B. Construct the employment grid, n⃗, and matrix of wages 
     n⃗       = fn⃗(params,p,f,q)
@@ -152,7 +153,7 @@ function fVFI!(params::ModelParameters,endo::EndogenousVariables,p,f,q)
         end 
 
         # G. Grid refinement 
-        if (εᵛᶠⁱ<δʳᵉᶠ && 𝕀ᶠᵃˢᵗ == true)
+        if (εᵛᶠⁱ < δʳᵉᶠ && 𝕀ᶠᵃˢᵗ == true)
             # i. Save the old value  
             n⃗ᵒˡᵈ                = copy(n⃗) 
 
@@ -183,11 +184,58 @@ function fVFI!(params::ModelParameters,endo::EndogenousVariables,p,f,q)
             # v. Settings 
             𝕀ᶠᵃˢᵗ               = false 
             nˢ                  += 1
-            Πᵒˡᵈ = copy(Πᶠˡᵒʷ) 
-            Πᶠ   = zeros(Nₓ, Nₙ)
-            Πʰ   = zeros(Nₓ, Nₙ)
-            Πⁿᵉʷ = zeros(Nₓ, Nₙ)
+            Πᵒˡᵈ                = copy(Πᶠˡᵒʷ) 
+            Πᶠ                  = zeros(Nₓ, Nₙ)
+            Πʰ                  = zeros(Nₓ, Nₙ)
+            Πⁿᵉʷ                = zeros(Nₓ, Nₙ)
         end 
     end  
 
+    # 5. Produce the policy functions of interest
+    # A. Employment policy
+    ℑⁿˡ     = CubicSplineInterpolation(x⃗,nᶠ)
+    n̲ᵖ      = ℑⁿˡ(1.001 * x̲)
+    n̅ᵖ      = nʰ[Nₓ]
+    n̂ᵖ      = 1.25 * n̲ᵖ
+    n̂⃗₁      = 10 .^ range(log10(n̲ᵖ),log10(n̂ᵖ),length=N̅₁)
+    n̂⃗₂      = 10 .^ range(log10(n̂ᵖ),log10(n̅ᵖ),length=N̅₂)
+    endo.n⃗  = unique([n̂⃗₁;n̂⃗₂])
+
+    # B. Indices for firing and hiring thresholds 
+    𝓃₁      = findlast(nᶠ .< n̅ᵖ)
+    𝓃₂      = findfirst(nʰ .> n̲ᵖ)
+
+    # C. Firing threshold 
+    𝕟ᴿ      = nᶠ[1:𝓃₁]
+    𝒾ᴿ      = unique(i -> 𝕟ᴿ[i],1:length(𝕟ᴿ)) 
+    𝕩ᴿ      = x⃗[1:𝓃₁]
+    ℑᴿ      = CubicSplineInterpolation(𝕟ᴿ[𝒾ᴿ],𝕩ᴿ[𝒾ᴿ])
+    endo.R⃗  = ℑᴿ(endo.n⃗)
+    endo.∂R⃗ = Interpolations.derivative.(Ref(ℑᴿ),endo.n⃗)
+
+    # D. Hiring threshold 
+    𝕟ᴿⱽ     = nʰ[𝓃₂:end]
+    𝒾ᴿⱽ     = unique(i -> 𝕟ᴿⱽ[i],1:length(𝕟ᴿⱽ))
+    𝕩ᴿⱽ     = x⃗[𝓃₂:end]
+    ℑᴿⱽ     = CubicSplineInterpolation(𝕟ᴿⱽ[𝒾ᴿⱽ],𝕩ᴿⱽ[𝒾ᴿⱽ])
+    endo.R⃗ᵥ = min.(ℑᴿⱽ(endo.n⃗),x̅)
+    endo.∂R⃗ᵥ= Interpolations.derivative.(Ref(ℑᴿⱽ),endo.n⃗)
+    
+end 
+
+# 5. Aggregation 
+function fAggregation!(params::ModelParameters,endo::EndogenousVariables,p,f,q)
+
+    # A. Unpacking business 
+    @unpack x̲, x⃗, ξ, p̄ₓ = params 
+
+    # B. Compute CDFs, PDFs, and expectation 
+    𝐆R⃗ᵥ     = (1 .- (x̲ ./ endo.R⃗ᵥ).^ξ) ./ p̄ₓ
+    𝐠R⃗ᵥ     = ((1 / p̄ₓ) * ξ * x̲^ξ) ./ ((endo.R⃗ᵥ).^(ξ+1)) 
+    𝐆R⃗      = (1 .- (x̲ ./ endo.R⃗).^ξ) ./ p̄ₓ
+    𝐠R⃗      = ((1 / p̄ₓ) * ξ * x̲^ξ) ./ ((endo.R⃗).^(ξ+1)) 
+    𝐇n⃗      = 𝐆R⃗ ./ (1 - 𝐆R⃗ᵥ + 𝐆R⃗)
+    𝐡n⃗      = ((1 - 𝐆R⃗ᵥ) .* 𝐠R⃗ .* endo.∂R⃗ + 𝐆R⃗ .* 𝐠R⃗ᵥ .* endo.∂R⃗ᵥ) ./ ((1 - 𝐆R⃗ᵥ + 𝐆R⃗).^2)
+    𝔼x      = x̲^ξ * (ξ /(ξ - 1)) * (endo.R⃗.^(-ξ+1)-endo.R⃗ᵥ.^(-ξ+1)) ./ (𝐆R⃗ᵥ .- 𝐆R⃗)
+    
 end 

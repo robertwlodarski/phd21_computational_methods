@@ -42,10 +42,12 @@ using Parameters, FastGaussQuadrature, LinearAlgebra
     πˢᶜᵃˡᵉ::Float64 = 0.01          # Scale for the initial value function guess
     δʳᵉᶠ::Float64   = 0.01          # Tolerance for refining the grid
     n̅ˢ::Int         = 15            # The maximum number of spline interpolations
-    N₁::Int         = 11            # First, sparse. segment of the grid, number of elements
-    N₂::Int         = 175           # Second, super dense, segment of the grid, number of elements 
-    N₃::Int         = 101           # Third, medium density, segment of the grid, number of elements 
-    N₄::Int         = 16            # Fourth, sparse, segment of the grid, number of elements 
+    N₁::Int         = 11            # First, sparse, segment of the VFI grid, number of elements
+    N₂::Int         = 175           # Second, super dense, segment of the VFI grid, number of elements 
+    N₃::Int         = 101           # Third, medium density, segment of the VFI grid, number of elements 
+    N₄::Int         = 16            # Fourth, sparse, segment of the VFI grid, number of elements 
+    N̅₁::Int         = 51            # First segment of the final grid, number of elements 
+    N̅₂::Int         = 75            # Second segment of the final grid, number of elements 
 
 end
 
@@ -65,8 +67,8 @@ function setup_parameters(; σ=0.25, Nₓ=45)
     
     # 3. Calculate PDF and combined weights
     p̄ₓ              = 1 - (x̲ / x̅)^ξ
-    pdf_x           = (1 / p̄ₓ) .* (ξ * (x̲^ξ)) ./ (x⃗ .^ (ξ + 1))
-    W⃗ₓ              = w⃗ₓ .* pdf_x        # Final weights for expectations, allowing E[V] = dot(W⃗ₓ, V)
+    𝑓x⃗              = (1 / p̄ₓ) .* (ξ * (x̲^ξ)) ./ (x⃗ .^ (ξ + 1))
+    W⃗ₓ              = w⃗ₓ .* 𝑓x⃗          # Final weights for expectations, allowing E[V] = dot(W⃗ₓ, V)
 
     # 4. Return the struct
     return ModelParameters(
@@ -95,6 +97,16 @@ UsedParameters = setup_parameters()
     Πᶜ::Matrix{Float64}         # Continuation value function
     Πᶠˡᵒʷ ::Matrix{Float64}     # Flow profit 
     Υ::Float64                  # Unemployment flow value 
-    𝔼Π::Matrix{Float64}         # Expected value of firm value function 
+    𝔼Π::Matrix{Float64}         # Expected value of firm value function
+    n⃗::Vector{Float64}          # Employment grid
+    R⃗::Vector{Float64}          # Firing threshold 
+    ∂R⃗::Vector{Float64}         # Its partial derivative 
+    R⃗ᵥ::Vector{Float64}         # Hiring threshold 
+    ∂R⃗ᵥ::Vector{Float64}        # Its partial derivative
+
+    # # C. Distributions 
+    # 𝐆R⃗::Vector{Float64}         # Distribtion of firing threshold
+    # 𝐆R⃗ᵥ::Vector{Float64}        # Distribtion of hiring threshold
+    # 𝐇n⃗::Vector{Float64}         # Distribution of employment policy 
 
 end
