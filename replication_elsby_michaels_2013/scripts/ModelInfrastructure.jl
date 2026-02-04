@@ -17,6 +17,7 @@ using Parameters, FastGaussQuadrature, LinearAlgebra
     x̅::Float64                      # Pareto upper bound
     μₓ::Float64                     # Mean
     λ::Float64      = 0.043         # Shock arrival rate 
+    p̄ₓ::Float64                     # Maximum probability
     
     # Grid vectors
     Nₓ::Int         = 45            # Number of grids 
@@ -49,6 +50,10 @@ using Parameters, FastGaussQuadrature, LinearAlgebra
     N̅₁::Int         = 51            # First segment of the final grid, number of elements 
     N̅₂::Int         = 75            # Second segment of the final grid, number of elements 
 
+    # D. Steady state computation settings
+    q̅::Float64      = 0.95          # Upper bound for the job filling rate 
+    q̲::Float64      = 0.05          # Lower bound for the job filling rate 
+
 end
 
 # 1. The constructor 
@@ -73,7 +78,7 @@ function setup_parameters(; σ=0.25, Nₓ=45)
     # 4. Return the struct
     return ModelParameters(
         σ=σ, ξ=ξ, x̲=x̲, x̅=x̅, μₓ=μₓ, 
-        Nₓ=Nₓ, x⃗=x⃗, W⃗ₓ=W⃗ₓ
+        Nₓ=Nₓ, x⃗=x⃗, W⃗ₓ=W⃗ₓ, p̄ₓ=p̄ₓ
     )
 end
 
@@ -110,3 +115,39 @@ UsedParameters = setup_parameters()
     # 𝐇n⃗::Vector{Float64}         # Distribution of employment policy 
 
 end
+
+# 2. Constructor for endogenous variables 
+function setup_endo(params::ModelParameters)
+    # A. Unpack parameters 
+    @unpack q̅ = params 
+
+    # B. Initial guess for dimensions and labour grid  
+    p⁰      = 1.0
+    q⁰      = q̅
+    f⁰      = fUpdatedJobFindingRate(q⁰,params)
+    n⃗⁰      = fn⃗(params,p⁰,f⁰,q⁰)
+    Nₓ      = params.Nₓ
+    Nₙ      = length(n⃗⁰)
+
+    # C. Allocate & return the structure 
+    # Initialise with zeros, as the VFI will take care of the business 
+    return EndogenousVariables(
+        θ   = 0.0,
+        f   = f⁰,
+        q   = q⁰,
+        U   = 0.0,
+        E   = 0.0,
+        Υ   = 0.0,
+        n⃗   = n⃗⁰,
+        J   = zeros(Nₓ,Nₙ),
+        Π   = zeros(Nₓ,Nₙ),
+        Πᶜ  = zeros(Nₓ,Nₙ),
+        Πᶠˡᵒʷ   = zeros(Nₓ,Nₙ),
+        𝔼Π  = zeros(Nₓ,Nₙ),
+        R⃗   = zeros(Nₓ),
+        ∂R⃗  = zeros(Nₓ),
+        R⃗ᵥ  = zeros(Nₓ),
+        ∂R⃗ᵥ = zeros(Nₓ)
+    )
+end 
+Endo    = setup_endo(UsedParameters)
