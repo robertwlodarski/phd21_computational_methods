@@ -5,12 +5,15 @@
 ## 1. Packages
 using Preferences, Parameters, Accessors, StaticArrays, Adapt
 using Base.Cartesian, LinearAlgebra, SparseArrays, LoopVectorization, Interpolations
-using Distributions, Random, StatsBase, FastGaussQuadrature, Optim
+using Distributions, Random, StatsBase, FastGaussQuadrature, Optim, Roots, Dierckx
 using BenchmarkTools, AllocCheck, MAT
 
 ## 2. Load macros, infrastructure, and functions
 include("scripts/Macros.jl")
+include("functions/InnerFunctions.jl")
+include("functions/MainFunctions.jl")
 include("scripts/ModelInfrastructure.jl")
-include("_functions/InnerFunctions.jl")
-include("_functions/Functions.jl")
 
+
+## 3. Search for the steady state at p=1.0
+q̂,f̂,N̂,Ŷ,Ŝ,M̂,Â =@time fSteadyState(UsedParameters,Endo,1.0)
