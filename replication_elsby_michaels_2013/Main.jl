@@ -3,7 +3,7 @@
 # January 2026
 
 ## 1. Packages
-using Preferences, Parameters, Accessors, StaticArrays, Adapt
+using Preferences, Parameters, Accessors, StaticArrays, Adapt, QuantEcon
 using Base.Cartesian, LinearAlgebra, SparseArrays, LoopVectorization, Interpolations
 using Distributions, Random, StatsBase, FastGaussQuadrature, Optim, Roots, Dierckx
 using BenchmarkTools, AllocCheck, MAT

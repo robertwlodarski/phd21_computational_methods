@@ -2,13 +2,11 @@
 
 # Content
 #1. Params (struct & constructor)
-#3. ExogVars (struct & constructor)
-
-
-using Parameters, FastGaussQuadrature, LinearAlgebra
+#2. Endogenous variables (struct & constructor)
+#3. Simulated variables  (struct & constructor)
+#4. Aggregate uncertainty endogenous variables (struct & constructor)
 
 # 1.Parameters 
-
 @with_kw struct ModelParameters
     # A. Grid and productivity parameters
     σ::Float64      = 0.25          # x shocks volatility 
@@ -52,33 +50,47 @@ using Parameters, FastGaussQuadrature, LinearAlgebra
 
     # D. Steady state computation settings
     q̅::Float64      = 0.95          # Upper bound for the job filling rate 
-    q̲::Float64      = 0.05          # Lower bound for the job filling rate 
+    q̲::Float64      = 0.05          # Lower bound for the job filling rate
+    
+    # E. Aggregate parameters 
+    ρₚ::Float64     = 0.9925                # Productivity persistence 
+    σ̃ₚ::Float64     = 0.0275                # Unconditional variance 
+    σₚ::Float64     = σ̃ₚ * sqrt(1-ρₚ^2)     # Productivity update variance 
+    Nₚ::Int         = 11                    # Number of Rouwenhorst grids
+    P::Matrix{Float64}                      # Transition probability 
+    p⃗::Vector{Float64}                      # Productivity grid 
 
 end
 
 # 1. The constructor 
-function setup_parameters(; σ=0.25, Nₓ=45)
-    # 1. Calibrate Pareto
+function setup_parameters(; σ=0.25, Nₓ=45, ρₚ = 0.9925, σ̃ₚ = 0.0275, Nₚ = 11)
+    # A. Calibrate Pareto
     σ̂               = 1.04 * σ
     ξ               = 1 + sqrt(1 + (1 / σ̂)^2)
     x̲               = (ξ - 1) / ξ
     x̅               = x̲ * ((1 - 0.9995)^(-1 / ξ))
     μₓ              = ξ * x̲ / (ξ - 1)
     
-    # 2. Generate grid (Gauss-Legendre)
+    # B. Generate grid (Gauss-Legendre)
     nodes, weights  = gausslegendre(Nₓ)
     x⃗               = nodes .* (x̅ - x̲) / 2.0 .+ (x̅ + x̲) / 2.0
     w⃗ₓ              = weights .* (x̅ - x̲) / 2.0
     
-    # 3. Calculate PDF and combined weights
+    # C. Calculate PDF and combined weights
     p̄ₓ              = 1 - (x̲ / x̅)^ξ
     𝑓x⃗              = (1 / p̄ₓ) .* (ξ * (x̲^ξ)) ./ (x⃗ .^ (ξ + 1))
     W⃗ₓ              = w⃗ₓ .* 𝑓x⃗          # Final weights for expectations, allowing E[V] = dot(W⃗ₓ, V)
 
-    # 4. Return the struct
+    # D. Aggregate productivity items 
+    σₚ              = σ̃ₚ * sqrt(1-ρₚ^2)
+    ℳ𝒞              = rouwenhorst(Nₚ,ρₚ,σₚ) # Construct the Markov chain 
+    P               = ℳ𝒞.p                  
+    p⃗               = exp.(ℳ𝒞.state_values)      
+
+    # E. Return the struct
     return ModelParameters(
         σ=σ, ξ=ξ, x̲=x̲, x̅=x̅, μₓ=μₓ, 
-        Nₓ=Nₓ, x⃗=x⃗, W⃗ₓ=W⃗ₓ, p̄ₓ=p̄ₓ
+        Nₓ=Nₓ, x⃗=x⃗, W⃗ₓ=W⃗ₓ, p̄ₓ=p̄ₓ, P=P, p⃗=p⃗
     )
 end
 
@@ -86,7 +98,6 @@ end
 UsedParameters = setup_parameters()
 
 # 2. Endogenous variables preallocation
-
 @with_kw mutable struct EndogenousVariables
 
     # A. Aggregate labour market values 
@@ -113,7 +124,6 @@ UsedParameters = setup_parameters()
     # 𝐆R⃗::Vector{Float64}         # Distribtion of firing threshold
     # 𝐆R⃗ᵥ::Vector{Float64}        # Distribtion of hiring threshold
     # 𝐇n⃗::Vector{Float64}         # Distribution of employment policy 
-
 end
 
 # 2. Constructor for endogenous variables 
@@ -151,3 +161,69 @@ function setup_endo(params::ModelParameters)
     )
 end 
 Endo    = setup_endo(UsedParameters)
+
+# 3. Simulated variables (structure)
+@with_kw mutable struct SimulationVariables
+
+    # 1. Exogenous shocks
+    p⃗̂::Vector{Float64}          # Simulated productivity vector 
+    p⃗̂ᵢ::Vector{Int}             # Simulated productivity indices 
+    
+    # 2. Aggregate levels 
+    N⃗::Vector{Float64}          # Vector of aggregate employment levels 
+    Θ⃗::Vector{Float64}          # Vector of labour tightness values 
+    q⃗::Vector{Float64}          # Vector of job-filling rates 
+    f⃗::Vector{Float64}          # Vector of job-finding rates 
+
+    # 3. Other flows 
+    S⃗::Vector{Float64}          # Separations 
+    M⃗::Vector{Float64}          # Matches 
+    Y⃗::Vector{Float64}          # Output 
+end 
+
+# 3. Simulated variables (constructor)
+function setup_simulated(UsedParameters; T = 52*75 +52*5, seed = 1997)
+
+    # A. Unpacking and caring about reproducibility 
+    @unpack P, p⃗, Nₚ            = UsedParameters
+    Random.seed!(seed)
+
+    # B. Productivity process 
+    p⃗̂ᵢ              = zeros(Int,T)
+    p⃗̂               = zeros(Float64,T)
+    cs              = (Nₚ + 1) ÷ 2
+    p⃗̂ᵢ[1]           = cs 
+    p⃗̂[1]            = p⃗[cs]
+    𝐹P              = cumsum(P,dims=2)
+    for t in 1:(T-1)
+        ns          = searchsortedfirst(𝐹P[cs,:],rand())
+        p⃗̂ᵢ[t+1]     = ns 
+        p⃗̂[t+1]      = p⃗[ns]
+        cs          = ns 
+    end 
+
+    # C. Initialise empty vetors for aggregate endo variables 
+    N⃗               = zeros(T) 
+    Θ⃗               = zeros(T)
+    q⃗               = zeros(T)
+    f⃗               = zeros(T)
+    S⃗               = zeros(T)
+    M⃗               = zeros(T)
+    Y⃗               = zeros(T)
+
+    # Returning
+    return SimulationVariables(
+        p⃗̂ᵢ  = p⃗̂ᵢ,
+        p⃗̂   = p⃗̂,
+        N⃗   = N⃗,
+        Θ⃗   = Θ⃗,
+        q⃗   = q⃗,
+        f⃗   = f⃗,
+        S⃗   = S⃗,
+        M⃗   = M⃗,
+        Y⃗   = Y⃗
+    )
+end 
+
+# 3. Simulate 
+Simu    = setup_simulated(UsedParameters)   
