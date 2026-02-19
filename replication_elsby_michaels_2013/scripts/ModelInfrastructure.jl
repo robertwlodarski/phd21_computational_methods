@@ -4,7 +4,7 @@
 #1. Params (struct & constructor)
 #2. Endogenous variables (struct & constructor)
 #3. Simulated variables  (struct & constructor)
-#4. Aggregate uncertainty endogenous variables (struct & constructor)
+#4. Krussel-Smith variabes (struct & constructor)
 
 # 1.Parameters 
 @with_kw struct ModelParameters
@@ -58,7 +58,9 @@
     σₚ::Float64     = σ̃ₚ * sqrt(1-ρₚ^2)     # Productivity update variance 
     Nₚ::Int         = 11                    # Number of Rouwenhorst grids
     P::Matrix{Float64}                      # Transition probability 
-    p⃗::Vector{Float64}                      # Productivity grid 
+    p⃗::Vector{Float64}                      # Productivity grid  
+    Ñₙ::Int         = 7                     # Number of aggregate employment grids
+    Ñₜ::Int         = 11                    # Number of aggregate theta grids 
 
 end
 
@@ -163,6 +165,11 @@ end
 Endo    = setup_endo(UsedParameters)
 
 # 3. Simulated variables (structure)
+# Important note:
+# 𝒩⃗: caligraphic letters - state space
+# N⃗: standard letters - simulation 
+# Π̃: greek letters with a tilde - value functions with aggregate uncertainty
+
 @with_kw mutable struct SimulationVariables
 
     # 1. Exogenous shocks
@@ -227,3 +234,37 @@ end
 
 # 3. Simulate 
 Simu    = setup_simulated(UsedParameters)   
+
+#4. Krussel-Smith variabes (structure)
+# Important note:
+# 𝒩⃗: caligraphic latin letters - state space
+# N⃗: standard latin letters - simulation  
+# Π̃: greek letters with a tilde - value functions with aggregate uncertainty
+
+@with_kw mutable struct KrussellSmithVariables
+
+    # A. Regression parameters
+    # Employment forecasting  
+    ν₀::Float64     = 0.17634
+    νₙ::Float64     = 0.92979
+    νₚ::Float64     = 0.05397
+    Rₙ::Float64     = 0.0
+    # Tightness forecasting 
+    θ₀::Float64     = -6.380265
+    θₙ::Float64     = 1.338166
+    θₚ::Float64     = 2.664425
+    Rₜ::Float64     = 0.0
+
+    # B. Aggregate employment and tightness grids 
+    𝒩⃗::Vector{Float64}
+    ϴ⃗::Vector{Float64}
+    𝓃⃗::Vector{Float64}
+
+    # C. Multidimensional functions 
+    # 5-dimensional: (x, p, N, Θ, n)
+    # 4-dimensional: (x, p, N, n)
+    Π̃::Array{Float64,5}             # Value function 
+    𝔼Π̃::Array{Float64,4}            # Expected value function 
+    Πᶜ::Array{Float64,5}            # Continuation value function 
+
+end 
