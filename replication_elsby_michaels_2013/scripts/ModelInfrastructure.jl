@@ -65,7 +65,7 @@
 end
 
 # 1. The constructor 
-function setup_parameters(; σ=0.25, Nₓ=45, ρₚ = 0.9925, σ̃ₚ = 0.0275, Nₚ = 11)
+function fnSetUpParameters(; σ=0.25, Nₓ=45, ρₚ = 0.9925, σ̃ₚ = 0.0275, Nₚ = 11)
     # A. Calibrate Pareto
     σ̂               = 1.04 * σ
     ξ               = 1 + sqrt(1 + (1 / σ̂)^2)
@@ -97,7 +97,7 @@ function setup_parameters(; σ=0.25, Nₓ=45, ρₚ = 0.9925, σ̃ₚ = 0.0275, 
 end
 
 # 1. Run the parameters 
-UsedParameters = setup_parameters()
+UsedParameters = fnSetUpParameters()
 
 # 2. Endogenous variables preallocation
 @with_kw mutable struct EndogenousVariables
@@ -129,7 +129,7 @@ UsedParameters = setup_parameters()
 end
 
 # 2. Constructor for endogenous variables 
-function setup_endo(params::ModelParameters)
+function fnSetUpEndo(params::ModelParameters)
     # A. Unpack parameters 
     @unpack q̅ = params 
 
@@ -162,7 +162,7 @@ function setup_endo(params::ModelParameters)
         ∂R⃗ᵥ = zeros(Nₓ)
     )
 end 
-Endo    = setup_endo(UsedParameters)
+Endo    = fnSetUpEndo(UsedParameters)
 
 # 3. Simulated variables (structure)
 # Important note:
@@ -189,7 +189,7 @@ Endo    = setup_endo(UsedParameters)
 end 
 
 # 3. Simulated variables (constructor)
-function setup_simulated(UsedParameters; T = 52*75 +52*5, seed = 1997)
+function fnSetUpSimulated(UsedParameters; T = 52*75 +52*5, seed = 1997)
 
     # A. Unpacking and caring about reproducibility 
     @unpack P, p⃗, Nₚ            = UsedParameters
@@ -233,14 +233,13 @@ function setup_simulated(UsedParameters; T = 52*75 +52*5, seed = 1997)
 end 
 
 # 3. Simulate 
-Simu    = setup_simulated(UsedParameters)   
+Simu    = fnSetUpSimulated(UsedParameters)   
 
 #4. Krussel-Smith variabes (structure)
 # Important note:
 # 𝒩⃗: caligraphic latin letters - state space
 # N⃗: standard latin letters - simulation  
 # Π̃: greek letters with a tilde - value functions with aggregate uncertainty
-
 @with_kw mutable struct KrussellSmithVariables
 
     # A. Regression parameters
@@ -254,6 +253,9 @@ Simu    = setup_simulated(UsedParameters)
     θₙ::Float64     = 1.338166
     θₚ::Float64     = 2.664425
     Rₜ::Float64     = 0.0
+    # Collapsed forecasting parameters [updated using special functions]
+    𝔼θₙ::Float64   
+    𝔼θₚ::Float64    
 
     # B. Aggregate employment and tightness grids 
     𝒩⃗::Vector{Float64}
@@ -266,5 +268,12 @@ Simu    = setup_simulated(UsedParameters)
     Π̃::Array{Float64,5}             # Value function 
     𝔼Π̃::Array{Float64,4}            # Expected value function 
     Πᶜ::Array{Float64,5}            # Continuation value function 
+end 
 
+#4. Krussel-Smith variabes (constructor)
+# Important note:
+# 𝒩⃗: caligraphic latin letters - state space
+# N⃗: standard latin letters - simulation  
+# Π̃: greek letters with a tilde - value functions with aggregate uncertainty
+function fnSetUpKS(UsedParameters)
 end 

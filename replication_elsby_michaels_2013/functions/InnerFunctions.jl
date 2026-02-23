@@ -14,7 +14,7 @@
 
 # 1. Endogenous labour grid 
 
-function fn⃗(params::ModelParameters,p,f,q)
+function fn⃗(params,p,f,q)
     # A. Unpacking business 
     @unpack η, α, x̲, b, β, c, x̅, s̅ₙ, s̲ₙ, Δₙ,N₁,N₂,N₃,N₄= params
 
@@ -28,7 +28,7 @@ end
 
 # 2. Bargained wage
 
-function fW(params::ModelParameters,p,f,q,n⃗)
+function fW(params,p,f,q,n⃗)
     # A. Unpacking business 
     @unpack η, α, b, β, c, x⃗ = params 
 
@@ -41,7 +41,7 @@ end
 
 # 3. Initial value function guess 
 
-function fΠ⁰!(params::ModelParameters,endo::EndogenousVariables,p,n⃗,W,q)
+function fΠ⁰!(params,endo,p,n⃗,W,q)
     # A. Unpacking business 
     @unpack α, Nₓ, x⃗, πˢᶜᵃˡᵉ, β, c, λ, W⃗ₓ = params 
 
@@ -85,11 +85,11 @@ function fRobustSpline(x_in, y_in, eval_grid)
         if length(x_clean) >= 4
             # Standard
             spl     = Spline1D(x_clean, y_clean; k=3, bc="extrapolate")
-            return spl(eval_grid), derivative(spl, eval_grid)
+            return spl(eval_grid), Dierckx.derivative(spl, eval_grid)
         elseif length(x_clean) >= 2
             # Fallback to linear if not enough points for cubic
             spl     = Spline1D(x_clean, y_clean; k=1, bc="extrapolate")
-            return spl(eval_grid), derivative(spl, eval_grid)
+            return spl(eval_grid), Dierckx.derivative(spl, eval_grid)
         else
             # Fallback if degenerate (0 or 1 point) -> constant bounds
             val     = isempty(y_clean) ? 0.0 : y_clean[1]
@@ -98,7 +98,7 @@ function fRobustSpline(x_in, y_in, eval_grid)
     end
 
 # 4B. Value function iteration 
-function fVFI!(params::ModelParameters,endo::EndogenousVariables,p,f,q)
+function fVFI!(params,endo,p,f,q)
 
     # A. Unpacking business
     @unpack Nₓ, β, c, λ, W⃗ₓ, n̅ˢ,N₁,N₂,N₃,N₄, x⃗, x̲, N̅₁, N̅₂, x̅,δʳᵉᶠ,α = params
@@ -236,8 +236,8 @@ function fVFI!(params::ModelParameters,endo::EndogenousVariables,p,f,q)
         end 
     end  
 
-    # 5. Produce the policy functions of interest
-    # A. Employment policy
+    # H. Produce the policy functions of interest
+    # H1. Employment policy
     ℑⁿˡ     = Spline1D(x⃗,nᶠ; k=3, bc="extrapolate")
     n̲ᵖ      = ℑⁿˡ(1.001 * x̲)
     n̅ᵖ      = nʰ[Nₓ]
@@ -246,25 +246,25 @@ function fVFI!(params::ModelParameters,endo::EndogenousVariables,p,f,q)
     n̂⃗₂      = 10 .^ range(log10(n̂ᵖ),log10(n̅ᵖ),length=N̅₂)
     endo.n⃗  = sort(unique([n̂⃗₁;n̂⃗₂]))
 
-    # B. Indices for firing and hiring thresholds 
+    # H2. Indices for firing and hiring thresholds 
     𝓃₁      = findlast(nᶠ .< n̅ᵖ)
     𝓃₂      = findfirst(nʰ .> n̲ᵖ)
 
-    # C. Firing threshold 
+    # H3. Firing threshold 
     𝕟ᴿ      = nᶠ[1:𝓃₁]
     𝒾ᴿ      = unique(i -> 𝕟ᴿ[i],1:length(𝕟ᴿ)) 
     𝕩ᴿ      = x⃗[1:𝓃₁]
     ℑᴿ      = Spline1D(𝕟ᴿ[𝒾ᴿ],𝕩ᴿ[𝒾ᴿ]; k=3, bc="extrapolate")
     endo.R⃗  = ℑᴿ(endo.n⃗)
-    endo.∂R⃗ = derivative(ℑᴿ,endo.n⃗)
+    endo.∂R⃗ = Dierckx.derivative(ℑᴿ,endo.n⃗)
 
-    # D. Hiring threshold 
+    # H4. Hiring threshold 
     𝕟ᴿⱽ     = nʰ[𝓃₂:end]
     𝒾ᴿⱽ     = unique(i -> 𝕟ᴿⱽ[i],1:length(𝕟ᴿⱽ))
     𝕩ᴿⱽ     = x⃗[𝓃₂:end]
     ℑᴿⱽ     = Spline1D(𝕟ᴿⱽ[𝒾ᴿⱽ],𝕩ᴿⱽ[𝒾ᴿⱽ]; k=3, bc="extrapolate")
     endo.R⃗ᵥ = min.(ℑᴿⱽ(endo.n⃗),x̅)
-    endo.∂R⃗ᵥ= derivative(ℑᴿⱽ,endo.n⃗)
+    endo.∂R⃗ᵥ= Dierckx.derivative(ℑᴿⱽ,endo.n⃗)
     
 end 
 
@@ -278,7 +278,7 @@ function fSimpsonRule(Integrand, Interval)
 end 
 
 # 6. Aggregation 
-function fAggregation(params::ModelParameters,endo::EndogenousVariables,p,f,q)
+function fAggregation(params,endo,p,f,q)
 
     # A. Unpacking business 
     @unpack x̲, x⃗, ξ, p̄ₓ, α, λ = params 
@@ -302,13 +302,13 @@ function fAggregation(params::ModelParameters,endo::EndogenousVariables,p,f,q)
 end 
 
 # 7. Update the job finding rate 
-function fUpdatedJobFindingRate(q,params::ModelParameters)
+function fUpdatedJobFindingRate(q,params)
      @unpack μ,ε   = params
     return μ * (q / μ)^((ε-1)/ε)
 end 
 
 # 8. Equilibrium residual 
-function fEqResidual(q,p,params::ModelParameters, endo::EndogenousVariables)
+function fEqResidual(q,p,params, endo)
 
     # A. Unpacking business
     @unpack L       = params
