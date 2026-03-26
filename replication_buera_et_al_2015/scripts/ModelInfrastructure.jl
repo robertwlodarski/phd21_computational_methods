@@ -32,7 +32,8 @@
     a⃗::Vector{Float64}  = zeros(Nᵃ)     # Assets grid 
     a̲::Float64          = 0.0           # Minimum assets 
     a̅::Float64          = 700.0         # Maximum assets
-    θᵃ::Float64         = 3.0           # Curvature of the assets grid 
+    θᵃ::Float64         = 3.0           # Curvature of the assets grid
+    c̲::Float64          = 1e-6          # "Zero" consumption  
 
     # F. Employment grid 
     l̲::Float64          = 0.0           # Minimum employment 
@@ -40,10 +41,11 @@
     θˡ::Float64         = 3.0           # Curvature of employment grid 
     l⃗::Vector{Float64}  = zeros(Nˡ)     # Employment grid 
 
-    # G. VFI-related parameters
-    πˢᶜᵃˡᵉ::Float64     = 0.5           # Scale for the initial value function guess
-    δʳᵉᶠ::Float64       = 0.01          # Tolerance for refining the grid
+    # G. VFI-related and distribution-related parameters
+    δᵛᶠⁱ::Float64       = 1e-3          # VFI iteration tolerance
     𝒾̄ᵛᶠⁱ::Int           = 2500          # Maximum VFI iterations 
+    δᵈⁱˢᵗ::Float64      = 1e-4          # Distribution iteration tolerance
+
 end 
 
 # 1. Parameters (compiler)
@@ -93,12 +95,18 @@ UsedParameters = fnSetUpParameters()
     𝕀ᶜ::Matrix{Bool}        # Constraint indicator 
     
     # C. Aggregate measures 
-    G::Array{Float64, 4}    # Distribution 
+    G::Array{Float64, 4}    # Distribution
+    G̃::Array{Float64,3}     # Marginal distribution  
+    JD::Float64             # Job destruction 
+    S::Float64              # Switchers from entrepreneurship to working 
+    D::Float64              # Jobs reduced 
     Kᵈ::Float64             # Capital demand 
     Kˢ::Float64             # Capital supplied 
     Lᵈ::Float64             # Labour demand 
     Lˢ::Float64             # Labour supply 
     Gᵉ::Float64             # Government expenditure
+    U::Float64              # Unemployed workers 
+    M::Float64              # Matches 
 
     # D. Prices 
     rₜ::Float64             # Interest rate 
@@ -128,11 +136,17 @@ function fnSetUpEndo(params::ModelParameters)
     
     # C. Aggregate measures 
     G       = zeros(Nᶻ, Nᵃ, Nˡ,2) # Last = unemployment
+    G̃       = zeros(Nᶻ, Nᵃ, Nˡ)
+    JD      = 0.0
+    D       = 0.0
+    S       = 0.0
     Kᵈ      = 0.0 
     Kˢ      = 0.0
     Lᵈ      = 0.0
     Lˢ      = 0.0
     Gᵉ      = 0.0
+    U       = 0.0
+    M       = 0.0
 
     # D. Prices 
     rₜ      = 0.0
@@ -153,11 +167,17 @@ function fnSetUpEndo(params::ModelParameters)
       𝐥     = 𝐥,
       𝕀ᶜ    = 𝕀ᶜ,
       G     = G,
+      G̃     = G̃,
+      JD    = JD,
+      D     = D, 
+      S     = S,
       Kᵈ    = Kᵈ,
       Kˢ    = Kˢ,
       Lᵈ    = Lᵈ,
       Lˢ    = Lˢ, 
       Gᵉ    = Gᵉ,
+      U     = U, 
+      M     = M,
       rₜ    = rₜ,
       wₜ    = wₜ,
       τₜ    = τₜ
