@@ -95,8 +95,8 @@ UsedParameters = fnSetUpParameters()
     𝕀ᶜ::Matrix{Bool}        # Constraint indicator 
     
     # C. Aggregate measures 
-    G::Array{Float64, 4}    # Distribution
-    G̃::Array{Float64,3}     # Marginal distribution  
+    g::Array{Float64, 4}    # Distirbution (PDF)
+    g̃::Array{Float64, 3}    # Marginal distribution (PDF)
     JD::Float64             # Job destruction 
     S::Float64              # Switchers from entrepreneurship to working 
     D::Float64              # Jobs reduced 
@@ -107,7 +107,9 @@ UsedParameters = fnSetUpParameters()
     Gᵉ::Float64             # Government expenditure
     U::Float64              # Unemployed workers 
     M::Float64              # Matches 
-
+    W::Float64              # Employed workers 
+    E::Float64              # Entrepreneurs
+    
     # D. Prices 
     rₜ::Float64             # Interest rate 
     wₜ::Float64             # Wages 
@@ -135,8 +137,8 @@ function fnSetUpEndo(params::ModelParameters)
     𝕀ᶜ      = fill(true, Nᶻ, Nᵃ)
     
     # C. Aggregate measures 
-    G       = zeros(Nᶻ, Nᵃ, Nˡ,2) # Last = unemployment
-    G̃       = zeros(Nᶻ, Nᵃ, Nˡ)
+    g       = zeros(Nᶻ, Nᵃ, Nˡ,2),
+    g̃       = zeros(Nᶻ, Nᵃ, Nˡ),
     JD      = 0.0
     D       = 0.0
     S       = 0.0
@@ -147,6 +149,8 @@ function fnSetUpEndo(params::ModelParameters)
     Gᵉ      = 0.0
     U       = 0.0
     M       = 0.0
+    W       = 0.0
+    E       = 0.0
 
     # D. Prices 
     rₜ      = 0.0
@@ -166,8 +170,8 @@ function fnSetUpEndo(params::ModelParameters)
       𝐜     = 𝐜,
       𝐥     = 𝐥,
       𝕀ᶜ    = 𝕀ᶜ,
-      G     = G,
-      G̃     = G̃,
+      g     = g,
+      g̃     = g̃,
       JD    = JD,
       D     = D, 
       S     = S,
@@ -178,6 +182,8 @@ function fnSetUpEndo(params::ModelParameters)
       Gᵉ    = Gᵉ,
       U     = U, 
       M     = M,
+      W     = W,
+      E     = E,
       rₜ    = rₜ,
       wₜ    = wₜ,
       τₜ    = τₜ
