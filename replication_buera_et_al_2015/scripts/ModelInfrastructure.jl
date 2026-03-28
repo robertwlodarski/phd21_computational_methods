@@ -17,9 +17,10 @@
     A::Float64          = 1.0           # Steady state productivity 
 
     # C. Grid sizes  
-    Nᶻ::Int             = 40            # Productivity grids (number) 
-    Nᵃ::Int             = 50            # Wealth grids (number)
-    Nˡ::Int             = 40            # Employment grid
+    Nᶻ::Int             = 11            # Productivity grids (number) 
+    Nᵃ::Int             = 100           # Wealth grids (number)
+    Nˡ::Int             = 15            # Employment grid
+    Nᵘ::Int             = 2             # Unemployment and other states grid 
 
     # D. Productivity grid 
     # Pareto: f(z) = 1 - z^(-η), z ≥ 1
@@ -31,7 +32,7 @@
     # E. Assets grid 
     a⃗::Vector{Float64}  = zeros(Nᵃ)     # Assets grid 
     a̲::Float64          = 0.0           # Minimum assets 
-    a̅::Float64          = 700.0         # Maximum assets
+    a̅::Float64          = 900.0         # Maximum assets
     θᵃ::Float64         = 3.0           # Curvature of the assets grid
     c̲::Float64          = 1e-6          # "Zero" consumption  
 
@@ -46,18 +47,25 @@
     𝒾̄ᵛᶠⁱ::Int           = 2500          # Maximum VFI iterations 
     δᵈⁱˢᵗ::Float64      = 1e-4          # Distribution iteration tolerance
 
+    # H. GE bounds for the prices 
+    w̲::Float64          = 1e-3              # Minimum wage 
+    w̅::Float64          = 50.0              # Maximum wage 
+    r̲::Float64          = 1e-3              # Minimum interest rate 
+    r̅::Float64          = 1.0 / β - 1.0 - 5* 1e-3 # Maximum interest rate 
+    τ̲::Float64          = 1e-3              # Minimum tax 
+    τ̅::Float64          = 10.0              # Maximum tax 
 end 
 
 # 1. Parameters (compiler)
 function fnSetUpParameters(params::ModelParameters = ModelParameters())
 
     # A. Unpacking business 
-    @unpack Nᶻ, Nᵃ, z̲, z̅, η, a̲, a̅, θᵃ, l̲, l̅, θˡ = params
+    @unpack Nᶻ, Nᵃ,Nˡ, z̲, z̅, η, a̲, a̅, θᵃ, l̲, l̅, θˡ = params
 
     # B. Productivity process 
     μ(z)    = 1 - z^(-η)
     z_of_p  = p -> (1 - p)^(-1/η)
-    z⃗       = [LinRange(z_of_p(0.633), z_of_p(0.998), 38); z_of_p(0.999); z_of_p(0.9995)]
+    z⃗       = [LinRange(z_of_p(0.633), z_of_p(0.998), Nᶻ-2); z_of_p(0.999); z_of_p(0.9995)]
     μ⃗       = [μ(z⃗[1]); diff(μ.(z⃗))] ./ μ(z⃗[end])
 
     # C. Assets grid 
@@ -119,7 +127,7 @@ end
 # 2. Endogenous variables preallocation (constructor)
 function fnSetUpEndo(params::ModelParameters)
     # A. Unpacking business 
-    @unpack Nᶻ, Nᵃ, Nˡ = params 
+    @unpack Nᶻ, Nᵃ, Nˡ,Nᵘ = params 
 
     # B. Key values 
     𝐕       = zeros(Nᶻ, Nᵃ)
@@ -137,8 +145,8 @@ function fnSetUpEndo(params::ModelParameters)
     𝕀ᶜ      = fill(true, Nᶻ, Nᵃ)
     
     # C. Aggregate measures 
-    g       = zeros(Nᶻ, Nᵃ, Nˡ,2),
-    g̃       = zeros(Nᶻ, Nᵃ, Nˡ),
+    g       = zeros(Nᶻ, Nᵃ, Nˡ, Nᵘ)
+    g̃       = zeros(Nᶻ, Nᵃ, Nˡ)
     JD      = 0.0
     D       = 0.0
     S       = 0.0

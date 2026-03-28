@@ -14,19 +14,28 @@
 # 4. Forward iteration
 # 5. Aggregate states 
 
+# C. Solving  
+# 1A. Logistic function for bounding 
+# 1B. Inverse logistic for bounding
+# 2. Combined steady state sesiduals
+# 3. Solve for the steady state 
+
 # -----------------------------------------------
 # A. VFI components 
 # -----------------------------------------------
 
 # 1. Utility function 
-function fnUtility(C,params)
+function fnUtility(C, params)
     
     # A. Unpacking business 
-    @unpack σ   = params 
+    @unpack σ,c̲ = params 
 
-    # B. Compute the utility 
-    return C.^(1-σ) ./ (1-σ) 
-end 
+    # B. Define a pure scalar function with the short-circuiting ternary operator
+    u(c) = c <= 0.0 ? (c̲^(1-σ)) / (1-σ) : (c^(1-σ)) / (1-σ)
+    
+    # C. Broadcast the custom function over C (works for scalars and arrays!)
+    return u.(C)
+end
 
 # 2. Static policy functions  
 function fnStaticPolicies!(params, endo)
@@ -58,10 +67,10 @@ function fnInitialVFIGuess!(params, endo)
     @unpack β, a⃗ = params 
 
     # B. Workers VF 
-    endo.𝐕ᵂ     .= (1-β)^(-1) * fnUtility(endo.rₜ .* a⃗' .- endo.τₜ + endo.wₜ ,params)
+    endo.𝐕ᵂ     .= 0.1*(1-β)^(-1) * fnUtility(endo.rₜ .* a⃗' .- endo.τₜ .+ endo.wₜ ,params)
 
     # C. Entrepreneurs VF 
-    endo.𝐕ᴱ     .= (1-β)^(-1) * fnUtility(endo.rₜ .* a⃗' .- endo.τₜ + endo.Π ,params)
+    endo.𝐕ᴱ     .= 0.1*(1-β)^(-1) * fnUtility(endo.rₜ .* a⃗' .- endo.τₜ .+ endo.Π ,params)
 
     # D. Overall VF 
     endo.𝐕      .= max.(endo.𝐕ᵂ,endo.𝐕ᴱ) 
@@ -80,12 +89,12 @@ function fnFindAssets(iz, ia, RHS_spline, params, endo)
     Cash_e          = a⃗[ia] * (1 + endo.rₜ) + endo.Π[iz,ia] - endo.τₜ
 
     # C. Bounds 
-    Lower           = 0.0
-    Upper_w         = Cash_w - c̲
-    Upper_e         = Cash_e - c̲
+    Lower           = a⃗[1]
+    Upper_w         = min(Cash_w - c̲, a⃗[end])
+    Upper_e         = min(Cash_e - c̲, a⃗[end])
 
     # D. Computation of assets: Worker 
-    if Cash_w <= c̲
+    if Upper_w <= Lower
         A_w         = a⃗[1]
     else
         Obj(A_next) = -(fnUtility(Cash_w-A_next,params) + β * RHS_spline(A_next))
@@ -94,7 +103,7 @@ function fnFindAssets(iz, ia, RHS_spline, params, endo)
     end 
 
     # E. Computation of assets: Entrepreneurs 
-    if Cash_e <= c̲
+    if Upper_e <= Lower
         A_e         = a⃗[1]
     else
         Obj(A_next) = -(fnUtility(Cash_e-A_next,params) + β * RHS_spline(A_next))
@@ -125,10 +134,10 @@ function fnVFI!(params, endo)
         # D1. Update the expected VF and open the loop for productivity 
         endo.𝔼𝐕     .= ψ .* endo.𝐕 .+ (1 - ψ) .* (μ⃗' *  endo.𝐕)
         𝐕ᵖʳᵉᵛ       = copy(endo.𝐕)
-        for iz in eachindex(z⃗)
+        @inbounds for iz in eachindex(z⃗)
         
             # B1. Prepare splines 
-            ℑᶠ              = Spline1D(a⃗,(@views endo.𝔼𝐕[iz, :]); k=1, bc="extrapolate")
+            ℑᶠ              = Spline1D(a⃗,(@views endo.𝔼𝐕[iz, :]); k=1, bc="nearest")
             
             # B2. Solve for each a and z 
             for ia in eachindex(a⃗)
@@ -153,6 +162,10 @@ function fnVFI!(params, endo)
         # D2. Error and update 
         εᵛᶠⁱ    = maximum(abs.(𝐕ᵖʳᵉᵛ.-endo.𝐕))
         𝓃ᵛᶠⁱ    += 1
+        # Add this heartbeat print statement!
+        if 𝓃ᵛᶠⁱ % 50 == 0
+            println("   -> VFI Iteration: $𝓃ᵛᶠⁱ, εᵛᶠⁱ = $(round(εᵛᶠⁱ, digits=6))")
+        end
     end 
 end 
 
@@ -225,7 +238,7 @@ function fnComputeFlows(iz,ia,il,iu, params, endo)
     UE  = 0.0 + (endo.𝐨[iz, ia] == true) * (iu == 2)
     UW  = 0.0 + (endo.𝐨[iz, ia] == false) * (iu == 2) * JFR
     EE  = 0.0 + (l⃗[il] > l⃗[1]) * (endo.𝐨[iz, ia] == true) * (iu == 1)
-    WW  = 0.0 + (endo.𝐨[iz, ia] == false) * (iu == 1) * ((1 - JDR) + (JDR * JFR))
+    WW  = 0.0 + (l⃗[il] == l⃗[1]) * (endo.𝐨[iz, ia] == false) * (iu == 1) * ((1 - JDR) + (JDR * JFR))
     UU  = 0.0 + (endo.𝐨[iz, ia] == false) * (iu == 2) * (1 - JFR)
 
     # C. Combine indicators to account for flows that matter
@@ -240,18 +253,19 @@ end
 function fnForwardIteration!(params, endo)
 
     # A. Unpacking business 
-    @unpack z⃗, a⃗, l⃗, δᵈⁱˢᵗ, ψ,μ⃗ = params 
+    @unpack z⃗, a⃗, l⃗, δᵈⁱˢᵗ, ψ,μ⃗,Nᶻ, Nᵃ, Nˡ,Nᵘ = params 
 
     # B. Starting the loop for a PDF
     εᵈⁱˢᵗ       = 1.0
-    gⁿᵉˣᵗ       = zeros(Nᶻ, Nᵃ, Nˡ,2)     
+    gⁿᵉˣᵗ       = zeros(Nᶻ, Nᵃ, Nˡ,Nᵘ)    
+    𝓃ᵈⁱˢᵗ       = 1 
     while (εᵈⁱˢᵗ > δᵈⁱˢᵗ)
         
         # C. Aggregate states 
         fnJobDestruction!(params, endo)         # Getting JD, S 
         fnUpdateLabourMarket!(params, endo)     # Getting U, M, W, E  
 
-        for ia in eachindex(a⃗)
+        @inbounds for ia in eachindex(a⃗)
             for il in eachindex(l⃗)
                 for iz in eachindex(z⃗)
                     for iu in 1:2
@@ -314,6 +328,10 @@ function fnForwardIteration!(params, endo)
         εᵈⁱˢᵗ       = maximum(abs.(gⁿᵉˣᵗ .- endo.g))
         endo.g      .= gⁿᵉˣᵗ
         fill!(gⁿᵉˣᵗ, 0.0)
+        if 𝓃ᵈⁱˢᵗ % 500 == 0
+            println("      -> Dist. iteration: $𝓃ᵈⁱˢᵗ, εᵈⁱˢᵗ: $(round(εᵈⁱˢᵗ, digits=8))")
+        end
+        𝓃ᵈⁱˢᵗ += 1
     end 
 end 
 
@@ -347,5 +365,70 @@ function fnAggregateStates!(params, endo)
 end 
 
 # -----------------------------------------------
-# 3. Solving  
+# C. Solving  
 # -----------------------------------------------
+
+# 1A. Logistic function for bounding 
+function fnLogistic(x,a,b)
+    # a: minimum 
+    # b: maximum 
+    return a + (b - a) / (1 + exp(-x))
+end 
+
+# 1B. Inverse logistic for bounding 
+function fnInverseLogistic(y,a,b)
+    # a: minimum 
+    # b: maximum 
+    return log( (y - a) / (b - y))
+end 
+
+# 2. Combined steady state residuals
+function fnSteadyStateResiduals!(F, x, params, endo)
+    
+    # A. Unpacking business 
+    @unpack w̲, w̅, r̲, r̅, τ̲, τ̅ = params 
+
+    # B. Unpack the simultaneous guesses
+    # x = [w_guess, r_guess, τ_guess]
+    endo.wₜ = fnLogistic(x[1],w̲,w̅)
+    endo.rₜ = fnLogistic(x[2],r̲,r̅)
+    endo.τₜ = fnLogistic(x[3],τ̲,τ̅)
+    endo.τₜ = min(endo.τₜ, 0.9*endo.wₜ)
+
+    # C. Run the heavy lifting 
+    fnVFI!(params, endo)
+    fnAggregateStates!(params, endo)
+
+    # D. Populate the residual vector F 
+    F[1] = endo.Lᵈ - endo.Lˢ                
+    F[2] = endo.Kᵈ - endo.Kˢ                
+    F[3] = endo.τₜ - (endo.wₜ * endo.U)     
+end 
+
+# 3. Solve for the steady state 
+function fnSolveSteadyState!(params, endo)
+
+    # A. Unpacking business 
+    @unpack w̲, w̅, r̲, r̅, τ̲, τ̅ = params 
+
+    # B. Set your initial guesses: [w_initial, r_initial, τ_initial]
+    x⁰          = [
+                fnInverseLogistic(1.0, w̲,w̅),
+                fnInverseLogistic(0.01,r̲,r̅),
+                fnInverseLogistic(0.25,τ̲,τ̅)
+                ] 
+
+    # C. Define the closure for    
+    𝒻!(F, x)    = fnSteadyStateResiduals!(F, x, params, endo)
+
+    # D. Run the multivariate solver (defaults to a highly efficient Trust-Region method)
+    sol     = nlsolve(𝒻!, x⁰, show_trace=true)
+    endo.wₜ = fnLogistic(sol.zero[1],w̲,w̅)
+    endo.rₜ = fnLogistic(sol.zero[2],r̲,r̅)
+    endo.τₜ = fnLogistic(sol.zero[3],τ̲,τ̅)
+    
+    # E. Run the model one final time 
+    fnVFI!(params, endo)
+    fnAggregateStates!(params, endo)
+    println("Equilibrium values: w = $(endo.wₜ), r = $(endo.rₜ), τ = $(endo.τₜ)")
+end
