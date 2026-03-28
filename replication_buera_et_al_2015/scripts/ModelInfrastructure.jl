@@ -18,7 +18,7 @@
 
     # C. Grid sizes  
     Nᶻ::Int             = 11            # Productivity grids (number) 
-    Nᵃ::Int             = 100           # Wealth grids (number)
+    Nᵃ::Int             = 250           # Wealth grids (number)
     Nˡ::Int             = 15            # Employment grid
     Nᵘ::Int             = 2             # Unemployment and other states grid 
 
@@ -43,17 +43,26 @@
     l⃗::Vector{Float64}  = zeros(Nˡ)     # Employment grid 
 
     # G. VFI-related and distribution-related parameters
-    δᵛᶠⁱ::Float64       = 1e-3          # VFI iteration tolerance
+    δᵛᶠⁱ::Float64       = 1e-2          # VFI iteration tolerance
     𝒾̄ᵛᶠⁱ::Int           = 2500          # Maximum VFI iterations 
-    δᵈⁱˢᵗ::Float64      = 1e-4          # Distribution iteration tolerance
+    λᵛᶠⁱ::Float64       = 0.0           # Updating loading (VFI)
+    δᵈⁱˢᵗ::Float64      = 1e-3          # Distribution iteration tolerance
+    λᵈⁱˢᵗ::Float64      = 0.5           # Updating loading for distributions
 
     # H. GE bounds for the prices 
     w̲::Float64          = 1e-3              # Minimum wage 
-    w̅::Float64          = 50.0              # Maximum wage 
+    w̅::Float64          = 25.0              # Maximum wage 
     r̲::Float64          = 1e-3              # Minimum interest rate 
     r̅::Float64          = 1.0 / β - 1.0 - 5* 1e-3 # Maximum interest rate 
     τ̲::Float64          = 1e-3              # Minimum tax 
     τ̅::Float64          = 10.0              # Maximum tax 
+
+    # I. Labour market loop updating 
+    δᴸ::Float64         = 1e-3              # Tolerance 
+    κᴸ::Float64         = 0.05              # Sensitivity
+    λᵗ::Float64         = 0.99              # Tax update
+    κᵗ::Float64         = 0.01              # Sensitivity
+    δᵗ::Float64         = 1e-3              # Tolerance 
 end 
 
 # 1. Parameters (compiler)
@@ -98,7 +107,11 @@ UsedParameters = fnSetUpParameters()
     𝐨::Matrix{Bool}         # Occupational choice (true = entrepreneurship)
     𝐤::Matrix{Float64}      # Capital policy function 
     𝐚::Matrix{Float64}      # Next period's assets 
+    𝐚ʷ::Matrix{Float64}      # → of worker
+    𝐚ᵉ::Matrix{Float64}      # → of entrepreneur 
     𝐜::Matrix{Float64}      # Consumption policy function 
+    𝐜ʷ::Matrix{Float64}      # → of worker 
+    𝐜ᵉ::Matrix{Float64}      # → of entrepreneur 
     𝐥::Matrix{Float64}      # Labour policy function 
     𝕀ᶜ::Matrix{Bool}        # Constraint indicator 
     
@@ -140,12 +153,16 @@ function fnSetUpEndo(params::ModelParameters)
     𝐨       = fill(true, Nᶻ, Nᵃ)
     𝐤       = zeros(Nᶻ, Nᵃ)
     𝐚       = zeros(Nᶻ, Nᵃ)
+    𝐚ᵉ      = zeros(Nᶻ, Nᵃ)
+    𝐚ʷ      = zeros(Nᶻ, Nᵃ)
     𝐜       = zeros(Nᶻ, Nᵃ)
+    𝐜ʷ      = zeros(Nᶻ, Nᵃ)
+    𝐜ᵉ      = zeros(Nᶻ, Nᵃ)
     𝐥       = zeros(Nᶻ, Nᵃ)
     𝕀ᶜ      = fill(true, Nᶻ, Nᵃ)
     
     # C. Aggregate measures 
-    g       = zeros(Nᶻ, Nᵃ, Nˡ, Nᵘ)
+    g       = ones(Nᶻ, Nᵃ, Nˡ, Nᵘ) ./ (Nᶻ * Nᵃ * Nˡ * Nᵘ)
     g̃       = zeros(Nᶻ, Nᵃ, Nˡ)
     JD      = 0.0
     D       = 0.0
@@ -175,7 +192,11 @@ function fnSetUpEndo(params::ModelParameters)
       𝐨     = 𝐨, 
       𝐤     = 𝐤,
       𝐚     = 𝐚,
+      𝐚ᵉ    = 𝐚ᵉ,
+      𝐚ʷ    = 𝐚ʷ,
       𝐜     = 𝐜,
+      𝐜ʷ    = 𝐜ʷ,
+      𝐜ᵉ    = 𝐜ᵉ,
       𝐥     = 𝐥,
       𝕀ᶜ    = 𝕀ᶜ,
       g     = g,

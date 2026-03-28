@@ -3,7 +3,7 @@
 # Authors: Buera, Jaef, and Shin (2015)
 # March 2026
 ## 1. Packages & load functions 
-using Parameters, Dierckx, Optim, NLsolve, QuantEcon, Plots, LinearAlgebra
+using Parameters, Dierckx, Optim, NLsolve, QuantEcon, Plots, LinearAlgebra, Roots
 include("scripts/ModelInfrastructure.jl")
 include("scripts/Functions.jl")
 
