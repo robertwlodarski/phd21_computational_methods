@@ -18,7 +18,7 @@
 
     # C. Grid sizes  
     Nᶻ::Int             = 11            # Productivity grids (number) 
-    Nᵃ::Int             = 250           # Wealth grids (number)
+    Nᵃ::Int             = 50            # Wealth grids (number)
     Nˡ::Int             = 15            # Employment grid
     Nᵘ::Int             = 2             # Unemployment and other states grid 
 
@@ -50,19 +50,20 @@
     λᵈⁱˢᵗ::Float64      = 0.5           # Updating loading for distributions
 
     # H. GE bounds for the prices 
-    w̲::Float64          = 1e-3              # Minimum wage 
-    w̅::Float64          = 25.0              # Maximum wage 
-    r̲::Float64          = 1e-3              # Minimum interest rate 
-    r̅::Float64          = 1.0 / β - 1.0 - 5* 1e-3 # Maximum interest rate 
-    τ̲::Float64          = 1e-3              # Minimum tax 
-    τ̅::Float64          = 10.0              # Maximum tax 
+    w̲::Float64          = 0.5               # Minimum wage 
+    w̅::Float64          = 3.00              # Maximum wage 
+    r̲::Float64          = 0.005             # Minimum interest rate 
+    r̅::Float64          = 1.0 / β - 1.02    # Maximum interest rate 
+    τ̲::Float64          = 0.5* 0.05         # Minimum tax 
+    τ̅::Float64          = 1.50              # Maximum tax 
 
     # I. Labour market loop updating 
     δᴸ::Float64         = 1e-3              # Tolerance 
-    κᴸ::Float64         = 0.05              # Sensitivity
-    λᵗ::Float64         = 0.99              # Tax update
-    κᵗ::Float64         = 0.01              # Sensitivity
-    δᵗ::Float64         = 1e-3              # Tolerance 
+    κᴸ::Float64         = 0.99              # Sensitivity
+    λᵗ::Float64         = 0.50              # Tax update
+    κᵗ::Float64         = 0.50              # Sensitivity
+    δᵗ::Float64         = 1e-4              # Tolerance
+    δʳ::Float64         = 1e-4              # Tolerance  
 end 
 
 # 1. Parameters (compiler)

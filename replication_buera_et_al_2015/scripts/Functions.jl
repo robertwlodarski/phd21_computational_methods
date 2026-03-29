@@ -66,20 +66,23 @@ function fnInitialVFIGuess!(params, endo)
     # A. Unpacking business 
     @unpack β, a⃗ = params
 
-    # B. Workers VF 
-    endo.𝐕ᵂ .= 0.1 * (1 - β)^(-1) * fnUtility(endo.rₜ .* a⃗' .- endo.τₜ .+ endo.wₜ, params)
+    if endo.𝐕[1, 1] == 0.0
+        # B. Workers VF 
+        endo.𝐕ᵂ .= 0.75 * (1 - β)^(-1) * fnUtility(endo.rₜ .* a⃗' .- endo.τₜ .+ endo.wₜ, params)
 
-    # C. Entrepreneurs VF 
-    endo.𝐕ᴱ .= 0.1 * (1 - β)^(-1) * fnUtility(endo.rₜ .* a⃗' .- endo.τₜ .+ endo.Π, params)
+        # C. Entrepreneurs VF 
+        endo.𝐕ᴱ .= 0.75 * (1 - β)^(-1) * fnUtility(endo.rₜ .* a⃗' .- endo.τₜ .+ endo.Π, params)
 
-    # D. Overall VF 
-    endo.𝐕 .= max.(endo.𝐕ᵂ, endo.𝐕ᴱ)
-    endo.𝐨 .= (endo.𝐕ᵂ .<= endo.𝐕ᴱ)
+        # D. Overall VF 
+        endo.𝐕 .= max.(endo.𝐕ᵂ, endo.𝐕ᴱ)
+        endo.𝐨 .= (endo.𝐕ᵂ .<= endo.𝐕ᴱ)
+    else 
+    end 
 
 end
 
 # 4. Solve for assets 
-function fnFindAssets(iz, ia, params, endo)
+function fnFindAssets(iz, ia, exp_spline, params, endo)
 
     # A. Unpack parameters 
     @unpack c̲, a⃗, β = params
@@ -95,33 +98,35 @@ function fnFindAssets(iz, ia, params, endo)
 
     # D. Computation of assets: Worker 
     if Upper_w <= Lower
-        A_w = a⃗[1]
-        iʷ = 1
-        𝐕ᵂ = fnUtility(Cash_w - a⃗[1], params) + β * @views(endo.𝔼𝐕[iz, 1])
+        A_w         = a⃗[1]
+        𝐕ᵂ          = fnUtility(Cash_w - a⃗[1], params) + exp_spline(a⃗[1])
+        𝔼𝐕ᵂ         = exp_spline(A_w)
     else
-        Objʷ = fnUtility(Cash_w .- a⃗, params) .+ β .* @views(endo.𝔼𝐕[iz, :])
-        𝐕ᵂ, iʷ = findmax(Objʷ)
-        A_w = a⃗[iʷ]
+        ℜʷ          = optimize(ap -> -(fnUtility(Cash_w - ap, params) + exp_spline(ap)),a⃗[1],Upper_w)
+        A_w         = Optim.minimizer(ℜʷ)
+        𝐕ᵂ          = - Optim.minimum(ℜʷ)
+        𝔼𝐕ᵂ         = exp_spline(A_w)
     end
 
     # E. Computation of assets: Entrepreneurs 
     if Upper_e <= Lower
-        A_e = a⃗[1]
-        iᵉ = 1
-        𝐕ᴱ = fnUtility(Cash_e - a⃗[1], params) + β * @views(endo.𝔼𝐕[iz, 1])
+        A_e         = a⃗[1]
+        𝐕ᴱ          = fnUtility(Cash_e - a⃗[1], params) + exp_spline(a⃗[1])
+        𝔼𝐕ᴱ         = exp_spline(A_e)
     else
-        Objᵉ = fnUtility(Cash_e .- a⃗, params) .+ β .* @views(endo.𝔼𝐕[iz, :])
-        𝐕ᴱ, iᵉ = findmax(Objᵉ)
-        A_e = a⃗[iᵉ]
+        ℜᴱ          = optimize(ap -> -(fnUtility(Cash_e - ap, params) + exp_spline(ap)),a⃗[1],Upper_e)
+        A_e         = Optim.minimizer(ℜᴱ)
+        𝐕ᴱ          = - Optim.minimum(ℜᴱ)
+        𝔼𝐕ᴱ         = exp_spline(A_e)
     end
-    return A_w, A_e, 𝐕ᵂ, 𝐕ᴱ, iʷ, iᵉ
+    return A_w, A_e, 𝐕ᵂ, 𝐕ᴱ, 𝔼𝐕ᵂ, 𝔼𝐕ᴱ
 end
 
 # 5. Value function iteration 
 function fnVFI!(params, endo)
 
     # A. Unpacking business
-    @unpack ψ, μ⃗, δᵛᶠⁱ, 𝒾̄ᵛᶠⁱ, z⃗, c̲, a⃗, β, λᵛᶠⁱ = params
+    @unpack ψ, μ⃗, δᵛᶠⁱ, 𝒾̄ᵛᶠⁱ, z⃗, c̲, a⃗, β, λᵛᶠⁱ,Nᶻ,Nᵃ = params
 
     # B. Static policies
     fnStaticPolicies!(params, endo)
@@ -132,53 +137,48 @@ function fnVFI!(params, endo)
     # D. Prepare the VFI loop 
     εᵛᶠⁱ    = 1.0
     𝓃ᵛᶠⁱ    = 1
-    𝐢ᵃʷ     = ones(Int, length(z⃗), length(a⃗))
-    𝐢ᵃᵉ     = ones(Int, length(z⃗), length(a⃗))
+    𝔼𝐕ᵂ     = zeros(Nᶻ,Nᵃ) 
+    𝔼𝐕ᴱ     = zeros(Nᶻ,Nᵃ)
 
     while (εᵛᶠⁱ > δᵛᶠⁱ && 𝓃ᵛᶠⁱ < 𝒾̄ᵛᶠⁱ)
 
-        # D1. Update the expected VF and open the loop for productivity 
+        # D1. Interpolate the expected value properly 
+        ℑᴱ                      = [Spline1D(a⃗, view(endo.𝐕ᴱ, iz, :); k=1, bc="nearest") for iz in eachindex(z⃗)]
+        ℑᵂ                      = [Spline1D(a⃗, view(endo.𝐕ᵂ, iz, :); k=1, bc="nearest") for iz in eachindex(z⃗)]
+        ℑ̄(iz, a)                = max(ℑᴱ[iz](a), ℑᵂ[iz](a))
+        ℑ(iz, a)                = β * (ψ * ℑ̄(iz, a) + (1 - ψ) * sum(μ⃗[jz] * ℑ̄(jz, a) for jz in eachindex(z⃗)))
+
+        # D2. Update the expected VF and open the loop for productivity 
         endo.𝔼𝐕 .= ψ .* endo.𝐕 .+ (1 - ψ) .* (μ⃗' * endo.𝐕)
         𝐕ᵖʳᵉᵛ = copy(endo.𝐕)
-        @inbounds for iz in eachindex(z⃗)
+        Threads.@threads for ia in eachindex(a⃗)
+            @inbounds for iz in eachindex(z⃗)
+                # B1. Solve for each a and z 
+                # I. Find assets
+                ℑᶻ(a) = ℑ(iz, a)
+                endo.𝐚ʷ[iz, ia], endo.𝐚ᵉ[iz, ia], endo.𝐕ᵂ[iz, ia], endo.𝐕ᴱ[iz, ia], 𝔼𝐕ᵂ[iz, ia], 𝔼𝐕ᴱ[iz, ia] = fnFindAssets(iz, ia, ℑᶻ, params, endo)
 
-            # B1. Solve for each a and z 
-            for ia in eachindex(a⃗)
-                
-                # Fully solve
-                if (𝓃ᵛᶠⁱ % 25 == 0 | 𝓃ᵛᶠⁱ < 25)
+                # II. VFs for different occupations
+                endo.𝐜ʷ[iz, ia] = a⃗[ia] * (1 + endo.rₜ) + endo.wₜ - endo.τₜ - endo.𝐚ʷ[iz, ia]
+                endo.𝐜ᵉ[iz, ia] = a⃗[ia] * (1 + endo.rₜ) + endo.Π[iz, ia] - endo.τₜ - endo.𝐚ᵉ[iz, ia]
 
-                    # I. Find assets
-                    endo.𝐚ʷ[iz, ia], endo.𝐚ᵉ[iz, ia], endo.𝐕ᵂ[iz, ia], endo.𝐕ᴱ[iz, ia],𝐢ᵃʷ[iz,ia],𝐢ᵃᵉ[iz,ia] = fnFindAssets(iz, ia, params, endo)
-
-                    # II. VFs for different occupations
-                    endo.𝐜ʷ[iz, ia] = a⃗[ia] * (1 + endo.rₜ) + endo.wₜ - endo.τₜ - endo.𝐚ʷ[iz, ia]
-                    endo.𝐜ᵉ[iz, ia] = a⃗[ia] * (1 + endo.rₜ) + endo.Π[iz, ia] - endo.τₜ - endo.𝐚ᵉ[iz, ia]
-
-                    # III. Occupational decision and updated VF
-                    endo.𝐨[iz, ia] = (endo.𝐕ᴱ[iz, ia] >= endo.𝐕ᵂ[iz, ia])
-                    endo.𝐚[iz, ia] = endo.𝐨[iz, ia] ? endo.𝐚ᵉ[iz, ia] : endo.𝐚ʷ[iz, ia]
-                    endo.𝐜[iz, ia] = max(endo.𝐨[iz, ia] ? endo.𝐜ᵉ[iz, ia] :  endo.𝐜ʷ[iz, ia], c̲)
-                    endo.𝐕[iz, ia] = max(endo.𝐕ᴱ[iz, ia], endo.𝐕ᵂ[iz, ia])
-                else 
-                    # Howard improvement
-                    endo.𝐕ᴱ[iz, ia] = fnUtility(endo.𝐜ᵉ[iz, ia], params) + β * endo.𝔼𝐕[iz, 𝐢ᵃᵉ[iz,ia]]
-                    endo.𝐕ᵂ[iz, ia] = fnUtility(endo.𝐜ʷ[iz, ia], params) + β * endo.𝔼𝐕[iz, 𝐢ᵃʷ[iz,ia]]
-                    endo.𝐕[iz, ia]  = max(endo.𝐕ᴱ[iz, ia], endo.𝐕ᵂ[iz, ia])
-                end 
+                # III. Occupational decision and updated VF
+                endo.𝐨[iz, ia] = (endo.𝐕ᴱ[iz, ia] >= endo.𝐕ᵂ[iz, ia])
+                endo.𝐚[iz, ia] = endo.𝐨[iz, ia] ? endo.𝐚ᵉ[iz, ia] : endo.𝐚ʷ[iz, ia]
+                endo.𝐜[iz, ia] = max(endo.𝐨[iz, ia] ? endo.𝐜ᵉ[iz, ia] : endo.𝐜ʷ[iz, ia], c̲)
+                endo.𝐕[iz, ia] = max(endo.𝐕ᴱ[iz, ia], endo.𝐕ᵂ[iz, ia])
             end
         end
 
         # D2. Error and update 
         εᵛᶠⁱ = maximum(abs.(𝐕ᵖʳᵉᵛ .- endo.𝐕))
         𝓃ᵛᶠⁱ += 1
-        endo.𝐕 .= λᵛᶠⁱ .* 𝐕ᵖʳᵉᵛ .+ (1.0 - λᵛᶠⁱ) .* endo.𝐕
         # Add this heartbeat print statement!
-        # if 𝓃ᵛᶠⁱ % 25 == 0
+        # if 𝓃ᵛᶠⁱ % 50 == 0
         #     println("→→→→ VFI Iteration: $𝓃ᵛᶠⁱ, εᵛᶠⁱ = $(round(εᵛᶠⁱ, digits=5))")
         # end
     end
-    #println("→→→→ VFI done: 𝓃 = $𝓃ᵛᶠⁱ, ε = $εᵛᶠⁱ")
+    # println("→→→→ VFI done: 𝓃 = $𝓃ᵛᶠⁱ, ε = $εᵛᶠⁱ")
 end
 
 # -----------------------------------------------
@@ -272,68 +272,87 @@ function fnForwardIteration!(params, endo)
     gⁿᵉˣᵗ   = zeros(Nᶻ, Nᵃ, Nˡ, Nᵘ)
     𝓃ᵈⁱˢᵗ   = 1
     B       = zeros(Nᵃ, Nˡ, 2)
+
+    # C. Precompute the invariant elements 
+    # I. Initialisation 
+    ibᵃ     = zeros(Int, Nᶻ, Nᵃ)
+    iuᵃ     = zeros(Int, Nᶻ, Nᵃ)
+    wᵃ      = zeros(Float64, Nᶻ, Nᵃ)
+    ibˡ     = zeros(Int, Nᶻ, Nᵃ)
+    iuˡ     = zeros(Int, Nᶻ, Nᵃ)
+    wˡ      = zeros(Float64, Nᶻ, Nᵃ)
+
+    # II. Loop 
+    @inbounds for ia in eachindex(a⃗)
+        for iz in eachindex(z⃗)
+
+            # (a) Next asset mass 
+            Aₜ          = endo.𝐚[iz, ia]
+            ibᵃ[iz,ia]  = clamp(searchsortedlast(a⃗, Aₜ), 1, length(a⃗) - 1)
+            iuᵃ[iz,ia]  = ibᵃ[iz,ia] + 1
+            wᵃ[iz,ia]   = clamp((a⃗[iuᵃ[iz,ia]] - Aₜ) / (a⃗[iuᵃ[iz,ia]] - a⃗[ibᵃ[iz,ia]]), 0.0, 1.0)
+            # (b) Labour mass 
+            Lₜ          = endo.𝐨[iz, ia] ? endo.𝐥[iz, ia] : 0.0
+            ibˡ[iz,ia]  = clamp(searchsortedlast(l⃗, Lₜ), 1, length(l⃗) - 1)
+            iuˡ[iz,ia]  = ibˡ[iz,ia] + 1
+            wˡ[iz,ia]   = clamp((l⃗[iuˡ[iz,ia]] - Lₜ) / (l⃗[iuˡ[iz,ia]] - l⃗[ibˡ[iz,ia]]), 0.0, 1.0)
+        end 
+    end 
+
+    # D. Begin the loop 
     while (εᵈⁱˢᵗ > δᵈⁱˢᵗ)
 
-        # C. Aggregate states 
+        # E. Aggregate states 
         fnJobDestruction!(params, endo)         # Getting JD, S 
         fnUpdateLabourMarket!(params, endo)     # Getting U, M, W, E  
 
-        @inbounds for ia in eachindex(a⃗)
-            for il in eachindex(l⃗)
-                for iz in eachindex(z⃗)
-                    for iu in 1:2
-
+        @inbounds for iu in 1:2 
+            for il in eachindex(l⃗) 
+                for ia in eachindex(a⃗)
+                    for iz in eachindex(z⃗)
                         # I. Common terms
                         Mass = endo.g[iz, ia, il, iu]
                         if Mass == 0.0
                             continue
                         end
-                        # (a) Next asset mass 
-                        Aₜ = endo.𝐚[iz, ia]
-                        ibᵃ = clamp(searchsortedlast(a⃗, Aₜ), 1, length(a⃗) - 1)
-                        iuᵃ = ibᵃ + 1
-                        wᵃ = clamp((a⃗[iuᵃ] - Aₜ) / (a⃗[iuᵃ] - a⃗[ibᵃ]), 0.0, 1.0)
-                        # (b) Labour mass 
-                        Lₜ = endo.𝐨[iz, ia] ? endo.𝐥[iz, ia] : 0.0
-                        ibˡ = clamp(searchsortedlast(l⃗, Lₜ), 1, length(l⃗) - 1)
-                        iuˡ = ibˡ + 1
-                        wˡ = clamp((l⃗[iuˡ] - Lₜ) / (l⃗[iuˡ] - l⃗[ibˡ]), 0.0, 1.0)
+
+                        # II. Update the flows 
                         # (c) Get flows that matter
                         f¹², f²¹, f²², f¹¹ = fnComputeFlows(iz, ia, il, iu, params, endo)
                         FlowU = f¹² + f²²
                         FlowO = f²¹ + f¹¹
 
-                        # II. With switching productivity
+                        # III. With switching productivity
                         # To unemployment (iu=2)
-                        B[ibᵃ, ibˡ, 2] += Mass * wᵃ * wˡ * FlowU
-                        B[ibᵃ, iuˡ, 2] += Mass * wᵃ * (1 - wˡ) * FlowU
-                        B[iuᵃ, ibˡ, 2] += Mass * (1 - wᵃ) * wˡ * FlowU
-                        B[iuᵃ, iuˡ, 2] += Mass * (1 - wᵃ) * (1 - wˡ) * FlowU
+                        B[ibᵃ[iz,ia], ibˡ[iz,ia], 2]    += Mass * wᵃ[iz,ia] * wˡ[iz,ia] * FlowU
+                        B[ibᵃ[iz,ia], iuˡ[iz,ia], 2]    += Mass * wᵃ[iz,ia] * (1 - wˡ[iz,ia]) * FlowU
+                        B[iuᵃ[iz,ia], ibˡ[iz,ia], 2]    += Mass * (1 - wᵃ[iz,ia]) * wˡ[iz,ia] * FlowU
+                        B[iuᵃ[iz,ia], iuˡ[iz,ia], 2]    += Mass * (1 - wᵃ[iz,ia]) * (1 - wˡ[iz,ia]) * FlowU
                         # To employment/entrepreneurship (iu=1)
-                        B[ibᵃ, ibˡ, 1] += Mass * wᵃ * wˡ * FlowO
-                        B[ibᵃ, iuˡ, 1] += Mass * wᵃ * (1 - wˡ) * FlowO
-                        B[iuᵃ, ibˡ, 1] += Mass * (1 - wᵃ) * wˡ * FlowO
-                        B[iuᵃ, iuˡ, 1] += Mass * (1 - wᵃ) * (1 - wˡ) * FlowO
+                        B[ibᵃ[iz,ia], ibˡ[iz,ia], 1]    += Mass * wᵃ[iz,ia] * wˡ[iz,ia] * FlowO
+                        B[ibᵃ[iz,ia], iuˡ[iz,ia], 1]    += Mass * wᵃ[iz,ia] * (1 - wˡ[iz,ia]) * FlowO
+                        B[iuᵃ[iz,ia], ibˡ[iz,ia], 1]    += Mass * (1 - wᵃ[iz,ia]) * wˡ[iz,ia] * FlowO
+                        B[iuᵃ[iz,ia], iuˡ[iz,ia], 1]    += Mass * (1 - wᵃ[iz,ia]) * (1 - wˡ[iz,ia]) * FlowO
 
-                        # III. The same productivity
+                        # IV. The same productivity
                         # (c) Update (asset, labour) = (BB, BU, UB, UU)
                         # To unemployment 
-                        gⁿᵉˣᵗ[iz, ibᵃ, ibˡ, 2] += ψ * Mass * wᵃ * wˡ * FlowU
-                        gⁿᵉˣᵗ[iz, ibᵃ, iuˡ, 2] += ψ * Mass * wᵃ * (1 - wˡ) * FlowU
-                        gⁿᵉˣᵗ[iz, iuᵃ, ibˡ, 2] += ψ * Mass * (1 - wᵃ) * wˡ * FlowU
-                        gⁿᵉˣᵗ[iz, iuᵃ, iuˡ, 2] += ψ * Mass * (1 - wᵃ) * (1 - wˡ) * FlowU
+                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia], ibˡ[iz,ia], 2]    += ψ * Mass * wᵃ[iz,ia] * wˡ[iz,ia] * FlowU
+                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia], iuˡ[iz,ia], 2]    += ψ * Mass * wᵃ[iz,ia] * (1 - wˡ[iz,ia]) * FlowU
+                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia], ibˡ[iz,ia], 2]    += ψ * Mass * (1 - wᵃ[iz,ia]) * wˡ[iz,ia] * FlowU
+                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia], iuˡ[iz,ia], 2]    += ψ * Mass * (1 - wᵃ[iz,ia]) * (1 - wˡ[iz,ia]) * FlowU
                         # To others 
-                        gⁿᵉˣᵗ[iz, ibᵃ, ibˡ, 1] += ψ * Mass * wᵃ * wˡ * FlowO
-                        gⁿᵉˣᵗ[iz, ibᵃ, iuˡ, 1] += ψ * Mass * wᵃ * (1 - wˡ) * FlowO
-                        gⁿᵉˣᵗ[iz, iuᵃ, ibˡ, 1] += ψ * Mass * (1 - wᵃ) * wˡ * FlowO
-                        gⁿᵉˣᵗ[iz, iuᵃ, iuˡ, 1] += ψ * Mass * (1 - wᵃ) * (1 - wˡ) * FlowO
+                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia], ibˡ[iz,ia], 1]    += ψ * Mass * wᵃ[iz,ia] * wˡ[iz,ia] * FlowO
+                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia], iuˡ[iz,ia], 1]    += ψ * Mass * wᵃ[iz,ia] * (1 - wˡ[iz,ia]) * FlowO
+                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia], ibˡ[iz,ia], 1]    += ψ * Mass * (1 - wᵃ[iz,ia]) * wˡ[iz,ia] * FlowO
+                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia], iuˡ[iz,ia], 1]    += ψ * Mass * (1 - wᵃ[iz,ia]) * (1 - wˡ[iz,ia]) * FlowO
                     end
                 end
             end
         end
 
         # IV. Add the mass to the updated productivity states
-        @inbounds for iu in 1:2, il in 1:Nˡ, ia in 1:Nᵃ, iz in 1:Nᶻ
+        @inbounds for iu in 1:2, il in 1:Nˡ ,ia in 1:Nᵃ, iz in 1:Nᶻ
             gⁿᵉˣᵗ[iz, ia, il, iu] += (1 - ψ) * μ⃗[iz] * B[ia, il, iu]
         end
         
@@ -379,82 +398,157 @@ end
 # C. Solving  
 # -----------------------------------------------
 
-# 1. Labour market clearing
-function fnLabourMarketClearing!(params, endo)
+# 1. Labour residual.
+function fnLabourResidual!(w, params, endo, r, τ)
+    # A. Update the state
+    endo.wₜ = w
+    endo.rₜ = r
+    endo.τₜ = τ
+
+    # B. Run the parallelized engine
+    fnVFI!(params, endo)
+    fnAggregateStates!(params, endo)
+    
+    # C. Return the Labor market error
+    εᴸ      = (endo.Lᵈ / max(endo.Lˢ, 1e-4)) - 1.0
+    println("→→→ Wage search        | w = $(round(w, digits=4)), εᴸ = $(round(εᴸ, digits=4))")
+    return εᴸ
+end
+
+# 2. Labour market 
+function fnBudgetResidual!(τ, params, endo, r)
+
+    # A. Unpacking business 
+    @unpack w̲, w̅, δᴸ = params
+
+    # B. Find the wage that clears labor for THIS tax and interest rate
+    wˣ      = find_zero(w -> fnLabourResidual!(w, params, endo, r, τ), (w̲, w̅), Bisection(),xatol = δᴸ)
+    endo.wₜ = wˣ 
+
+    # C. Return the Budget error
+    εᵗ      = (endo.U * endo.wₜ / max(endo.τₜ, 1e-4)) - 1.0
+    println("→→ Tax loop        | τ = $(round(τ, digits=4)), εᵗ = $(round(εᵗ, digits=4)) [Cleared w = $(round(endo.wₜ, digits=4))]")
+    return εᵗ
+end
+
+# 3. Government budget 
+function fnCapitalResidual!(params, endo, r)
+        
+        # A. Unpacking business 
+        @unpack τ̲, τ̅, δᵗ = params
+
+        # B. Solve
+        τˣ      = find_zero(τ -> fnBudgetResidual!(τ, params, endo, r), (τ̲, τ̅), Bisection(), xatol = δᵗ)
+        endo.τₜ = τˣ
+
+        # C. Return error 
+        εᴷ = (endo.Kᵈ / max(endo.Kˢ, 1e-4)) - 1.0
+        println("→ Capital loop     | r = $(round(r, digits=4)), εᴷ = $(round(εᴷ, digits=4)) [Cleared τ = $(round(endo.τₜ, digits=4))]")
+        return εᴷ
+    end
+
+# 4. Steady state 
+function fnSolveSteadyState!(params, endo)
     
     # A. Unpacking business 
-    @unpack w̲, w̅, δᴸ, κᴸ, λᵗ, τ̲, τ̅, κᵗ, δᵗ = params
+    @unpack r̲, r̅, δʳ = params
 
-    # B. Initial guesses
-    endo.wₜ     = 1.1
-    endo.τₜ     = 0.05 * endo.wₜ
-    εᵗ          = 1.0
-
-    # C. Budget loop 
-    while abs(εᵗ) > δᵗ
-        
-        κᴸˣ     = κᴸ
-        εᴸ      = 1.0
-        εᴸ²     = 1.0
-
-        # D.Labour market loop 
-        while abs(εᴸ) > δᴸ
-
-            # I. Run the model 
-            fnVFI!(params, endo)
-            fnAggregateStates!(params, endo)
-
-            # II. Wage error 
-            εᴸ = (endo.Lᵈ / max(endo.Lˢ, 1e-4)) - 1.0
-            if εᴸ * εᴸ² < 0.0
-                κᴸˣ = max(κᴸˣ * 0.5, 0.01)
-            end
-
-            # III. Update Wage (Tax remains fixed here)
-            endo.wₜ = clamp(endo.wₜ * (1.0 + κᴸˣ * εᴸ), w̲, w̅)
-            εᴸ²     = εᴸ
-            
-            println("→→→ Wage Search    | w = $(round(endo.wₜ,digits=3)), εᴸ = $(round(εᴸ,digits=3))")
-        end
-
-        # E. OUTER UPDATE: Once wage has settled, check the budget
-        # Calculate budget error (Tax Gap)
-        εᵗ = endo.U * endo.wₜ - endo.τₜ
-        
-        # Proportional update for the Tax
-        τ_next  = clamp(endo.τₜ * (1.0 + κᵗ * (εᵗ/max(endo.τₜ, 1e-4))), τ̲, τ̅)
-        endo.τₜ = λᵗ * endo.τₜ + (1 - λᵗ) * τ_next
-        println("→→ Tax loop            | w = $(round(endo.wₜ,digits=3)), εᵗ = $(round(εᵗ,digits=5)), τ = $(round(endo.τₜ,digits=3))")
-    end
-end
-
-
-# 2. Capital markets clearing 
-function fnCapitalMarketsClearing!(params, endo)
-
-    # A. Unpacking business 
-    @unpack r̲, r̅ = params
-
-    # B. Prepare closure 
-    function ℊ(r, params, endo)
-        endo.rₜ = r
-        fnLabourMarketClearing!(params, endo)
-        return (endo.Kᵈ / max(endo.Kˢ, 1e-4)) - 1.0
-    end
-
-    # C. Solve for interest 
-    rˣ = find_zero(r -> ℊ(r, params, endo), (r̲, r̅), Bisection())
+    # B. The Final Solve
+    rˣ = find_zero(r -> fnCapitalResidual!(params, endo, r), (r̲, r̅), Bisection(), xatol = δʳ)
     endo.rₜ = rˣ
-    fnLabourMarketClearing!(params, endo)
-    println("→ Capital loop             | w = $(round(endo.wₜ,digits=3)), r = $(round(endo.rₜ,digits=3)), τ = $(round(endo.τₜ,digits=3))")
+
+    # C. Lock in the results
+    fnVFI!(params, endo)
+    fnAggregateStates!(params, endo)
+    println("\n--- Steady state ---")
+    println("Wage (w):   $(round(endo.wₜ, digits=6))")
+    println("Interest(r):$(round(endo.rₜ, digits=6))")
+    println("Tax (τ):    $(round(endo.τₜ, digits=6))")
 end
 
-# 3. Solve the model 
-function fnSolveSteadyState!(params, endo)
-    fnCapitalMarketsClearing!(params, endo)
-    println("Steady state ready found")
-    println("Equilibrium values: w = $(endo.wₜ), r = $(endo.rₜ), τ = $(endo.τₜ)")
-end
+# # 1. Labour market clearing
+# function fnLabourMarketClearing!(params, endo)
+    
+#     # A. Unpacking business 
+#     @unpack w̲, w̅, δᴸ, λᵗ, τ̲, τ̅, κᵗ, δᵗ = params
+
+#     # B. Initial setup 
+#     endo.wₜ     = 1.6       
+#     endo.τₜ     = 0.05 * endo.wₜ
+#     εᵗ          = 1.0
+#     w_low       = w̲         
+#     w_high      = w̅    
+    
+#     # C. Tax loop 
+#     while abs(εᵗ) > δᵗ
+        
+#         # I. Reset bisection bounds for the new tax environment     
+#         εᴸ          = 1.0
+
+#         # D. Wage bisection 
+#         while abs(εᴸ) > δᴸ
+
+#             # I. Run the model 
+#             if (w_high - w_low) < 1e-4
+#                 break
+#             end
+#             fnVFI!(params, endo)
+#             fnAggregateStates!(params, endo)
+
+#             # II. Calculate labour error 
+#             εᴸ = (endo.Lᵈ / max(endo.Lˢ, 1e-4)) - 1.0
+#             if abs(εᴸ) <= δᴸ
+#                 break
+#             end
+
+#             # III. The bisection bounds update
+#             if εᴸ > 0.0
+#                 w_low = endo.wₜ
+#             else
+#                 w_high = endo.wₜ
+#             end
+#             endo.wₜ = 0.5 * w_low + 0.5 * w_high
+#             println("→→→ Wage search        | w = $(round(endo.wₜ,digits=4)) [Floor: $(round(w_low,digits=3)), Ceil: $(round(w_high,digits=3))], εᴸ = $(round(εᴸ,digits=4))")
+#         end
+
+#         # E. Check the budget
+#         εᵗ          = (endo.U * endo.wₜ / max(endo.τₜ, 1e-4)) - 1.0
+#         τ_target    = clamp(endo.τₜ * (1.0 + κᵗ * εᵗ), τ̲, τ̅)
+#         endo.τₜ     = λᵗ * endo.τₜ + (1 - λᵗ) * τ_target
+#         println("→→ Tax loop            | τ = $(round(endo.τₜ,digits=4)), εᵗ = $(round(εᵗ,digits=4)) [Cleared w = $(round(endo.wₜ,digits=4))]")
+    
+#         # F. Update for performance 
+#         w_low       = max(w̲, endo.wₜ * 0.90)
+#         w_high      = min(w̅, endo.wₜ * 1.10)
+#     end
+# end
+
+# # 2. Capital markets clearing 
+# function fnCapitalMarketsClearing!(params, endo)
+
+#     # A. Unpacking business 
+#     @unpack r̲, r̅ = params
+
+#     # B. Prepare closure 
+#     function ℊ(r, params, endo)
+#         endo.rₜ = r
+#         fnLabourMarketClearing!(params, endo)
+#         return (endo.Kᵈ / max(endo.Kˢ, 1e-4)) - 1.0
+#     end
+
+#     # C. Solve for interest 
+#     rˣ = find_zero(r -> ℊ(r, params, endo), (r̲, r̅), Bisection())
+#     endo.rₜ = rˣ
+#     fnLabourMarketClearing!(params, endo)
+#     println("→ Capital loop             | w = $(round(endo.wₜ,digits=3)), r = $(round(endo.rₜ,digits=3)), τ = $(round(endo.τₜ,digits=3))")
+# end
+
+# # 3. Solve the model 
+# function fnSolveSteadyState!(params, endo)
+#     fnCapitalMarketsClearing!(params, endo)
+#     println("Steady state ready found")
+#     println("Equilibrium values: w = $(endo.wₜ), r = $(endo.rₜ), τ = $(endo.τₜ)")
+# end
 
 
 # # 1A. Logistic function for bounding 
@@ -481,7 +575,6 @@ end
 #     endo.wₜ = fnLogistic(x[1],w̲,w̅)
 #     endo.rₜ = fnLogistic(x[2],r̲,r̅)
 #     endo.τₜ = fnLogistic(x[3],τ̲,τ̅)
-#     endo.τₜ = min(endo.τₜ, 0.9*endo.wₜ)
 
 #     # C. Run the heavy lifting 
 #     fnVFI!(params, endo)
@@ -491,6 +584,18 @@ end
 #     F[1] = (endo.Lᵈ / max(endo.Lˢ, 1e-4)) - 1.0                
 #     F[2] = (endo.Kᵈ / max(endo.Kˢ, 1e-4)) - 1.0                
 #     F[3] = (endo.τₜ / max(endo.wₜ * endo.U, 1e-4)) - 1.0
+
+#     # E. Print the trace
+#     println("→ Wage       | w = $(round(endo.wₜ,digits=4)), εᴸ = $(round(F[1],digits=4))")
+#     println("→ Capital    | r = $(round(endo.rₜ,digits=4)), εᴷ = $(round(F[2],digits=4))")
+#     println("→ Tax        | τ = $(round(endo.τₜ,digits=4)), εᵗ = $(round(F[3],digits=4))\n")
+
+#     # E. The NaN Bouncer
+#     if any(isnan, F) || any(isinf, F)
+#         println("→→→ [WARNING] The world collapsed! Penalty.")
+#         F .= 1e6 
+#         return
+#     end
 # end 
 
 # # 3. Solve for the steady state 
@@ -501,25 +606,21 @@ end
 
 #     # B. Set your initial guesses: [w_initial, r_initial, τ_initial]
 #     x⁰          = [
-#                 fnInverseLogistic(1.0, w̲,w̅),
-#                 fnInverseLogistic(0.01,r̲,r̅),
-#                 fnInverseLogistic(0.25,τ̲,τ̅)
+#                 fnInverseLogistic(1.5, w̲,w̅),
+#                 fnInverseLogistic(0.02,r̲,r̅),
+#                 fnInverseLogistic(0.075,τ̲,τ̅)
 #                 ] 
 
-#     # C. Define the closure 
-#     function 𝒻_optim(x)
-#         F = zeros(3)
-#         fnSteadyStateResiduals!(F, x, params, endo)
-#         return F[1]^2 + F[2]^2 + F[3]^2
-#     end
+#     # C. Run the model
+#     sol         = nlsolve((F, x) -> fnSteadyStateResiduals!(F, x, params, endo), x⁰, 
+#                     method        = :broyden, 
+#                     show_trace    = true, 
+#                     ftol          = 1e-4)
 
-#     # D. Run the derivative-free Nelder-Mead simplex
-#     sol = optimize(𝒻_optim, x⁰, NelderMead(), Optim.Options(show_trace=true, iterations=500))
-
-#     # D. Run the multivariate solver (defaults to a highly efficient Trust-Region method)
-#     endo.wₜ = fnLogistic(sol.minimizer[1],w̲,w̅)
-#     endo.rₜ = fnLogistic(sol.minimizer[2],r̲,r̅)
-#     endo.τₜ = fnLogistic(sol.minimizer[3],τ̲,τ̅)
+#     # D. Run the multivariate solver
+#     endo.wₜ = fnLogistic(sol.zero[1],w̲,w̅)
+#     endo.rₜ = fnLogistic(sol.zero[2],r̲,r̅)
+#     endo.τₜ = fnLogistic(sol.zero[3],τ̲,τ̅)
 
 #     # E. Run the model one final time 
 #     fnVFI!(params, endo)
