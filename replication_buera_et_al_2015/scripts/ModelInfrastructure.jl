@@ -17,66 +17,84 @@
     A::Float64          = 1.0           # Steady state productivity 
 
     # C. Grid sizes  
-    Nᶻ::Int             = 11            # Productivity grids (number) 
-    Nᵃ::Int             = 50            # Wealth grids (number)
-    Nˡ::Int             = 15            # Employment grid
+    Nᶻ::Int             = 40            # Productivity grids (number) 
+    Nᵃ::Int             = 70            # Wealth grids (number)
+    Nˡ::Int             = 50            # Employment grid
     Nᵘ::Int             = 2             # Unemployment and other states grid 
 
     # D. Productivity grid 
     # Pareto: f(z) = 1 - z^(-η), z ≥ 1
     z̲::Float64          = 1.0 + 1e-6    # Minimum productivity 
-    z̅::Float64          = 10.0          # Maximum productivity 
+    z̅::Float64          = 4.31          # Maximum productivity 
     z⃗::Vector{Float64}  = zeros(Nᶻ)     # Grid 
     μ⃗::Vector{Float64}  = zeros(Nᶻ)     # PDF of the distribution 
 
     # E. Assets grid 
     a⃗::Vector{Float64}  = zeros(Nᵃ)     # Assets grid 
     a̲::Float64          = 0.0           # Minimum assets 
-    a̅::Float64          = 900.0         # Maximum assets
+    a̅::Float64          = 7500.0        # Maximum assets
     θᵃ::Float64         = 3.0           # Curvature of the assets grid
     c̲::Float64          = 1e-6          # "Zero" consumption  
 
     # F. Employment grid 
     l̲::Float64          = 0.0           # Minimum employment 
-    l̅::Float64          = 2000.0        # Maximum employment 
+    l̅::Float64          = 5000.0        # Maximum employment 
     θˡ::Float64         = 3.0           # Curvature of employment grid 
     l⃗::Vector{Float64}  = zeros(Nˡ)     # Employment grid 
 
     # G. VFI-related and distribution-related parameters
     δᵛᶠⁱ::Float64       = 1e-2          # VFI iteration tolerance
-    𝒾̄ᵛᶠⁱ::Int           = 2500          # Maximum VFI iterations 
+    𝒾̄ᵛᶠⁱ::Int           = 2000          # Maximum VFI iterations 
     λᵛᶠⁱ::Float64       = 0.0           # Updating loading (VFI)
-    δᵈⁱˢᵗ::Float64      = 1e-3          # Distribution iteration tolerance
+    δᵈⁱˢᵗ::Float64      = 1e-8          # Distribution iteration tolerance
     λᵈⁱˢᵗ::Float64      = 0.5           # Updating loading for distributions
 
     # H. GE bounds for the prices 
-    w̲::Float64          = 0.5               # Minimum wage 
-    w̅::Float64          = 3.00              # Maximum wage 
+    w̲::Float64          = 0.99              # Minimum wage 
+    w̅::Float64          = 2.50              # Maximum wage 
     r̲::Float64          = 0.005             # Minimum interest rate 
     r̅::Float64          = 1.0 / β - 1.02    # Maximum interest rate 
-    τ̲::Float64          = 0.5* 0.05         # Minimum tax 
-    τ̅::Float64          = 1.50              # Maximum tax 
+    τ̲::Float64          = 0.99 * 0.05       # Minimum tax 
+    τ̅::Float64          = 2.50*0.25         # Maximum tax 
 
     # I. Labour market loop updating 
-    δᴸ::Float64         = 1e-3              # Tolerance 
-    κᴸ::Float64         = 0.99              # Sensitivity
+    δᴸ::Float64         = 5*1e-3            # Tolerance 
+    κᴸ::Float64         = 0.40              # Updates
     λᵗ::Float64         = 0.50              # Tax update
-    κᵗ::Float64         = 0.50              # Sensitivity
-    δᵗ::Float64         = 1e-4              # Tolerance
-    δʳ::Float64         = 1e-4              # Tolerance  
+    κᵗ::Float64         = 0.70              # Updates
+    δᵗ::Float64         = 1e-3              # Tolerance
+    δʳ::Float64         = 1e-4              # Tolerance
+    κʳ::Float64         = 0.70              # Updates   
 end 
 
 # 1. Parameters (compiler)
 function fnSetUpParameters(params::ModelParameters = ModelParameters())
 
     # A. Unpacking business 
-    @unpack Nᶻ, Nᵃ,Nˡ, z̲, z̅, η, a̲, a̅, θᵃ, l̲, l̅, θˡ = params
+    @unpack Nᶻ, Nᵃ,Nˡ, z̲, z̅, η,α, a̲, a̅, θᵃ, l̲, l̅, θˡ,θ = params
 
     # B. Productivity process 
-    μ(z)    = 1 - z^(-η)
-    z_of_p  = p -> (1 - p)^(-1/η)
-    z⃗       = [LinRange(z_of_p(0.633), z_of_p(0.998), Nᶻ-2); z_of_p(0.999); z_of_p(0.9995)]
-    μ⃗       = [μ(z⃗[1]); diff(μ.(z⃗))] ./ μ(z⃗[end])
+    μ(z)            = 1 - z^(-η)
+    z_of_p(p)       = (1 - p)^(-1/η)
+    step_p          = 0.9995 / (Nᶻ - 1)
+    p_bounds        = collect(range(step_p, 0.9995, length=Nᶻ-1))    
+    z⃗               = zeros(Nᶻ)
+    μ⃗               = zeros(Nᶻ)
+    μ⃗[1]            = p_bounds[1]
+    z⃗[1]            = z_of_p(p_bounds[1] / 2.0)
+    for i in 2:(Nᶻ - 1)
+        μ⃗[i]        = p_bounds[i] - p_bounds[i-1]
+        p_mid       = (p_bounds[i-1] + p_bounds[i]) / 2.0
+        z⃗[i]        = z_of_p(p_mid)
+    end
+    μ⃗[Nᶻ]           = 1.0 - p_bounds[end]
+    ν               = α + θ                 
+    ξ               = 1.0 / (1.0 - ν)       
+    if η <= ξ
+        error("Pareto tail integral diverges.")
+    end
+    tail_multiplier = (η / (η - ξ)) ^ (1.0 / ξ)
+    z⃗[Nᶻ]           = z_of_p(p_bounds[end]) * tail_multiplier
 
     # C. Assets grid 
     a⃗       = a̲ .+ (a̅ .- a̲) .* (range(0,1,length=Nᵃ)).^θᵃ
