@@ -206,7 +206,7 @@ function fnJobDestruction!(params, endo)
 
                 # C1. Compute key elements 
                 Mass            = endo.g[iz, ia, il, 1]
-                LabDemand       =  endo.𝐨[iz, ia] ? endo.𝐥[iz, ia] : 0.0
+                LabDemand       = endo.𝐨[iz, ia] ? endo.𝐥[iz, ia] : 0.0
                 JobsDestroyed   = max(0.0, l⃗[il] - LabDemand)
                 Switchers       = (l⃗[il] > 0) && (endo.𝐨[iz, ia] == false)
 
