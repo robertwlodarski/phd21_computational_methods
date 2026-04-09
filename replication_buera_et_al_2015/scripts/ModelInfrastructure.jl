@@ -65,6 +65,9 @@
     δᵗ::Float64         = 1e-3              # Tolerance
     δʳ::Float64         = 1e-4              # Tolerance
     κʳ::Float64         = 0.70              # Updates   
+
+    # J. MIT shock settings 
+    Tᴹᴵᵀ::Int           = 50                # Shock periods 
 end 
 
 # 1. Parameters (compiler)
@@ -238,3 +241,129 @@ function fnSetUpEndo(params::ModelParameters)
     )
 end 
 Endo        = fnSetUpEndo(UsedParameters) 
+
+# 3. MIT shock endogenous variables preallocation (structure)
+@with_kw mutable struct MITEndogenousVariables
+
+    # A. Key values 
+    𝐕::Array{Float64,3}     # Value function 
+    𝔼𝐕::Array{Float64,3}    # Expected value function 
+    𝐕ᵂ::Array{Float64,3}    # Value of working 
+    𝐕ᴱ::Array{Float64,3}    # Value of entrepreneurship
+    Π::Array{Float64,3}     # Firm profit  
+
+    # B. Policy functions & indicators 
+    𝐨::Array{Bool,3}        # Occupational choice (true = entrepreneurship)
+    𝐤::Array{Float64,3}     # Capital policy function 
+    𝐚::Array{Float64,3}     # Next period's assets 
+    𝐚ʷ::Array{Float64,3}    # → of worker
+    𝐚ᵉ::Array{Float64,3}    # → of entrepreneur 
+    𝐜::Array{Float64,3}     # Consumption policy function 
+    𝐜ʷ::Array{Float64,3}    # → of worker 
+    𝐜ᵉ::Array{Float64,3}    # → of entrepreneur 
+    𝐥::Array{Float64,3}     # Labour policy function 
+    𝕀ᶜ::Array{Bool,3}       # Constraint indicator 
+    
+    # C. Aggregate measures 
+    g::Array{Float64, 5}    # Distribution (PDF)
+    g̃::Array{Float64, 4}    # Marginal distribution (PDF)
+    JD::Vector{Float64}     # Job destruction 
+    S::Vector{Float64}      # Switchers from entrepreneurship to working 
+    D::Vector{Float64}      # Jobs reduced 
+    Kᵈ::Vector{Float64}     # Capital demand 
+    Kˢ::Vector{Float64}     # Capital supplied 
+    Lᵈ::Vector{Float64}     # Labour demand 
+    Lˢ::Vector{Float64}     # Labour supply 
+    Gᵉ::Vector{Float64}     # Government expenditure
+    U::Vector{Float64}      # Unemployed workers 
+    M::Vector{Float64}      # Matches 
+    W::Vector{Float64}      # Employed workers 
+    E::Vector{Float64}      # Entrepreneurs
+    
+    # D. Prices 
+    rₜ::Vector{Float64}     # Interest rate 
+    wₜ::Vector{Float64}     # Wages 
+    τₜ::Vector{Float64}     # Taxes 
+end
+
+# 3. MIT shock endogenous variables (constructor)
+function fnSetUpEndoMIT(params::ModelParameters)
+    # A. Unpacking business 
+    @unpack Nᶻ, Nᵃ, Nˡ,Nᵘ,Tᴹᴵᵀ = params 
+
+    # B. Key values 
+    𝐕       = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ)
+    𝔼𝐕      = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ)
+    𝐕ᵂ      = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ)
+    𝐕ᴱ      = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ)
+    Π       = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ)
+
+    # B. Policy functions & indicators 
+    𝐨       = fill(true, Nᶻ, Nᵃ,Tᴹᴵᵀ)
+    𝐤       = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ)
+    𝐚       = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ)
+    𝐚ᵉ      = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ)
+    𝐚ʷ      = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ)
+    𝐜       = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ)
+    𝐜ʷ      = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ)
+    𝐜ᵉ      = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ)
+    𝐥       = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ)
+    𝕀ᶜ      = fill(true, Nᶻ, Nᵃ,Tᴹᴵᵀ)
+    
+    # C. Aggregate measures 
+    g       = fill(1.0 / (Nᶻ * Nᵃ * Nˡ * Nᵘ), Nᶻ, Nᵃ, Nˡ, Nᵘ, Tᴹᴵᵀ)
+    g̃       = zeros(Nᶻ, Nᵃ, Nˡ,Tᴹᴵᵀ)
+    JD      = zeros(Tᴹᴵᵀ)
+    D       = zeros(Tᴹᴵᵀ)
+    S       = zeros(Tᴹᴵᵀ)
+    Kᵈ      = zeros(Tᴹᴵᵀ)
+    Kˢ      = zeros(Tᴹᴵᵀ)
+    Lᵈ      = zeros(Tᴹᴵᵀ)
+    Lˢ      = zeros(Tᴹᴵᵀ)
+    Gᵉ      = zeros(Tᴹᴵᵀ)
+    U       = zeros(Tᴹᴵᵀ)
+    M       = zeros(Tᴹᴵᵀ)
+    W       = zeros(Tᴹᴵᵀ)
+    E       = zeros(Tᴹᴵᵀ)
+
+    # D. Prices 
+    rₜ      = zeros(Tᴹᴵᵀ)
+    wₜ      = zeros(Tᴹᴵᵀ)
+    τₜ      = zeros(Tᴹᴵᵀ)
+
+    # E. Returning 
+    return MITEndogenousVariables(
+      𝐕     = 𝐕,
+      𝔼𝐕    = 𝔼𝐕,  
+      𝐕ᵂ    = 𝐕ᵂ,    
+      𝐕ᴱ    = 𝐕ᴱ, 
+      Π     = Π,
+      𝐨     = 𝐨, 
+      𝐤     = 𝐤,
+      𝐚     = 𝐚,
+      𝐚ᵉ    = 𝐚ᵉ,
+      𝐚ʷ    = 𝐚ʷ,
+      𝐜     = 𝐜,
+      𝐜ʷ    = 𝐜ʷ,
+      𝐜ᵉ    = 𝐜ᵉ,
+      𝐥     = 𝐥,
+      𝕀ᶜ    = 𝕀ᶜ,
+      g     = g,
+      g̃     = g̃,
+      JD    = JD,
+      D     = D, 
+      S     = S,
+      Kᵈ    = Kᵈ,
+      Kˢ    = Kˢ,
+      Lᵈ    = Lᵈ,
+      Lˢ    = Lˢ, 
+      Gᵉ    = Gᵉ,
+      U     = U, 
+      M     = M,
+      W     = W,
+      E     = E,
+      rₜ    = rₜ,
+      wₜ    = wₜ,
+      τₜ    = τₜ
+    )
+end 
