@@ -62,8 +62,6 @@ function fnInitialVFIGuess!(params, endo)
 end
 
 # 4. Solve for assets 
-
-
 # A. A struct to hold the explicitly typed variables
 struct AssetObjective{S, P}
     cash::Float64
