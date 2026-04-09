@@ -245,7 +245,7 @@ Endo        = fnSetUpEndo(UsedParameters)
 # 3. MIT shock endogenous variables preallocation (structure)
 @with_kw mutable struct MITEndogenousVariables
 
-    # A. Key values 
+    # A. Key values for MIT shock 
     𝐕::Array{Float64,3}     # Value function 
     𝔼𝐕::Array{Float64,3}    # Expected value function 
     𝐕ᵂ::Array{Float64,3}    # Value of working 
