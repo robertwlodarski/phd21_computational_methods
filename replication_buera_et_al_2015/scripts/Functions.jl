@@ -495,7 +495,6 @@ function fnBudgetResidual!(τ, params, endo, r)
 end
 
 # 3. Government budget 
-
 # A. Struct for the tax residual
 struct BudgetResidualObjective{P, E, T}
     params::P
