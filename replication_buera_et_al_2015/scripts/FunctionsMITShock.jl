@@ -396,10 +396,16 @@ function fnConvexUpdatingMIT(f, bounds::Tuple, method = nothing; loading = 0.05,
 
         # C. Compute and update 
         residual            = f(xˣ)
+        min_loading         = @. loadings / 7.5
         if iter > 0
-            @. loadings     = ifelse(sign(residual) != sign(prev_res), loadings * 0.75, loadings)
+            @. loadings = ifelse(sign(residual) != sign(prev_res), max(loadings * 0.75, min_loading), loadings)
         end
-        @. x_new            = clamp(xˣ * (1 + loadings * residual), bounds[1], bounds[2])
+        # Distinguish between interest and wages 
+        if maximum(xˣ) < 0.35
+            @. x_new = clamp(xˣ + loadings * residual, bounds[1], bounds[2]) 
+        else
+            @. x_new = clamp(xˣ * (1 + loadings * residual), bounds[1], bounds[2]) 
+        end
         @. prev_res         = residual
 
         # Update error and step forward
@@ -434,7 +440,7 @@ function fnLabourResidualMIT(w⃗,r⃗, τ⃗, params, mit_endo, ss_endo,  A⃗,
     
     # D. Return the labour market error
     ε⃗ᴸ          = @. (mit_endo.Lᵈ / max(mit_endo.Lˢ, 1e-4)) - 1.0
-    εᴸ          = maximum(ε⃗ᴸ) 
+    εᴸ          = maximum(abs,ε⃗ᴸ) 
     𝔼w          = sum(mit_endo.wₜ) / Tᴹᴵᵀ
     println("→→→ Wage search        | w₄ = $(round(mit_endo.wₜ[4], digits=4)), 𝔼w = $(round(𝔼w, digits=4)), max(εᴸ) = $(round(εᴸ, digits=4))")
     return ε⃗ᴸ
@@ -506,17 +512,17 @@ function fnCapitalResidualMIT!(r⃗, params, mit_endo,ss_endo,A⃗, λ⃗, error
         τ̅       = fill(0.3,Tᴹᴵᵀ)
         
         # E. Solve [old, super precise but at risk of looping]
-        # Oᵗ      = BudgetResidualObjectiveMIT(params, r⃗, mit_endo,ss_endo,A⃗, λ⃗)
-        # τˣ      = fnConvexUpdatingMIT(Oᵗ, (τ̲, τ̅),loading = κᵗ,  xatol = δᵗ,init = mit_endo.τₜ)
-        # @. mit_endo.τₜ      = τˣ
+        Oᵗ      = BudgetResidualObjectiveMIT(params, r⃗, mit_endo,ss_endo,A⃗, λ⃗)
+        τˣ      = fnConvexUpdatingMIT(Oᵗ, (τ̲, τ̅),loading = κᵗ,  xatol = δᵗ,init = mit_endo.τₜ)
+        @. mit_endo.τₜ      = τˣ
 
         # E. Solve: iterate w-search → τ update a few times
-        for _ in 1:3
-            Oᴸ              = LabourResidualObjectiveMIT(params, r⃗, mit_endo.τₜ, mit_endo, ss_endo, A⃗, λ⃗)
-            wˣ              = fnConvexUpdatingMIT(Oᴸ, (fill(0.1, Tᴹᴵᵀ), fill(2.5, Tᴹᴵᵀ)), loading=κᴸ, xatol=δᴸ, init=mit_endo.wₜ)
-            mit_endo.wₜ     .= wˣ
-            @. mit_endo.τₜ  = mit_endo.wₜ * mit_endo.U
-        end
+        # for _ in 1:3
+        #     Oᴸ              = LabourResidualObjectiveMIT(params, r⃗, mit_endo.τₜ, mit_endo, ss_endo, A⃗, λ⃗)
+        #     wˣ              = fnConvexUpdatingMIT(Oᴸ, (fill(0.1, Tᴹᴵᵀ), fill(2.5, Tᴹᴵᵀ)), loading=κᴸ, xatol=δᴸ, init=mit_endo.wₜ)
+        #     mit_endo.wₜ     .= wˣ
+        #     @. mit_endo.τₜ  = mit_endo.wₜ * mit_endo.U
+        # end
 
         # F. Return error 
         ε⃗ᴷ  = @. (mit_endo.Kᵈ / max(mit_endo.Kˢ, 1e-4)) - 1.0
@@ -548,10 +554,10 @@ end
 function fnTransitionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
     
     # D. Unpacking business 
-    @unpack δʳ,κʳ,Tᴹᴵᵀ = params
+    @unpack δʳ,κʳᴹᴵᵀ,Tᴹᴵᵀ = params
 
     # E. Bounds and warm start 
-    r̲               = fill(0.001,Tᴹᴵᵀ)
+    r̲               = fill(-0.1,Tᴹᴵᵀ)
     r̅               = fill(0.20,Tᴹᴵᵀ)
     fill!(mit_endo.rₜ, ss_endo.rₜ)
     fill!(mit_endo.wₜ, ss_endo.wₜ)
@@ -560,7 +566,7 @@ function fnTransitionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
     # F. The final solve
     error_history   = Float64[]
     Oᶜ              = CapitalResidualObjectiveMIT(params, mit_endo, ss_endo, A⃗, λ⃗,error_history)
-    rˣ              = fnConvexUpdatingMIT(Oᶜ, (r̲, r̅),loading=κʳ, xatol = δʳ, init = mit_endo.rₜ)
+    rˣ              = fnConvexUpdatingMIT(Oᶜ, (r̲, r̅),loading=κʳᴹᴵᵀ, xatol = δʳ, init = mit_endo.rₜ)
     @. mit_endo.rₜ  = rˣ
 end
 
