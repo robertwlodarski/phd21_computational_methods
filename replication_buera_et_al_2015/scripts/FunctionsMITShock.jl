@@ -442,12 +442,12 @@ end
 
 # 2. Budget residual (MIT)
 # A. A struct to hold the variables needed for the labor residual
-struct LabourResidualObjectiveMIT{P,T,E,G}
+struct LabourResidualObjectiveMIT{P,T,E1,E2,G}
     params::P
     r⃗::T
     τ⃗::T
-    mit_endo::E
-    ss_endo::E
+    mit_endo::E1
+    ss_endo::E2
     A⃗::G 
     λ⃗::G
 end
@@ -482,11 +482,11 @@ end
 
 # 3. Government budget 
 # A. Struct for the tax residual
-struct BudgetResidualObjectiveMIT{P,T,E,G}
+struct BudgetResidualObjectiveMIT{P,T,E1,E2,G}
     params::P
     r⃗::T
-    mit_endo::E
-    ss_endo::E
+    mit_endo::E1
+    ss_endo::E2
     A⃗::G 
     λ⃗::G
 end
@@ -499,16 +499,24 @@ end
 function fnCapitalResidualMIT!(r⃗, params, mit_endo,ss_endo,A⃗, λ⃗, error_history)
         
         # C. Unpacking business 
-        @unpack δᵗ,κᵗ,Tᴹᴵᵀ = params
+        @unpack δᵗ,κᵗ,Tᴹᴵᵀ,δᴸ,κᴸ = params
 
         # D. Prepare lower and upper bounds 
-        τ̲       = fill(0.1,Tᴹᴵᵀ)
+        τ̲       = fill(0.01,Tᴹᴵᵀ)
         τ̅       = fill(0.3,Tᴹᴵᵀ)
         
-        # E. Solve
-        Oᵗ      = BudgetResidualObjectiveMIT(params, r⃗, mit_endo,ss_endo,A⃗, λ⃗)
-        τˣ      = fnConvexUpdatingMIT(Oᵗ, (τ̲, τ̅),loading = κᵗ,  xatol = δᵗ,init = mit_endo.τₜ)
-        @. mit_endo.τₜ      = τˣ
+        # E. Solve [old, super precise but at risk of looping]
+        # Oᵗ      = BudgetResidualObjectiveMIT(params, r⃗, mit_endo,ss_endo,A⃗, λ⃗)
+        # τˣ      = fnConvexUpdatingMIT(Oᵗ, (τ̲, τ̅),loading = κᵗ,  xatol = δᵗ,init = mit_endo.τₜ)
+        # @. mit_endo.τₜ      = τˣ
+
+        # E. Solve: iterate w-search → τ update a few times
+        for _ in 1:3
+            Oᴸ              = LabourResidualObjectiveMIT(params, r⃗, mit_endo.τₜ, mit_endo, ss_endo, A⃗, λ⃗)
+            wˣ              = fnConvexUpdatingMIT(Oᴸ, (fill(0.1, Tᴹᴵᵀ), fill(2.5, Tᴹᴵᵀ)), loading=κᴸ, xatol=δᴸ, init=mit_endo.wₜ)
+            mit_endo.wₜ     .= wˣ
+            @. mit_endo.τₜ  = mit_endo.wₜ * mit_endo.U
+        end
 
         # F. Return error 
         ε⃗ᴷ  = @. (mit_endo.Kᵈ / max(mit_endo.Kˢ, 1e-4)) - 1.0
@@ -522,10 +530,10 @@ end
 # 4. Steady state 
 
 # A. Struct for the capital residual
-struct CapitalResidualObjectiveMIT{P,E,G,H}
+struct CapitalResidualObjectiveMIT{P,E1,E2,G,H}
     params::P
-    mit_endo::E
-    ss_endo::E
+    mit_endo::E1
+    ss_endo::E2
     A⃗::G 
     λ⃗::G
     error_history::H
@@ -545,9 +553,9 @@ function fnTransitionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
     # E. Bounds and warm start 
     r̲               = fill(0.001,Tᴹᴵᵀ)
     r̅               = fill(0.20,Tᴹᴵᵀ)
-    @. mit_endo.rₜ  = fill(ss_endo.rₜ,Tᴹᴵᵀ)
-    @. mit_endo.wₜ  = fill(ss_endo.wₜ,Tᴹᴵᵀ)
-    @. mit_endo.τₜ  = fill(ss_endo.τₜ,Tᴹᴵᵀ)
+    fill!(mit_endo.rₜ, ss_endo.rₜ)
+    fill!(mit_endo.wₜ, ss_endo.wₜ)
+    fill!(mit_endo.τₜ, ss_endo.τₜ)
 
     # F. The final solve
     error_history   = Float64[]
