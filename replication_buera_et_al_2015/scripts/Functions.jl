@@ -452,11 +452,11 @@ function fnLabourResidual!(w, params, endo, r, τ)
     endo.rₜ = r
     endo.τₜ = τ
 
-    # B. Run the parallelized engine
+    # B. Run the parallelised engine
     fnVFI!(params, endo)
     fnAggregateStates!(params, endo)
     
-    # C. Return the Labor market error
+    # C. Return the labour market error
     εᴸ      = (endo.Lᵈ / max(endo.Lˢ, 1e-4)) - 1.0
     println("→→→ Wage search        | w = $(round(w, digits=4)), εᴸ = $(round(εᴸ, digits=4))")
     return εᴸ
@@ -488,7 +488,7 @@ function fnBudgetResidual!(τ, params, endo, r)
     wˣ      = fnConvexUpdating(Oᴸ, (w̲, w̅),loading = κᴸ,xatol = δᴸ,init = endo.wₜ)
     endo.wₜ = wˣ 
 
-    # C. Return the Budget error
+    # C. Return the budget error
     εᵗ      = (endo.U * endo.wₜ / max(endo.τₜ, 1e-4)) - 1.0
     println("→→ Tax loop        | τ = $(round(τ, digits=4)), εᵗ = $(round(εᵗ, digits=4)) [Cleared w = $(round(endo.wₜ, digits=4))]")
     return εᵗ
@@ -626,7 +626,7 @@ function fnSolveSteadyState!(params, endo)
     # A. Unpacking business 
     @unpack r̲, r̅, δʳ,κʳ = params
 
-    # B. The Final Solve
+    # B. The final solve
     Oᶜ          = CapitalResidualObjective(params, endo)
     rˣ          = fnConvexUpdating(Oᶜ, (r̲, r̅),loading=κʳ, xatol = δʳ, init = endo.rₜ)
     endo.rₜ     = rˣ
