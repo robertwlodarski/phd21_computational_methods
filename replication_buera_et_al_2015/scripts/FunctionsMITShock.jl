@@ -12,6 +12,9 @@
 # 5. Aggregate states
 
 # C. Solving 
+# 1. Convex updating for MIT shock
+# 2. Labour market residual
+# 3. Government balance 
 
 # -----------------------------------------------
 # A. Backward logic 
@@ -44,17 +47,17 @@ function fnLastPeriodMIT!(params, mit_endo, ss_endo)
     @unpack Tᴹᴵᵀ = params 
 
     # B. Value functions 
-    mit_endo.𝐕[:,:,Tᴹᴵᵀ]    .= ss_mit_endo.𝐕
-    mit_endo.𝔼𝐕[:,:,Tᴹᴵᵀ]   .= ss_mit_endo.𝔼𝐕
-    mit_endo.𝐕ᵂ[:,:,Tᴹᴵᵀ]   .= ss_mit_endo.𝐕ᵂ
-    mit_endo.𝐕ᴱ[:,:,Tᴹᴵᵀ]   .= ss_mit_endo.𝐕ᴱ
+    mit_endo.𝐕[:,:,Tᴹᴵᵀ]    .= ss_endo.𝐕
+    mit_endo.𝔼𝐕[:,:,Tᴹᴵᵀ]   .= ss_endo.𝔼𝐕
+    mit_endo.𝐕ᵂ[:,:,Tᴹᴵᵀ]   .= ss_endo.𝐕ᵂ
+    mit_endo.𝐕ᴱ[:,:,Tᴹᴵᵀ]   .= ss_endo.𝐕ᴱ
 
     # C. Policy functions 
-    mit_endo.𝐨[:,:,Tᴹᴵᵀ]    .= ss_mit_endo.𝐨
-    mit_endo.𝐤[:,:,Tᴹᴵᵀ]    .= ss_mit_endo.𝐤
-    mit_endo.𝐚[:,:,Tᴹᴵᵀ]    .= ss_mit_endo.𝐚
-    mit_endo.𝐜[:,:,Tᴹᴵᵀ]    .= ss_mit_endo.𝐜
-    mit_endo.𝐥[:,:,Tᴹᴵᵀ]    .= ss_mit_endo.𝐥
+    mit_endo.𝐨[:,:,Tᴹᴵᵀ]    .= ss_endo.𝐨
+    mit_endo.𝐤[:,:,Tᴹᴵᵀ]    .= ss_endo.𝐤
+    mit_endo.𝐚[:,:,Tᴹᴵᵀ]    .= ss_endo.𝐚
+    mit_endo.𝐜[:,:,Tᴹᴵᵀ]    .= ss_endo.𝐜
+    mit_endo.𝐥[:,:,Tᴹᴵᵀ]    .= ss_endo.𝐥
 end 
 
 # 3. Solve for assets 
@@ -246,11 +249,9 @@ function fnDistributionIterationMIT!(params, mit_endo, ss_endo)
     @unpack z⃗, a⃗, l⃗, ψ, μ⃗, Nᶻ, Nᵃ, Nˡ, Nᵘ, Tᴹᴵᵀ = params
 
     # B. Starting the loop for a PDF at different times 
-    B                           = zeros(Nᵃ, Nˡ, Nᵘ,Tᴹᴵᵀ)
-    gⁿᵉˣᵗ                       = zeros(Nᶻ, Nᵃ, Nˡ, Nᵘ,Tᴹᴵᵀ)
+    B                           = zeros(Nᵃ, Nˡ, Nᵘ)
+    gⁿᵉˣᵗ                       = zeros(Nᶻ, Nᵃ, Nˡ, Nᵘ)
     @. mit_endo.g[:,:,:,:, 1]   = @views(ss_endo.g)
-    gᵖʳᵉᵛ                       = zeros(Nᶻ, Nᵃ, Nˡ, Nᵘ,Tᴹᴵᵀ)
-    @. gᵖʳᵉᵛ[:,:,:,:, 1]        = @views(ss_endo.g)
 
     # C. Precompute the invariant elements 
     # I. Initialisation 
@@ -294,7 +295,7 @@ function fnDistributionIterationMIT!(params, mit_endo, ss_endo)
                     for iz in eachindex(z⃗)
 
                         # II. Common terms
-                        Mass = gᵖʳᵉᵛ[iz, ia, il, iu, it]
+                        Mass = mit_endo.g[iz, ia, il, iu, it]
                         if Mass == 0.0
                             continue
                         end
@@ -307,28 +308,28 @@ function fnDistributionIterationMIT!(params, mit_endo, ss_endo)
 
                         # IV. With switching productivity
                         # To unemployment (iu=2)
-                        B[ibᵃ[iz,ia,it], ibˡ[iz,ia,it], 2, it]      += Mass * wᵃ[iz,ia,it] * wˡ[iz,ia,it] * FlowU
-                        B[ibᵃ[iz,ia,it], iuˡ[iz,ia,it], 2, it]      += Mass * wᵃ[iz,ia, it] * (1 - wˡ[iz,ia,it]) * FlowU
-                        B[iuᵃ[iz,ia,it], ibˡ[iz,ia,it], 2, it]      += Mass * (1 - wᵃ[iz,ia,it]) * wˡ[iz,ia,it] * FlowU
-                        B[iuᵃ[iz,ia,it], iuˡ[iz,ia,it], 2, it]      += Mass * (1 - wᵃ[iz,ia,it]) * (1 - wˡ[iz,ia,it]) * FlowU
+                        B[ibᵃ[iz,ia,it], ibˡ[iz,ia,it], 2]      += Mass * wᵃ[iz,ia,it] * wˡ[iz,ia,it] * FlowU
+                        B[ibᵃ[iz,ia,it], iuˡ[iz,ia,it], 2]      += Mass * wᵃ[iz,ia, it] * (1 - wˡ[iz,ia,it]) * FlowU
+                        B[iuᵃ[iz,ia,it], ibˡ[iz,ia,it], 2]      += Mass * (1 - wᵃ[iz,ia,it]) * wˡ[iz,ia,it] * FlowU
+                        B[iuᵃ[iz,ia,it], iuˡ[iz,ia,it], 2]      += Mass * (1 - wᵃ[iz,ia,it]) * (1 - wˡ[iz,ia,it]) * FlowU
                         # To employment/entrepreneurship (iu=1)
-                        B[ibᵃ[iz,ia,it], ibˡ[iz,ia,it], 1, it]      += Mass * wᵃ[iz,ia,it] * wˡ[iz,ia,it] * FlowO
-                        B[ibᵃ[iz,ia,it], iuˡ[iz,ia,it], 1, it]      += Mass * wᵃ[iz,ia,it] * (1 - wˡ[iz,ia,it]) * FlowO
-                        B[iuᵃ[iz,ia,it], ibˡ[iz,ia,it], 1, it]      += Mass * (1 - wᵃ[iz,ia,it]) * wˡ[iz,ia,it] * FlowO
-                        B[iuᵃ[iz,ia,it], iuˡ[iz,ia,it], 1, it]      += Mass * (1 - wᵃ[iz,ia,it]) * (1 - wˡ[iz,ia,it]) * FlowO
+                        B[ibᵃ[iz,ia,it], ibˡ[iz,ia,it], 1]      += Mass * wᵃ[iz,ia,it] * wˡ[iz,ia,it] * FlowO
+                        B[ibᵃ[iz,ia,it], iuˡ[iz,ia,it], 1]      += Mass * wᵃ[iz,ia,it] * (1 - wˡ[iz,ia,it]) * FlowO
+                        B[iuᵃ[iz,ia,it], ibˡ[iz,ia,it], 1]      += Mass * (1 - wᵃ[iz,ia,it]) * wˡ[iz,ia,it] * FlowO
+                        B[iuᵃ[iz,ia,it], iuˡ[iz,ia,it], 1]      += Mass * (1 - wᵃ[iz,ia,it]) * (1 - wˡ[iz,ia,it]) * FlowO
 
                         # V. The same productivity
                         # (c) Update (asset, labour) = (BB, BU, UB, UU)
                         # To unemployment 
-                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia,it], ibˡ[iz,ia,it], 2, it]      += ψ * Mass * wᵃ[iz,ia,it] * wˡ[iz,ia,it] * FlowU
-                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia,it], iuˡ[iz,ia,it], 2, it]      += ψ * Mass * wᵃ[iz,ia,it] * (1 - wˡ[iz,ia,it]) * FlowU
-                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia,it], ibˡ[iz,ia,it], 2, it]      += ψ * Mass * (1 - wᵃ[iz,ia, it]) * wˡ[iz,ia, it] * FlowU
-                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia,it], iuˡ[iz,ia,it], 2, it]      += ψ * Mass * (1 - wᵃ[iz,ia, it]) * (1 - wˡ[iz,ia,it]) * FlowU
+                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia,it], ibˡ[iz,ia,it], 2]      += ψ * Mass * wᵃ[iz,ia,it] * wˡ[iz,ia,it] * FlowU
+                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia,it], iuˡ[iz,ia,it], 2]      += ψ * Mass * wᵃ[iz,ia,it] * (1 - wˡ[iz,ia,it]) * FlowU
+                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia,it], ibˡ[iz,ia,it], 2]      += ψ * Mass * (1 - wᵃ[iz,ia, it]) * wˡ[iz,ia, it] * FlowU
+                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia,it], iuˡ[iz,ia,it], 2]      += ψ * Mass * (1 - wᵃ[iz,ia, it]) * (1 - wˡ[iz,ia,it]) * FlowU
                         # To others 
-                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia,it], ibˡ[iz,ia,it], 1, it]      += ψ * Mass * wᵃ[iz,ia,it] * wˡ[iz,ia,it] * FlowO
-                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia,it], iuˡ[iz,ia,it], 1, it]      += ψ * Mass * wᵃ[iz,ia,it] * (1 - wˡ[iz,ia,it]) * FlowO
-                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia,it], ibˡ[iz,ia,it], 1, it]      += ψ * Mass * (1 - wᵃ[iz,ia,it]) * wˡ[iz,ia,it] * FlowO
-                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia,it], iuˡ[iz,ia,it], 1, it]      += ψ * Mass * (1 - wᵃ[iz,ia,it]) * (1 - wˡ[iz,ia,it]) * FlowO
+                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia,it], ibˡ[iz,ia,it], 1]      += ψ * Mass * wᵃ[iz,ia,it] * wˡ[iz,ia,it] * FlowO
+                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia,it], iuˡ[iz,ia,it], 1]      += ψ * Mass * wᵃ[iz,ia,it] * (1 - wˡ[iz,ia,it]) * FlowO
+                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia,it], ibˡ[iz,ia,it], 1]      += ψ * Mass * (1 - wᵃ[iz,ia,it]) * wˡ[iz,ia,it] * FlowO
+                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia,it], iuˡ[iz,ia,it], 1]      += ψ * Mass * (1 - wᵃ[iz,ia,it]) * (1 - wˡ[iz,ia,it]) * FlowO
                     end
                 end
             end
@@ -336,13 +337,18 @@ function fnDistributionIterationMIT!(params, mit_endo, ss_endo)
 
         # VI. Add the mass to the updated productivity states
         @inbounds for iu in 1:2, il in 1:Nˡ ,ia in 1:Nᵃ, iz in 1:Nᶻ
-            gⁿᵉˣᵗ[iz, ia, il, iu, it] += (1 - ψ) * μ⃗[iz] * B[ia, il, iu, it]
+            gⁿᵉˣᵗ[iz, ia, il, iu]   += (1 - ψ) * μ⃗[iz] * B[ia, il, iu]
         end
 
         # VII. Update 
-        @. mit_endo.g[:,:,:,:,it+1] = @views(gⁿᵉˣᵗ[:,:,:,:,it])
-        @. gᵖʳᵉᵛ[:,:,:,:,it+1]      = @views(mit_endo.g[:,:,:,:,it+1])
+        @. mit_endo.g[:,:,:,:,it+1] = gⁿᵉˣᵗ
+        fill!(gⁿᵉˣᵗ, 0.0)
+        fill!(B, 0.0)
     end
+
+    # Final update to the important rates 
+    fnJobDestructionMIT!(params, mit_endo, Tᴹᴵᵀ)
+    fnUpdateLabourMarketMIT!(params, mit_endo, Tᴹᴵᵀ)
 end
 
 # 5. Aggregate states 
@@ -366,4 +372,236 @@ function fnAggregateStatesMIT!(params, mit_endo, ss_endo)
         mit_endo.Lˢ[it] = mit_endo.W[it]
         mit_endo.Lᵈ[it] = sum(ωᵃ .* @views(mit_endo.𝐥[:,:,it]) .* @views(mit_endo.𝐨[:,:,it]))
     end 
+end
+
+# -----------------------------------------------
+# C. Solving
+# -----------------------------------------------
+
+# 1. Convex updating for MIT shock
+function fnConvexUpdatingMIT(f, bounds::Tuple, method = nothing; loading = 0.05, xatol = 1e-5, max_iter=2000, init = nothing, kwargs...)
+    # A. Bounds and setting the stage 
+    xˣ = (isnothing(init) || init == 0.0) ? fill((bounds[1] + bounds[2]) / 2.0, length(bounds[1])) : copy(init)
+    
+    # Preallocate vectors for the loop
+    loadings = fill(loading, length(xˣ))
+    prev_res = zeros(length(xˣ))
+    x_new    = similar(xˣ)
+    
+    ε = 1.0
+    iter = 0
+
+    # B. Start the loop 
+    while ε > xatol && iter < max_iter
+
+        # C. Compute and update 
+        residual            = f(xˣ)
+        if iter > 0
+            @. loadings     = ifelse(sign(residual) != sign(prev_res), loadings * 0.75, loadings)
+        end
+        @. x_new            = clamp(xˣ * (1 + loadings * residual), bounds[1], bounds[2])
+        @. prev_res         = residual
+
+        # Update error and step forward
+        ε                   = maximum(abs, residual)
+        @. xˣ               = x_new
+        iter                += 1
+    end
+
+    # C. Warning messager 
+    if iter == max_iter
+        @warn "Convex updating hit the ceiling ($max_iter). Final error: $ε. Try adjusting the loading parameter!"
+    end
+
+    # D. Return 
+    return xˣ
+end 
+
+# 2. Labour market residual (MIT)
+function fnLabourResidualMIT(w⃗,r⃗, τ⃗, params, mit_endo, ss_endo,  A⃗, λ⃗)
+    
+    # A. Unpacking parameters
+    @unpack Tᴹᴵᵀ = params
+
+    # B. Update the state
+    mit_endo.wₜ = w⃗
+    mit_endo.rₜ = r⃗
+    mit_endo.τₜ = τ⃗
+
+    # C. Run the VFI and aggregate routine 
+    fnBackwardInductionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
+    fnAggregateStatesMIT!(params, mit_endo, ss_endo)
+    
+    # D. Return the labour market error
+    ε⃗ᴸ          = @. (mit_endo.Lᵈ / max(mit_endo.Lˢ, 1e-4)) - 1.0
+    εᴸ          = maximum(ε⃗ᴸ) 
+    𝔼w          = sum(mit_endo.wₜ) / Tᴹᴵᵀ
+    println("→→→ Wage search        | w₄ = $(round(mit_endo.wₜ[4], digits=4)), 𝔼w = $(round(𝔼w, digits=4)), max(εᴸ) = $(round(εᴸ, digits=4))")
+    return ε⃗ᴸ
+end 
+
+# 2. Budget residual (MIT)
+# A. A struct to hold the variables needed for the labor residual
+struct LabourResidualObjectiveMIT{P,T,E,G}
+    params::P
+    r⃗::T
+    τ⃗::T
+    mit_endo::E
+    ss_endo::E
+    A⃗::G 
+    λ⃗::G
+end
+
+# B. Make it callable
+function (obj::LabourResidualObjectiveMIT)(w⃗)
+    return fnLabourResidualMIT(w⃗, obj.r⃗, obj.τ⃗, obj.params, obj.mit_endo,obj.ss_endo,obj.A⃗,obj.λ⃗)
+end
+
+# C. Start the function 
+function fnBudgetResidualMIT!(τ⃗,r⃗, params, mit_endo,ss_endo,A⃗, λ⃗)
+
+    # D. Unpacking business 
+    @unpack δᴸ, κᴸ,Tᴹᴵᵀ = params
+
+    # E. Prepare lower and upper bounds 
+    w̲       = fill(0.1,Tᴹᴵᵀ)
+    w̅       = fill(2.5,Tᴹᴵᵀ)
+
+    # F. Find the wage that clears labor for THIS tax and interest rate
+    Oᴸ              = LabourResidualObjectiveMIT(params, r⃗, τ⃗, mit_endo,ss_endo,A⃗, λ⃗)
+    wˣ              = fnConvexUpdatingMIT(Oᴸ, (w̲, w̅),loading = κᴸ,xatol = δᴸ,init = mit_endo.wₜ)
+    mit_endo.wₜ     .= wˣ 
+
+    # G. Return the budget error
+    ε⃗ᵗ          = @. (mit_endo.U * mit_endo.wₜ / max(mit_endo.τₜ, 1e-4)) - 1.0
+    εᵗ          = maximum(ε⃗ᵗ)
+    𝔼τ          = sum(τ⃗) / Tᴹᴵᵀ
+    println("→→ Tax loop        | τ₄ = $(round(τ⃗[4], digits=4)), 𝔼τ = $(round(𝔼τ, digits=4)), max(εᵗ) = $(round(εᵗ, digits=4))")
+    return ε⃗ᵗ
+end
+
+# 3. Government budget 
+# A. Struct for the tax residual
+struct BudgetResidualObjectiveMIT{P,T,E,G}
+    params::P
+    r⃗::T
+    mit_endo::E
+    ss_endo::E
+    A⃗::G 
+    λ⃗::G
+end
+
+# B. Make it callable
+function (obj::BudgetResidualObjectiveMIT)(τ⃗)
+    return fnBudgetResidualMIT!(τ⃗, obj.r⃗,obj.params, obj.mit_endo,obj.ss_endo,obj.A⃗,obj.λ⃗)
+end
+
+function fnCapitalResidualMIT!(r⃗, params, mit_endo,ss_endo,A⃗, λ⃗, error_history)
+        
+        # C. Unpacking business 
+        @unpack δᵗ,κᵗ,Tᴹᴵᵀ = params
+
+        # D. Prepare lower and upper bounds 
+        τ̲       = fill(0.1,Tᴹᴵᵀ)
+        τ̅       = fill(0.3,Tᴹᴵᵀ)
+        
+        # E. Solve
+        Oᵗ      = BudgetResidualObjectiveMIT(params, r⃗, mit_endo,ss_endo,A⃗, λ⃗)
+        τˣ      = fnConvexUpdatingMIT(Oᵗ, (τ̲, τ̅),loading = κᵗ,  xatol = δᵗ,init = mit_endo.τₜ)
+        @. mit_endo.τₜ      = τˣ
+
+        # F. Return error 
+        ε⃗ᴷ  = @. (mit_endo.Kᵈ / max(mit_endo.Kˢ, 1e-4)) - 1.0
+        εᴷ  = maximum(abs,ε⃗ᴷ)
+        push!(error_history, εᴷ)
+        fnPlotConvergenceMIT(error_history, mit_endo, params)
+        println("⋆ Capital loop     | r₄ = $(round(r⃗[4], digits=4)), max(εᴷ) = $(round(εᴷ, digits=4))")
+        return ε⃗ᴷ
+end
+
+# 4. Steady state 
+
+# A. Struct for the capital residual
+struct CapitalResidualObjectiveMIT{P,E,G,H}
+    params::P
+    mit_endo::E
+    ss_endo::E
+    A⃗::G 
+    λ⃗::G
+    error_history::H
+end
+
+# B. Make it callable
+function (obj::CapitalResidualObjectiveMIT)(r⃗)
+    return fnCapitalResidualMIT!(r⃗, obj.params, obj.mit_endo,obj.ss_endo,obj.A⃗,obj.λ⃗,obj.error_history)
+end
+
+# C. Start the function 
+function fnTransitionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
+    
+    # D. Unpacking business 
+    @unpack δʳ,κʳ,Tᴹᴵᵀ = params
+
+    # E. Bounds and warm start 
+    r̲               = fill(0.001,Tᴹᴵᵀ)
+    r̅               = fill(0.20,Tᴹᴵᵀ)
+    @. mit_endo.rₜ  = fill(ss_endo.rₜ,Tᴹᴵᵀ)
+    @. mit_endo.wₜ  = fill(ss_endo.wₜ,Tᴹᴵᵀ)
+    @. mit_endo.τₜ  = fill(ss_endo.τₜ,Tᴹᴵᵀ)
+
+    # F. The final solve
+    error_history   = Float64[]
+    Oᶜ              = CapitalResidualObjectiveMIT(params, mit_endo, ss_endo, A⃗, λ⃗,error_history)
+    rˣ              = fnConvexUpdatingMIT(Oᶜ, (r̲, r̅),loading=κʳ, xatol = δʳ, init = mit_endo.rₜ)
+    @. mit_endo.rₜ  = rˣ
+end
+
+# 5. Live plotting function for MIT transition
+function fnPlotConvergenceMIT(error_history, mit_endo, params)
+    
+    # A. Unpacking business
+    @unpack Tᴹᴵᵀ    = params
+    t_grid          = 1:Tᴹᴵᵀ
+
+    # B. Define the four subplots
+    p1 = plot(error_history, 
+                title   = "Capital error history", 
+                xlabel  = "Iteration", 
+                ylabel  = "Max absolute error", 
+                yscale  = :log10, 
+                lw=2, 
+                color   = :black, 
+                legend  = false, 
+                grid    = true)
+              
+    p2 = plot(t_grid, mit_endo.rₜ, 
+                title   ="Interest rate", 
+                ylabel  = "r",
+                xlabel  ="t", 
+                lw      =2, 
+                color   =:blue, 
+                legend  =false, 
+                grid    = true )
+              
+    p3 = plot(t_grid, mit_endo.τₜ, 
+                title   ="Tax", 
+                ylabel  = "τ",
+                xlabel  ="t", 
+                lw      =2, 
+                color   =:red, 
+                legend  =false,
+                grid    = true)
+              
+    p4 = plot(t_grid, mit_endo.wₜ, 
+                title   ="Wage",
+                ylabel  = "w", 
+                xlabel  ="t", 
+                lw      =2, 
+                color   =:green, 
+                legend  =false,
+                grid    = true)
+
+    # C. Combine into a 2x2 grid and display
+    plt = plot(p1, p2, p3, p4, layout=(2, 2), size=(900, 900), margin=5Plots.mm)
+    display(plt)
 end

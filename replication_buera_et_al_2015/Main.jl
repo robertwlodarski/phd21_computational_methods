@@ -9,11 +9,13 @@ using Parameters, Dierckx, Optim, NLsolve, QuantEcon, Plots, LinearAlgebra, Root
 Threads.nthreads()
 include("scripts/ModelInfrastructure.jl")
 include("scripts/Functions.jl")
+include("scripts/FunctionsMITShock.jl")
 
+## 2. Solve the steady state model 
 
 @time fnSolveSteadyState!(UsedParameters, Endo)
 fnPrintCalibrationElements(UsedParameters, Endo)
 
-# Check mass at maximum wealth
-sum(Endo.g[:, UsedParameters.Nᵃ, :, :])
-sum(Endo.g[:, :, UsedParameters.Nˡ, :])
+
+## 3. Solve the MIT transition 
+@time fnTransitionMIT!(UsedParameters, EndoMIT, Endo, ConstantTechnology, CollateralShock)

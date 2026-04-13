@@ -1,6 +1,8 @@
 # Content 
 # 1. Parameters (structure and constructor)
 # 2. Endogenous variables (structure and constructor)
+# 3. MIT shock endogenous variables (structure and constructor)
+# 4. MIT shocks of interest 
 
 # 1. Parameters (structure)
 @with_kw struct ModelParameters
@@ -18,7 +20,7 @@
 
     # C. Grid sizes  
     Nᶻ::Int             = 40            # Productivity grids (number) 
-    Nᵃ::Int             = 70            # Wealth grids (number)
+    Nᵃ::Int             = 50            # Wealth grids (number)
     Nˡ::Int             = 50            # Employment grid
     Nᵘ::Int             = 2             # Unemployment and other states grid 
 
@@ -367,3 +369,15 @@ function fnSetUpEndoMIT(params::ModelParameters)
       τₜ    = τₜ
     )
 end 
+EndoMIT     = fnSetUpEndoMIT(UsedParameters) 
+
+# 4. MIT shocks of interest 
+ConstantTechnology      = ones(UsedParameters.Tᴹᴵᵀ)
+CollateralShock         = zeros(UsedParameters.Tᴹᴵᵀ)
+CollateralShock[1]      = 7.5
+CollateralShock[2]      = 4.5
+CollateralShock[3]      = 3.0
+CollateralShock[4]      = 3.5
+for t in 5:UsedParameters.Tᴹᴵᵀ
+    CollateralShock[t]  = 0.75 * CollateralShock[t-1] + 0.25 * 7.5
+end
