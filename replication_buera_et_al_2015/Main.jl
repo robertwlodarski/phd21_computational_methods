@@ -10,12 +10,13 @@ Threads.nthreads()
 include("scripts/ModelInfrastructure.jl")
 include("scripts/Functions.jl")
 include("scripts/FunctionsMITShock.jl")
+include("scripts/PlottingMIT.jl")
 
 ## 2. Solve the steady state model 
 
 @time fnSolveSteadyState!(UsedParameters, Endo)
 fnPrintCalibrationElements(UsedParameters, Endo)
 
-
 ## 3. Solve the MIT transition 
 @time fnTransitionMIT!(UsedParameters, EndoMIT, Endo, ConstantTechnology, CollateralShock)
+fnPlotMITResults(UsedParameters, EndoMIT, Endo,ConstantTechnology)

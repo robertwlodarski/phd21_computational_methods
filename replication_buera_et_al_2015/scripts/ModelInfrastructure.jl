@@ -20,7 +20,7 @@
 
     # C. Grid sizes  
     Nᶻ::Int             = 40            # Productivity grids (number) 
-    Nᵃ::Int             = 80            # Wealth grids (number)
+    Nᵃ::Int             = 250           # Wealth grids (number)
     Nˡ::Int             = 40            # Employment grid
     Nᵘ::Int             = 2             # Unemployment and other states grid 
 
@@ -60,7 +60,7 @@
     τ̅::Float64          = 2.50*0.25         # Maximum tax 
 
     # I. Labour market loop updating 
-    δᴸ::Float64         = 1.26*1e-2         # Tolerance 
+    δᴸ::Float64         = 1e-2              # Tolerance 
     κᴸ::Float64         = 0.30              # Updates
     λᵗ::Float64         = 0.50              # Tax update
     κᵗ::Float64         = 0.70              # Updates

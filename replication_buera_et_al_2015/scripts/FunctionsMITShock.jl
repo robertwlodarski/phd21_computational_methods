@@ -512,17 +512,17 @@ function fnCapitalResidualMIT!(r⃗, params, mit_endo,ss_endo,A⃗, λ⃗, error
         τ̅       = fill(0.3,Tᴹᴵᵀ)
         
         # E. Solve [old, super precise but at risk of looping]
-        Oᵗ      = BudgetResidualObjectiveMIT(params, r⃗, mit_endo,ss_endo,A⃗, λ⃗)
-        τˣ      = fnConvexUpdatingMIT(Oᵗ, (τ̲, τ̅),loading = κᵗ,  xatol = δᵗ,init = mit_endo.τₜ)
-        @. mit_endo.τₜ      = τˣ
+        # Oᵗ      = BudgetResidualObjectiveMIT(params, r⃗, mit_endo,ss_endo,A⃗, λ⃗)
+        # τˣ      = fnConvexUpdatingMIT(Oᵗ, (τ̲, τ̅),loading = κᵗ,  xatol = δᵗ,init = mit_endo.τₜ)
+        # @. mit_endo.τₜ      = τˣ
 
         # E. Solve: iterate w-search → τ update a few times
-        # for _ in 1:3
-        #     Oᴸ              = LabourResidualObjectiveMIT(params, r⃗, mit_endo.τₜ, mit_endo, ss_endo, A⃗, λ⃗)
-        #     wˣ              = fnConvexUpdatingMIT(Oᴸ, (fill(0.1, Tᴹᴵᵀ), fill(2.5, Tᴹᴵᵀ)), loading=κᴸ, xatol=δᴸ, init=mit_endo.wₜ)
-        #     mit_endo.wₜ     .= wˣ
-        #     @. mit_endo.τₜ  = mit_endo.wₜ * mit_endo.U
-        # end
+        for _ in 1:3
+            Oᴸ              = LabourResidualObjectiveMIT(params, r⃗, mit_endo.τₜ, mit_endo, ss_endo, A⃗, λ⃗)
+            wˣ              = fnConvexUpdatingMIT(Oᴸ, (fill(0.1, Tᴹᴵᵀ), fill(2.5, Tᴹᴵᵀ)), loading=κᴸ, xatol=δᴸ, init=mit_endo.wₜ)
+            mit_endo.wₜ     .= wˣ
+            @. mit_endo.τₜ  = mit_endo.wₜ * mit_endo.U
+        end
 
         # F. Return error 
         ε⃗ᴷ  = @. (mit_endo.Kᵈ / max(mit_endo.Kˢ, 1e-4)) - 1.0
@@ -554,20 +554,26 @@ end
 function fnTransitionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
     
     # D. Unpacking business 
-    @unpack δʳ,κʳᴹᴵᵀ,Tᴹᴵᵀ = params
+    @unpack δʳ,κʳᴹᴵᵀ,Tᴹᴵᵀ,δ = params
 
     # E. Bounds and warm start 
-    r̲               = fill(-0.1,Tᴹᴵᵀ)
+    r̲               = fill(-δ,Tᴹᴵᵀ)
     r̅               = fill(0.20,Tᴹᴵᵀ)
     fill!(mit_endo.rₜ, ss_endo.rₜ)
     fill!(mit_endo.wₜ, ss_endo.wₜ)
     fill!(mit_endo.τₜ, ss_endo.τₜ)
 
     # F. The final solve
-    error_history   = Float64[]
-    Oᶜ              = CapitalResidualObjectiveMIT(params, mit_endo, ss_endo, A⃗, λ⃗,error_history)
-    rˣ              = fnConvexUpdatingMIT(Oᶜ, (r̲, r̅),loading=κʳᴹᴵᵀ, xatol = δʳ, init = mit_endo.rₜ)
-    @. mit_endo.rₜ  = rˣ
+    error_history       = Float64[]
+    Oᶜ                  = CapitalResidualObjectiveMIT(params, mit_endo, ss_endo, A⃗, λ⃗,error_history)
+    logit(x, a, b)      = log((x - a) / (b - x))
+    invlogit(y, a, b)   = a + (b - a) / (1 + exp(-y))
+    y₀                  = logit.(mit_endo.rₜ, r̲, r̅)
+    result              = nlsolve((F, y) -> F .= Oᶜ(invlogit.(y, r̲, r̅)), y₀, method=:anderson, m=5, ftol=δʳ)
+    mit_endo.rₜ         .= invlogit.(result.zero, r̲, r̅)
+
+    # rˣ              = fnConvexUpdatingMIT(Oᶜ, (r̲, r̅),loading=κʳᴹᴵᵀ, xatol = δʳ, init = mit_endo.rₜ)
+    # @. mit_endo.rₜ  = rˣ
 end
 
 # 5. Live plotting function for MIT transition
