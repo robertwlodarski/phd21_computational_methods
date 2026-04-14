@@ -19,4 +19,5 @@ fnPrintCalibrationElements(UsedParameters, Endo)
 
 ## 3. Solve the MIT transition 
 @time fnTransitionMIT!(UsedParameters, EndoMIT, Endo, ConstantTechnology, CollateralShock)
-fnPlotMITResults(UsedParameters, EndoMIT, Endo,ConstantTechnology)
+plt = fnPlotMITResults(UsedParameters, EndoMIT, Endo,ConstantTechnology)
+savefig(plt, "plots/MIT_transitions.pdf")

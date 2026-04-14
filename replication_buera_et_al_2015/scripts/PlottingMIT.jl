@@ -6,17 +6,18 @@
 
 # 1. Plotting panels 
 function fnPanelPlot(series_vec, ss_vec, labels, suptitle;
-                     Tᵖˡᵒᵗ = length(series_vec[1]),
+                     Tᵖˡᵒᵗ = 31,
+                     t₀ = 2008.25,          # Q2 2008
                      colors = [:blue, :red, :green, :orange, :purple, :teal, :magenta, :brown, :maroon, :navy])
 
-    t_grid = 1:Tᵖˡᵒᵗ
+    years  = [t₀ + (t - 1)*0.25 for t in 1:Tᵖˡᵒᵗ]
     N      = length(series_vec)
     ncols  = 4
     nrows  = ceil(Int, N / ncols)
 
     plots  = []
     for i in 1:N
-        p = plot(t_grid, series_vec[i][1:Tᵖˡᵒᵗ],
+        p = plot(years, series_vec[i][1:Tᵖˡᵒᵗ],
                  lw     = 2,
                  color  = colors[mod1(i, length(colors))],
                  label  = "Transition",
@@ -26,16 +27,16 @@ function fnPanelPlot(series_vec, ss_vec, labels, suptitle;
                  ylabel = "",
                  title  = labels[i])
         hline!(p, [ss_vec[i]],
-               lw        = 1.5,
-               ls        = :dash,
-               color     = :black,
-               label     = "Steady state")
+               lw    = 1.5, ls = :dash, color = :black, label = "Steady state")
+        vline!(p, [2008.5],
+               lw    = 1.5, ls = :dot, color = :red, label = "")
         push!(plots, p)
     end
 
-    # Pad with empty plots if odd number
     if N % ncols != 0
-        push!(plots, plot(framestyle=:none, legend=false))
+        for _ in 1:(ncols - N % ncols)
+            push!(plots, plot(framestyle=:none, legend=false))
+        end
     end
 
     plt = plot(plots...,
@@ -94,7 +95,7 @@ function fnComputeMITPlotSeries(params, mit_endo, ss_endo,  A⃗)
 end
 
 # 3. Main plotting call
-function fnPlotMITResults(params, mit_endo, ss_endo,  A⃗; Tᵖˡᵒᵗ = params.Tᴹᴵᵀ)
+function fnPlotMITResults(params, mit_endo, ss_endo,  A⃗; Tᵖˡᵒᵗ = 31)
 
     # A. Compute derived series
     TotalCredit, ss_TotalCredit, AvgProd, ss_AvgProd, Output, ss_Output, Investment, ss_Investment = fnComputeMITPlotSeries(params, mit_endo, ss_endo, A⃗)

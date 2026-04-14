@@ -20,7 +20,7 @@
 
     # C. Grid sizes  
     Nᶻ::Int             = 40            # Productivity grids (number) 
-    Nᵃ::Int             = 250           # Wealth grids (number)
+    Nᵃ::Int             = 120           # Wealth grids (number)
     Nˡ::Int             = 40            # Employment grid
     Nᵘ::Int             = 2             # Unemployment and other states grid 
 
@@ -379,6 +379,7 @@ CollateralShock[1]      = 7.5
 CollateralShock[2]      = 4.5
 CollateralShock[3]      = 3.0
 CollateralShock[4]      = 3.5
-for t in 5:UsedParameters.Tᴹᴵᵀ
-    CollateralShock[t]  = 0.75 * CollateralShock[t-1] + 0.25 * 7.5
+for t in 5:UsedParameters.Tᴹᴵᵀ-1
+    CollateralShock[t]      = 0.75 * CollateralShock[t-1] + 0.25 * 7.5
 end
+CollateralShock[end-5:end]  .= 7.5  

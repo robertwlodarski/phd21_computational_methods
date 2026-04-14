@@ -58,6 +58,7 @@ function fnLastPeriodMIT!(params, mit_endo, ss_endo)
     mit_endo.𝐚[:,:,Tᴹᴵᵀ]    .= ss_endo.𝐚
     mit_endo.𝐜[:,:,Tᴹᴵᵀ]    .= ss_endo.𝐜
     mit_endo.𝐥[:,:,Tᴹᴵᵀ]    .= ss_endo.𝐥
+    mit_endo.Π[:,:,Tᴹᴵᵀ]    .= ss_endo.Π
 end 
 
 # 3. Solve for assets 
@@ -554,11 +555,11 @@ end
 function fnTransitionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
     
     # D. Unpacking business 
-    @unpack δʳ,κʳᴹᴵᵀ,Tᴹᴵᵀ,δ = params
+    @unpack δʳ,κʳᴹᴵᵀ,Tᴹᴵᵀ,δ,r̲,r̅ = params
 
     # E. Bounds and warm start 
-    r̲               = fill(-δ,Tᴹᴵᵀ)
-    r̅               = fill(0.20,Tᴹᴵᵀ)
+    r̲⃗               = fill(-δ,Tᴹᴵᵀ)
+    r̅⃗               = fill(0.20,Tᴹᴵᵀ)
     fill!(mit_endo.rₜ, ss_endo.rₜ)
     fill!(mit_endo.wₜ, ss_endo.wₜ)
     fill!(mit_endo.τₜ, ss_endo.τₜ)
@@ -568,12 +569,15 @@ function fnTransitionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
     Oᶜ                  = CapitalResidualObjectiveMIT(params, mit_endo, ss_endo, A⃗, λ⃗,error_history)
     logit(x, a, b)      = log((x - a) / (b - x))
     invlogit(y, a, b)   = a + (b - a) / (1 + exp(-y))
-    y₀                  = logit.(mit_endo.rₜ, r̲, r̅)
-    result              = nlsolve((F, y) -> F .= Oᶜ(invlogit.(y, r̲, r̅)), y₀, method=:anderson, m=5, ftol=δʳ)
-    mit_endo.rₜ         .= invlogit.(result.zero, r̲, r̅)
+    y₀                  = logit.(mit_endo.rₜ, r̲⃗, r̅⃗)
+    result              = nlsolve((F, y) -> F .= Oᶜ(invlogit.(y, r̲⃗, r̅⃗)), y₀, method=:anderson, m=5, ftol=δʳ)
+    mit_endo.rₜ         .= invlogit.(result.zero, r̲⃗, r̅⃗)
 
     # rˣ              = fnConvexUpdatingMIT(Oᶜ, (r̲, r̅),loading=κʳᴹᴵᵀ, xatol = δʳ, init = mit_endo.rₜ)
     # @. mit_endo.rₜ  = rˣ
+    # G. Save convergence plot
+    plt_conv = fnPlotConvergenceMIT(error_history, mit_endo, params)
+    savefig(plt_conv, "plots/MIT_convergence.pdf")
 end
 
 # 5. Live plotting function for MIT transition
@@ -624,4 +628,5 @@ function fnPlotConvergenceMIT(error_history, mit_endo, params)
     # C. Combine into a 2x2 grid and display
     plt = plot(p1, p2, p3, p4, layout=(2, 2), size=(900, 900), margin=5Plots.mm)
     display(plt)
+    return plt
 end
