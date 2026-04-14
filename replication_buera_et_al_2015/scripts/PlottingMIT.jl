@@ -6,11 +6,11 @@
 
 # 1. Plotting panels 
 function fnPanelPlot(series_vec, ss_vec, labels, suptitle;
-                     Tᵖˡᵒᵗ = 31,
-                     t₀ = 2008.25,          # Q2 2008
+                     Tᵖˡᵒᵗ = 8,
+                     t₀ = 2008,          # Q2 2008
                      colors = [:blue, :red, :green, :orange, :purple, :teal, :magenta, :brown, :maroon, :navy])
 
-    years  = [t₀ + (t - 1)*0.25 for t in 1:Tᵖˡᵒᵗ]
+    years  = [t₀ + (t - 1) for t in 1:Tᵖˡᵒᵗ]
     N      = length(series_vec)
     ncols  = 4
     nrows  = ceil(Int, N / ncols)
@@ -95,7 +95,7 @@ function fnComputeMITPlotSeries(params, mit_endo, ss_endo,  A⃗)
 end
 
 # 3. Main plotting call
-function fnPlotMITResults(params, mit_endo, ss_endo,  A⃗; Tᵖˡᵒᵗ = 31)
+function fnPlotMITResults(params, mit_endo, ss_endo,  A⃗; Tᵖˡᵒᵗ = 8)
 
     # A. Compute derived series
     TotalCredit, ss_TotalCredit, AvgProd, ss_AvgProd, Output, ss_Output, Investment, ss_Investment = fnComputeMITPlotSeries(params, mit_endo, ss_endo, A⃗)
