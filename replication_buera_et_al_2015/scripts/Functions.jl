@@ -638,4 +638,3 @@ function fnSolveSteadyState!(params, endo)
     println("Interest(r):$(round(endo.rₜ, digits=6))")
     println("Tax (τ):    $(round(endo.τₜ, digits=6))")
 end
-
