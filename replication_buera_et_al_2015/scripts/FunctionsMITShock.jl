@@ -61,60 +61,99 @@ function fnLastPeriodMIT!(params, mit_endo, ss_endo)
     mit_endo.Π[:,:,Tᴹᴵᵀ]    .= ss_endo.Π
 end 
 
-# 3. Solve for assets 
+# 3A. Solve for assets 
 # A. A struct to hold the explicitly typed variables
-struct AssetObjective{S, P}
-    cash::Float64
-    spline::S
-    params::P
-end
+# struct AssetObjective{S, P}
+#     cash::Float64
+#     spline::S
+#     params::P
+# end
 
-# B. Make the struct callable (this replaces the anonymous function)
-function (obj::AssetObjective)(ap)
-    return -(fnUtility(obj.cash - ap, obj.params) + obj.spline(ap))
-end
+# # B. Make the struct callable (this replaces the anonymous function)
+# function (obj::AssetObjective)(ap)
+#     return -(fnUtility(obj.cash - ap, obj.params) + obj.spline(ap))
+# end
 
-# C. Start the function 
-function fnFindAssetsMIT(iz, ia, it, exp_spline, params, mit_endo)
+# # C. Start the function 
+# function fnFindAssetsMIT(iz, ia, it, exp_spline, params, mit_endo)
 
-    # D. Unpacking parameters
-    @unpack c̲, a⃗, β = params
+#     # D. Unpacking parameters
+#     @unpack c̲, a⃗, β = params
 
-    # E. Helper elements 
-    Cash_w = a⃗[ia] * (1 + mit_endo.rₜ[it]) + mit_endo.wₜ[it] - mit_endo.τₜ[it]
-    Cash_e = a⃗[ia] * (1 + mit_endo.rₜ[it]) + mit_endo.Π[iz, ia,it] - mit_endo.τₜ[it]
-    Lower   = a⃗[1]
-    Upper_w = min(Cash_w - c̲, a⃗[end])
-    Upper_e = min(Cash_e - c̲, a⃗[end])
+#     # E. Helper elements 
+#     Cash_w = a⃗[ia] * (1 + mit_endo.rₜ[it]) + mit_endo.wₜ[it] - mit_endo.τₜ[it]
+#     Cash_e = a⃗[ia] * (1 + mit_endo.rₜ[it]) + mit_endo.Π[iz, ia,it] - mit_endo.τₜ[it]
+#     Lower   = a⃗[1]
+#     Upper_w = min(Cash_w - c̲, a⃗[end])
+#     Upper_e = min(Cash_e - c̲, a⃗[end])
 
-    # F. Computation of assets: Worker 
-    if Upper_w <= Lower
-        A_w = a⃗[1]
-        𝐕ᵂ  = fnUtility(Cash_w - a⃗[1], params) + exp_spline(a⃗[1])
-        𝔼𝐕ᵂ = exp_spline(A_w)
-    else
-        obj_w = AssetObjective(Cash_w, exp_spline, params)
-        ℜʷ    = optimize(obj_w, Lower, Upper_w)
-        A_w   = Optim.minimizer(ℜʷ)
-        𝐕ᵂ    = -Optim.minimum(ℜʷ)
-        𝔼𝐕ᵂ   = exp_spline(A_w)
-    end
+#     # F. Computation of assets: Worker 
+#     if Upper_w <= Lower
+#         A_w = a⃗[1]
+#         𝐕ᵂ  = fnUtility(Cash_w - a⃗[1], params) + exp_spline(a⃗[1])
+#         𝔼𝐕ᵂ = exp_spline(A_w)
+#     else
+#         obj_w = AssetObjective(Cash_w, exp_spline, params)
+#         ℜʷ    = optimize(obj_w, Lower, Upper_w)
+#         A_w   = Optim.minimizer(ℜʷ)
+#         𝐕ᵂ    = -Optim.minimum(ℜʷ)
+#         𝔼𝐕ᵂ   = exp_spline(A_w)
+#     end
 
-    # G. Computation of assets: Entrepreneurs 
-    if Upper_e <= Lower
-        A_e = a⃗[1]
-        𝐕ᴱ  = fnUtility(Cash_e - a⃗[1], params) + exp_spline(a⃗[1])
-        𝔼𝐕ᴱ = exp_spline(A_e)
-    else
-        obj_e = AssetObjective(Cash_e, exp_spline, params)
-        ℜᴱ    = optimize(obj_e, Lower, Upper_e)
-        A_e   = Optim.minimizer(ℜᴱ)
-        𝐕ᴱ    = -Optim.minimum(ℜᴱ)
-        𝔼𝐕ᴱ   = exp_spline(A_e)
+#     # G. Computation of assets: Entrepreneurs 
+#     if Upper_e <= Lower
+#         A_e = a⃗[1]
+#         𝐕ᴱ  = fnUtility(Cash_e - a⃗[1], params) + exp_spline(a⃗[1])
+#         𝔼𝐕ᴱ = exp_spline(A_e)
+#     else
+#         obj_e = AssetObjective(Cash_e, exp_spline, params)
+#         ℜᴱ    = optimize(obj_e, Lower, Upper_e)
+#         A_e   = Optim.minimizer(ℜᴱ)
+#         𝐕ᴱ    = -Optim.minimum(ℜᴱ)
+#         𝔼𝐕ᴱ   = exp_spline(A_e)
+#     end
+    
+#     # H. Returning business  
+#     return A_w, A_e, 𝐕ᵂ, 𝐕ᴱ, 𝔼𝐕ᵂ, 𝔼𝐕ᴱ
+# end
+
+# 3B. Optimised grid search 
+ function fnPureGridSearchMIT(Budget, params, a⃗, 𝔼V_array)
+    
+    # A. Unpacking business
+    @unpack c̲, β = params
+    
+    # B. Initial values 
+    best_val    = -Inf
+    best_a      = a⃗[1]
+    
+    # C. Start the loop 
+    @inbounds for i in eachindex(a⃗)
+        
+        # D. Savings and consumption 
+        a_prime         = a⃗[i]
+        c               = Budget - a_prime
+        
+        # D. Stop searching if consumption hits the minimum bound
+        if c <= c̲
+            v_bound             = fnUtility(c̲, params) + β * 𝔼V_array[i]
+            if v_bound > best_val
+                best_val        = v_bound
+                best_a          = a_prime
+            end
+            break 
+        end
+        
+        # E. Pure array lookup 
+        v                       = fnUtility(c, params) + β * 𝔼V_array[i]
+        if v > best_val
+            best_val            = v
+            best_a              = a_prime
+        end
     end
     
-    # H. Returning business  
-    return A_w, A_e, 𝐕ᵂ, 𝐕ᴱ, 𝔼𝐕ᵂ, 𝔼𝐕ᴱ
+    # F. Returning business 
+    return best_a, best_val
 end
 
 # 4. Backward VF loop
@@ -130,25 +169,31 @@ function fnBackwardInductionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
     fnLastPeriodMIT!(params, mit_endo, ss_endo)
 
     # D. Start the loop 
-    𝔼𝐕ᵂ     = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ) 
-    𝔼𝐕ᴱ     = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ)
-
+    # 𝔼𝐕ᵂ     = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ) 
+    # 𝔼𝐕ᴱ     = zeros(Nᶻ, Nᵃ,Tᴹᴵᵀ)
+    
     for it in Tᴹᴵᵀ-1:(-1):1
 
         # D1. Spline business 
-        ℑᴱ                      = [Spline1D(a⃗, mit_endo.𝐕ᴱ[iz, :,it+1]; k=1, bc="nearest") for iz in eachindex(z⃗)]
-        ℑᵂ                      = [Spline1D(a⃗, mit_endo.𝐕ᵂ[iz, :,it+1]; k=1, bc="nearest") for iz in eachindex(z⃗)]
-        𝔼_max(a)                = sum(μ⃗[jz] * max(ℑᴱ[jz](a), ℑᵂ[jz](a)) for jz in eachindex(z⃗))
-        ℑ(iz, a)                = β * (ψ * max(ℑᴱ[iz](a), ℑᵂ[iz](a)) + (1 - ψ) * 𝔼_max(a))
+        # ℑᴱ                      = [Spline1D(a⃗, mit_endo.𝐕ᴱ[iz, :,it+1]; k=1, bc="nearest") for iz in eachindex(z⃗)]
+        # ℑᵂ                      = [Spline1D(a⃗, mit_endo.𝐕ᵂ[iz, :,it+1]; k=1, bc="nearest") for iz in eachindex(z⃗)]
+        # 𝔼_max(a)                = sum(μ⃗[jz] * max(ℑᴱ[jz](a), ℑᵂ[jz](a)) for jz in eachindex(z⃗))
+        # ℑ(iz, a)                = β * (ψ * max(ℑᴱ[iz](a), ℑᵂ[iz](a)) + (1 - ψ) * 𝔼_max(a))
+        @. mit_endo.𝔼𝐕[:,:,it]    = ψ * mit_endo.𝐕[:,:,it+1] + (1 - ψ) * $(μ⃗' * mit_endo.𝐕[:,:,it+1])
 
         # D2. Open the inner loops 
         Threads.@threads for ia in eachindex(a⃗)
             @inbounds for iz in eachindex(z⃗)
 
                 # I. Find assets
-                ℑᶻ(a)   = ℑ(iz, a)
-                mit_endo.𝐚ʷ[iz, ia, it], mit_endo.𝐚ᵉ[iz, ia, it], mit_endo.𝐕ᵂ[iz, ia, it], mit_endo.𝐕ᴱ[iz, ia, it], 𝔼𝐕ᵂ[iz, ia, it], 𝔼𝐕ᴱ[iz, ia, it] = fnFindAssetsMIT(iz, ia, it, ℑᶻ, params, mit_endo)
-                
+                # ℑᶻ(a)   = ℑ(iz, a)
+                # mit_endo.𝐚ʷ[iz, ia, it], mit_endo.𝐚ᵉ[iz, ia, it], mit_endo.𝐕ᵂ[iz, ia, it], mit_endo.𝐕ᴱ[iz, ia, it], 𝔼𝐕ᵂ[iz, ia, it], 𝔼𝐕ᴱ[iz, ia, it] = fnFindAssetsMIT(iz, ia, it, ℑᶻ, params, mit_endo)
+                Yᵂ                                                  = a⃗[ia] * (1 + mit_endo.rₜ[it]) + mit_endo.wₜ[it] - mit_endo.τₜ[it]
+                Yᴱ                                                  = a⃗[ia] * (1 + mit_endo.rₜ[it]) + mit_endo.Π[iz, ia,it] - mit_endo.τₜ[it]
+                mit_endo.𝐚ʷ[iz, ia,it], mit_endo.𝐕ᵂ[iz, ia, it]     = fnPureGridSearchMIT(Yᵂ, params, a⃗, @views(mit_endo.𝔼𝐕[iz,:,it]))
+                mit_endo.𝐚ᵉ[iz, ia,it], mit_endo.𝐕ᴱ[iz, ia, it]     = fnPureGridSearchMIT(Yᴱ, params, a⃗, @views(mit_endo.𝔼𝐕[iz,:,it]))
+
+
                 # II. VFs for different occupations
                 mit_endo.𝐜ʷ[iz, ia, it] = a⃗[ia] * (1 + mit_endo.rₜ[it]) + mit_endo.wₜ[it] - mit_endo.τₜ[it] - mit_endo.𝐚ʷ[iz, ia, it]
                 mit_endo.𝐜ᵉ[iz, ia, it] = a⃗[ia] * (1 + mit_endo.rₜ[it]) + mit_endo.Π[iz, ia, it] - mit_endo.τₜ[it] - mit_endo.𝐚ᵉ[iz, ia, it]
@@ -380,49 +425,53 @@ end
 # -----------------------------------------------
 
 # 1. Convex updating for MIT shock
-function fnConvexUpdatingMIT(f, bounds::Tuple, method = nothing; loading = 0.05, xatol = 1e-5, max_iter=2000, init = nothing, kwargs...)
-    # A. Bounds and setting the stage 
-    xˣ = (isnothing(init) || init == 0.0) ? fill((bounds[1] + bounds[2]) / 2.0, length(bounds[1])) : copy(init)
+function fnConvexUpdatingMIT(f, bounds::Tuple, method = nothing; 
+                            loading = 0.05, xatol = 1e-5, max_iter=2000, 
+                            init = nothing, step_tol = 1e-3, kwargs...)
     
-    # Preallocate vectors for the loop
+    # A. Initialization
+    xˣ = (isnothing(init) || all(init .== 0.0)) ? 
+         fill((bounds[1] + bounds[2]) / 2.0, length(bounds[1])) : copy(init)
+    
     loadings = fill(loading, length(xˣ))
     prev_res = zeros(length(xˣ))
-    x_new    = similar(xˣ)
     
-    ε = 1.0
-    iter = 0
+    iter    = 0
+    ε       = 1.0
+    x_old   = fill(0.0, length(xˣ))
 
     # B. Start the loop 
     while ε > xatol && iter < max_iter
-
-        # C. Compute and update 
-        residual            = f(xˣ)
-        min_loading         = @. loadings / 7.5
+        residual        = f(xˣ)
+        
+        # C. Limit 
         if iter > 0
-            @. loadings = ifelse(sign(residual) != sign(prev_res), max(loadings * 0.75, min_loading), loadings)
+            @. loadings = ifelse(sign(residual) != sign(prev_res), loadings * 0.7, loadings)
         end
-        # Distinguish between interest and wages 
-        if maximum(xˣ) < 0.35
-            @. x_new = clamp(xˣ + loadings * residual, bounds[1], bounds[2]) 
-        else
-            @. x_new = clamp(xˣ * (1 + loadings * residual), bounds[1], bounds[2]) 
-        end
-        @. prev_res         = residual
 
-        # Update error and step forward
-        ε                   = maximum(abs, residual)
-        @. xˣ               = x_new
-        iter                += 1
+        # D. Safety clause
+        if maximum(loadings) < loading/10 
+            return xˣ 
+        end
+        if iter>3 && maximum(abs, xˣ .- x_old) < step_tol
+            @warn "Solver stagnated at step $iter. Exiting."
+            return xˣ
+        end
+
+        # E. Update 
+        x_old       .= copy(xˣ)
+        @. xˣ       = clamp(xˣ * (1 + loadings * residual), bounds[1], bounds[2])
+        prev_res    .= residual
+        ε           = maximum(abs, residual)
+        iter        += 1
     end
 
-    # C. Warning messager 
     if iter == max_iter
-        @warn "Convex updating hit the ceiling ($max_iter). Final error: $ε. Try adjusting the loading parameter!"
+        @warn "MIT Updating reached max_iter. ε = $ε"
     end
 
-    # D. Return 
     return xˣ
-end 
+end
 
 # 2. Labour market residual (MIT)
 function fnLabourResidualMIT(w⃗,r⃗, τ⃗, params, mit_endo, ss_endo,  A⃗, λ⃗)
@@ -441,9 +490,10 @@ function fnLabourResidualMIT(w⃗,r⃗, τ⃗, params, mit_endo, ss_endo,  A⃗,
     
     # D. Return the labour market error
     ε⃗ᴸ          = @. (mit_endo.Lᵈ / max(mit_endo.Lˢ, 1e-4)) - 1.0
-    εᴸ          = maximum(abs,ε⃗ᴸ) 
+    εᴸ          = maximum(ε⃗ᴸ) 
+    ε̃ᴸ          = minimum(ε⃗ᴸ) 
     𝔼w          = sum(mit_endo.wₜ) / Tᴹᴵᵀ
-    println("→→→ Wage search        | w₄ = $(round(mit_endo.wₜ[4], digits=4)), 𝔼w = $(round(𝔼w, digits=4)), max(εᴸ) = $(round(εᴸ, digits=4))")
+    println("→→→ Wage search        | w₄ = $(round(mit_endo.wₜ[4], digits=4)), 𝔼w = $(round(𝔼w, digits=4)), max(εᴸ) = $(round(εᴸ, digits=4)), min(εᴸ) = $(round(ε̃ᴸ, digits=4))")
     return ε⃗ᴸ
 end 
 
@@ -476,14 +526,15 @@ function fnBudgetResidualMIT!(τ⃗,r⃗, params, mit_endo,ss_endo,A⃗, λ⃗)
 
     # F. Find the wage that clears labor for THIS tax and interest rate
     Oᴸ              = LabourResidualObjectiveMIT(params, r⃗, τ⃗, mit_endo,ss_endo,A⃗, λ⃗)
-    wˣ              = fnConvexUpdatingMIT(Oᴸ, (w̲, w̅),loading = κᴸ,xatol = δᴸ,init = mit_endo.wₜ)
+    wˣ              = fnConvexUpdatingMIT(Oᴸ, (w̲, w̅),loading = κᴸ,xatol = 10*δᴸ,init = mit_endo.wₜ,max_iter=20)
     mit_endo.wₜ     .= wˣ 
 
     # G. Return the budget error
     ε⃗ᵗ          = @. (mit_endo.U * mit_endo.wₜ / max(mit_endo.τₜ, 1e-4)) - 1.0
     εᵗ          = maximum(ε⃗ᵗ)
+    ε̃ᵗ          = minimum(ε⃗ᵗ)
     𝔼τ          = sum(τ⃗) / Tᴹᴵᵀ
-    println("→→ Tax loop        | τ₄ = $(round(τ⃗[4], digits=4)), 𝔼τ = $(round(𝔼τ, digits=4)), max(εᵗ) = $(round(εᵗ, digits=4))")
+    println("→→ Tax loop            | τ₄ = $(round(τ⃗[4], digits=4)), 𝔼τ = $(round(𝔼τ, digits=4)), max(εᵗ) = $(round(εᵗ, digits=4)),  min(εᵗ) = $(round(ε̃ᵗ, digits=4))")
     return ε⃗ᵗ
 end
 
@@ -513,23 +564,23 @@ function fnCapitalResidualMIT!(r⃗, params, mit_endo,ss_endo,A⃗, λ⃗, error
         τ̅       = fill(0.3,Tᴹᴵᵀ)
         
         # E. Solve [old, super precise but at risk of looping]
-        # Oᵗ      = BudgetResidualObjectiveMIT(params, r⃗, mit_endo,ss_endo,A⃗, λ⃗)
-        # τˣ      = fnConvexUpdatingMIT(Oᵗ, (τ̲, τ̅),loading = κᵗ,  xatol = δᵗ,init = mit_endo.τₜ)
-        # @. mit_endo.τₜ      = τˣ
+        Oᵗ      = BudgetResidualObjectiveMIT(params, r⃗, mit_endo,ss_endo,A⃗, λ⃗)
+        τˣ      = fnConvexUpdatingMIT(Oᵗ, (τ̲, τ̅),loading = 0.5*κᵗ,  xatol = 10*δᵗ,init = mit_endo.τₜ)
+        @. mit_endo.τₜ      = τˣ
 
         # E. Solve: iterate w-search → τ update a few times
-        for _ in 1:3
-            Oᴸ              = LabourResidualObjectiveMIT(params, r⃗, mit_endo.τₜ, mit_endo, ss_endo, A⃗, λ⃗)
-            wˣ              = fnConvexUpdatingMIT(Oᴸ, (fill(0.1, Tᴹᴵᵀ), fill(2.5, Tᴹᴵᵀ)), loading=κᴸ, xatol=δᴸ, init=mit_endo.wₜ)
-            mit_endo.wₜ     .= wˣ
-            @. mit_endo.τₜ  = mit_endo.wₜ * mit_endo.U
-        end
+        # for _ in 1:3
+        #     Oᴸ              = LabourResidualObjectiveMIT(params, r⃗, mit_endo.τₜ, mit_endo, ss_endo, A⃗, λ⃗)
+        #     wˣ              = fnConvexUpdatingMIT(Oᴸ, (fill(0.1, Tᴹᴵᵀ), fill(2.5, Tᴹᴵᵀ)), loading=κᴸ, xatol=δᴸ, init=mit_endo.wₜ)
+        #     mit_endo.wₜ     .= wˣ
+        #     @. mit_endo.τₜ  = mit_endo.wₜ * mit_endo.U
+        # end
 
         # F. Return error 
         ε⃗ᴷ  = @. (mit_endo.Kᵈ / max(mit_endo.Kˢ, 1e-4)) - 1.0
         εᴷ  = maximum(abs,ε⃗ᴷ)
         push!(error_history, εᴷ)
-        fnPlotConvergenceMIT(error_history, mit_endo, params)
+        fnPlotConvergenceMIT(error_history, mit_endo, ss_endo,params)
         println("⋆ Capital loop     | r₄ = $(round(r⃗[4], digits=4)), max(εᴷ) = $(round(εᴷ, digits=4))")
         return ε⃗ᴷ
 end
@@ -560,73 +611,69 @@ function fnTransitionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
     # E. Bounds and warm start 
     r̲⃗               = fill(-δ,Tᴹᴵᵀ)
     r̅⃗               = fill(0.20,Tᴹᴵᵀ)
-    fill!(mit_endo.rₜ, ss_endo.rₜ)
-    fill!(mit_endo.wₜ, ss_endo.wₜ)
+    # fill!(mit_endo.rₜ, ss_endo.rₜ)
+    # fill!(mit_endo.wₜ, ss_endo.wₜ)
+    Multiplier    = min.(A⃗ ./ A⃗[1], λ⃗ ./ λ⃗[1])
     fill!(mit_endo.τₜ, ss_endo.τₜ)
+    mit_endo.rₜ  .= ss_endo.rₜ .* Multiplier
+    mit_endo.wₜ  .= ss_endo.wₜ .* Multiplier
 
     # F. The final solve
     error_history       = Float64[]
     Oᶜ                  = CapitalResidualObjectiveMIT(params, mit_endo, ss_endo, A⃗, λ⃗,error_history)
-    logit(x, a, b)      = log((x - a) / (b - x))
-    invlogit(y, a, b)   = a + (b - a) / (1 + exp(-y))
-    y₀                  = logit.(mit_endo.rₜ, r̲⃗, r̅⃗)
-    result              = nlsolve((F, y) -> F .= Oᶜ(invlogit.(y, r̲⃗, r̅⃗)), y₀, method=:anderson, m=5, ftol=δʳ)
-    mit_endo.rₜ         .= invlogit.(result.zero, r̲⃗, r̅⃗)
+    # logit(x, a, b)      = log((x - a) / (b - x))
+    # invlogit(y, a, b)   = a + (b - a) / (1 + exp(-y))
+    # y₀                  = logit.(mit_endo.rₜ, r̲⃗, r̅⃗)
+    # result              = nlsolve((F, y) -> F .= Oᶜ(invlogit.(y, r̲⃗, r̅⃗)), y₀, method=:anderson, m=5, ftol=10*δʳ)
+    # mit_endo.rₜ         .= invlogit.(result.zero, r̲⃗, r̅⃗)
 
-    # rˣ              = fnConvexUpdatingMIT(Oᶜ, (r̲, r̅),loading=κʳᴹᴵᵀ, xatol = δʳ, init = mit_endo.rₜ)
-    # @. mit_endo.rₜ  = rˣ
+    rˣ              = fnConvexUpdatingMIT(Oᶜ, (r̲, r̅),loading=κʳᴹᴵᵀ, xatol = δʳ, init = mit_endo.rₜ,step_tol=1e-4)
+    @. mit_endo.rₜ  = rˣ
     # G. Save convergence plot
-    plt_conv = fnPlotConvergenceMIT(error_history, mit_endo, params)
+    plt_conv = fnPlotConvergenceMIT(error_history, mit_endo,ss_endo, params)
     savefig(plt_conv, "plots/MIT_convergence.pdf")
 end
 
 # 5. Live plotting function for MIT transition
-function fnPlotConvergenceMIT(error_history, mit_endo, params)
+function fnPlotConvergenceMIT(error_history, mit_endo, ss_endo, params)
     
-    # A. Unpacking business
-    @unpack Tᴹᴵᵀ    = params
-    t_grid          = 1:Tᴹᴵᵀ
+    @unpack Tᴹᴵᵀ = params
+    t_grid = 1:Tᴹᴵᵀ
 
-    # B. Define the four subplots
-    p1 = plot(error_history, 
-                title   = "Capital error history", 
-                xlabel  = "Iteration", 
-                ylabel  = "Max absolute error", 
-                yscale  = :log10, 
-                lw=2, 
-                color   = :black, 
-                legend  = false, 
-                grid    = true)
-              
-    p2 = plot(t_grid, mit_endo.rₜ, 
-                title   ="Interest rate", 
-                ylabel  = "r",
-                xlabel  ="t", 
-                lw      =2, 
-                color   =:blue, 
-                legend  =false, 
-                grid    = true )
-              
-    p3 = plot(t_grid, mit_endo.τₜ, 
-                title   ="Tax", 
-                ylabel  = "τ",
-                xlabel  ="t", 
-                lw      =2, 
-                color   =:red, 
-                legend  =false,
-                grid    = true)
-              
-    p4 = plot(t_grid, mit_endo.wₜ, 
-                title   ="Wage",
-                ylabel  = "w", 
-                xlabel  ="t", 
-                lw      =2, 
-                color   =:green, 
-                legend  =false,
-                grid    = true)
+    # Row 1
+    p1 = plot(error_history, title="Capital error history", xlabel="t", ylabel="Max absolute error", yscale=:log10, lw=2, color=:black, legend=false, grid=true)
+    
+    p2 = plot(t_grid, mit_endo.Kᵈ, title="Capital", xlabel="t", lw=2, color=:black, label="Demand", grid=true)
+    plot!(p2, t_grid, mit_endo.Kˢ, lw=2, color=:red, ls=:dash, label="Supply")
+    hline!(p2, [ss_endo.Kˢ], color=:gray, ls=:dash, label="Steady state")
+    
+    p3 = plot(t_grid, mit_endo.rₜ, title="Interest rate", xlabel="t", lw=2, color=:blue, legend=false, grid=true)
+    hline!(p3, [ss_endo.rₜ], color=:gray, ls=:dash)
 
-    # C. Combine into a 2x2 grid and display
-    plt = plot(p1, p2, p3, p4, layout=(2, 2), size=(900, 900), margin=5Plots.mm)
+    # Row 2
+    p4 = plot(t_grid, mit_endo.Lᵈ, title="Labour", xlabel="t", lw=2, color=:black, label="Demand", grid=true)
+    plot!(p4, t_grid, mit_endo.Lˢ, lw=2, color=:red, ls=:dash, label="Supply")
+    hline!(p4, [ss_endo.Lˢ], color=:gray, ls=:dash, label="SS")
+
+    p5 = plot(t_grid, mit_endo.U, title="Unemployment", xlabel="t", lw=2, color=:orange, legend=false, grid=true)
+    hline!(p5, [ss_endo.U], color=:gray, ls=:dash)
+
+    p6 = plot(t_grid, mit_endo.wₜ, title="Wage", xlabel="t", lw=2, color=:green, legend=false, grid=true)
+    hline!(p6, [ss_endo.wₜ], color=:gray, ls=:dash)
+
+    # Row 3
+    p7 = plot(t_grid, mit_endo.τₜ, title="Tax", xlabel="t", lw=2, color=:red, legend=false, grid=true)
+    hline!(p7, [ss_endo.τₜ], color=:gray, ls=:dash)
+
+    p8 = plot(t_grid, mit_endo.E, title="Entrepreneurs", xlabel="t", lw=2, color=:purple, legend=false, grid=true)
+    hline!(p8, [ss_endo.E], color=:gray, ls=:dash)
+
+    p9 = plot(t_grid, mit_endo.JD, title="Job Destruction", xlabel="t", lw=2, color=:black, label="Total", grid=true)
+    plot!(p9, t_grid, mit_endo.S, lw=2, color=:blue, ls=:dash, label="Switchers (S)")
+    plot!(p9, t_grid, mit_endo.D, lw=2, color=:red, ls=:dot, label="Downsizing (D)")
+    hline!(p9, [ss_endo.JD], color=:gray, ls=:dash, label="SS Total")
+
+    plt = plot(p1, p2, p3, p4, p5, p6, p7, p8, p9, layout=(3, 3), size=(1200, 1000), margin=5Plots.mm)
     display(plt)
     return plt
 end
