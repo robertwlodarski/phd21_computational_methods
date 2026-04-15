@@ -20,8 +20,8 @@
 
     # C. Grid sizes  
     Nᶻ::Int             = 40            # Productivity grids (number) 
-    Nᵃ::Int             = 120           # Wealth grids (number)
-    Nˡ::Int             = 40            # Employment grid
+    Nᵃ::Int             = 250           # Wealth grids (number)
+    Nˡ::Int             = 100           # Employment grid
     Nᵘ::Int             = 2             # Unemployment and other states grid 
 
     # D. Productivity grid 
@@ -34,8 +34,8 @@
     # E. Assets grid 
     a⃗::Vector{Float64}  = zeros(Nᵃ)     # Assets grid 
     a̲::Float64          = 0.0           # Minimum assets 
-    a̅::Float64          = 7500.0        # Maximum assets
-    θᵃ::Float64         = 3.0           # Curvature of the assets grid
+    a̅::Float64          = 10000         # Maximum assets
+    θᵃ::Float64         = 6.0           # Curvature of the assets grid
     c̲::Float64          = 1e-6          # "Zero" consumption  
 
     # F. Employment grid 
@@ -45,10 +45,10 @@
     l⃗::Vector{Float64}  = zeros(Nˡ)     # Employment grid 
 
     # G. VFI-related and distribution-related parameters
-    δᵛᶠⁱ::Float64       = 1e-2          # VFI iteration tolerance
+    δᵛᶠⁱ::Float64       = 1e-5          # VFI iteration tolerance
     𝒾̄ᵛᶠⁱ::Int           = 2000          # Maximum VFI iterations 
     λᵛᶠⁱ::Float64       = 0.0           # Updating loading (VFI)
-    δᵈⁱˢᵗ::Float64      = 1e-8          # Distribution iteration tolerance
+    δᵈⁱˢᵗ::Float64      = 1e-4          # Distribution iteration tolerance
     λᵈⁱˢᵗ::Float64      = 0.5           # Updating loading for distributions
 
     # H. GE bounds for the prices 
@@ -60,14 +60,14 @@
     τ̅::Float64          = 2.50*0.25         # Maximum tax 
 
     # I. Labour market loop updating 
-    δᴸ::Float64         = 1e-2              # Tolerance 
+    δᴸ::Float64         = 0.3*1e-3          # Tolerance 
     κᴸ::Float64         = 0.30              # Updates
     λᵗ::Float64         = 0.50              # Tax update
     κᵗ::Float64         = 0.70              # Updates
-    δᵗ::Float64         = 1e-2              # Tolerance
+    δᵗ::Float64         = 0.5*1e-3          # Tolerance
     δʳ::Float64         = 1e-3              # Tolerance
     κʳ::Float64         = 0.50              # Updates (SS)
-    κʳᴹᴵᵀ::Float64      = 0.05              # Updates (MIT)   
+    κʳᴹᴵᵀ::Float64      = 0.15              # Updates (MIT)   
 
     # J. MIT shock settings 
     Tᴹᴵᵀ::Int           = 70                # Shock periods 
@@ -82,25 +82,29 @@ function fnSetUpParameters(params::ModelParameters = ModelParameters())
     # B. Productivity process 
     μ(z)            = 1 - z^(-η)
     z_of_p(p)       = (1 - p)^(-1/η)
-    step_p          = 0.9995 / (Nᶻ - 1)
-    p_bounds        = collect(range(step_p, 0.9995, length=Nᶻ-1))    
     z⃗               = zeros(Nᶻ)
     μ⃗               = zeros(Nᶻ)
-    μ⃗[1]            = p_bounds[1]
-    z⃗[1]            = z_of_p(p_bounds[1] / 2.0)
-    for i in 2:(Nᶻ - 1)
-        μ⃗[i]        = p_bounds[i] - p_bounds[i-1]
-        p_mid       = (p_bounds[i-1] + p_bounds[i]) / 2.0
-        z⃗[i]        = z_of_p(p_mid)
-    end
-    μ⃗[Nᶻ]           = 1.0 - p_bounds[end]
-    ν               = α + θ                 
-    ξ               = 1.0 / (1.0 - ν)       
+    z̄₁              = z_of_p(0.633)
+    z̄₃₈             = z_of_p(0.998)
+    z⃗[1:Nᶻ-2]       = range(z̄₁, z̄₃₈, length=38)
+    z⃗[Nᶻ-1]         = z_of_p(0.999)
+    z⃗[Nᶻ]           = z_of_p(0.9995)
+    ν               = α + θ
+    ξ               = 1.0 / (1.0 - ν)
     if η <= ξ
         error("Pareto tail integral diverges.")
     end
+    # μ⃗[1]            = μ(z⃗[1])
+    # for i in 2:Nᶻ-1
+    #     μ⃗[i]        = μ(z⃗[i]) - μ(z⃗[i-1])
+    # end
+    #μ⃗[Nᶻ]           = 1.0 - μ(z⃗[Nᶻ-1])   
+    μ⃗[1] = μ(z⃗[1]) / μ(z⃗[Nᶻ])
+    for i in 2:Nᶻ
+        μ⃗[i] = (μ(z⃗[i]) - μ(z⃗[i-1])) / μ(z⃗[Nᶻ])
+    end
     tail_multiplier = (η / (η - ξ)) ^ (1.0 / ξ)
-    z⃗[Nᶻ]           = z_of_p(p_bounds[end]) * tail_multiplier
+    z⃗[Nᶻ]           *= tail_multiplier       
 
     # C. Assets grid 
     a⃗       = a̲ .+ (a̅ .- a̲) .* (range(0,1,length=Nᵃ)).^θᵃ

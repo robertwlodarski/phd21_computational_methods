@@ -27,8 +27,7 @@
 # 1. Utility function 
 function fnUtility(c, params)
     @unpack σ, c̲ = params
-    # Strictly scalar! No dots needed here.
-    return c <= 0.0 ? (c̲^(1 - σ)) / (1 - σ) + (c - c̲) * 1e4 : (c^(1 - σ)) / (1 - σ)
+    return c <= c̲ ? (c̲^(1 - σ)) / (1 - σ) + (c - c̲) * (c̲^(-σ)) : (c^(1 - σ)) / (1 - σ)
 end
 
 # 2. Static policy functions  
@@ -53,68 +52,107 @@ function fnInitialVFIGuess!(params, endo)
     @unpack β, a⃗ = params
 
     if endo.𝐕[1, 1] == 0.0
-        endo.𝐕ᵂ     .= 0.75 .* (1 - β)^(-1) .* fnUtility.(endo.rₜ .* a⃗' .- endo.τₜ .+ endo.wₜ, Ref(params))
-        endo.𝐕ᴱ     .= 0.75 .* (1 - β)^(-1) .* fnUtility.(endo.rₜ .* a⃗' .- endo.τₜ .+ endo.Π, Ref(params))
+        endo.𝐕ᵂ     .=  (1 - β)^(-1) .* fnUtility.(endo.rₜ .* a⃗' .- endo.τₜ .+ endo.wₜ, Ref(params))
+        endo.𝐕ᴱ     .=  (1 - β)^(-1) .* fnUtility.(endo.rₜ .* a⃗' .- endo.τₜ .+ endo.Π, Ref(params))
 
         @. endo.𝐕   = max(endo.𝐕ᵂ, endo.𝐕ᴱ)
         @. endo.𝐨   = endo.𝐕ᵂ <= endo.𝐕ᴱ
     end 
 end
 
-# 4. Solve for assets 
+# 4A. Solve for assets 
 # A. A struct to hold the explicitly typed variables
-struct AssetObjective{S, P}
-    cash::Float64
-    spline::S
-    params::P
-end
+# struct AssetObjective{S, P}
+#     cash::Float64
+#     spline::S
+#     params::P
+# end
 
-# B. Make the struct callable (this replaces the anonymous function)
-function (obj::AssetObjective)(ap)
-    return -(fnUtility(obj.cash - ap, obj.params) + obj.spline(ap))
-end
+# # B. Make the struct callable (this replaces the anonymous function)
+# function (obj::AssetObjective)(ap)
+#     return -(fnUtility(obj.cash - ap, obj.params) + obj.spline(ap))
+# end
 
-# C. Start the function 
-function fnFindAssets(iz, ia, exp_spline, params, endo)
+# # C. Start the function 
+# function fnFindAssets(iz, ia, exp_spline, params, endo)
 
-    # D. Unpacking parameters
-    @unpack c̲, a⃗, β = params
+#     # D. Unpacking parameters
+#     @unpack c̲, a⃗, β = params
 
-    # E. Helper elements 
-    Cash_w = a⃗[ia] * (1 + endo.rₜ) + endo.wₜ - endo.τₜ
-    Cash_e = a⃗[ia] * (1 + endo.rₜ) + endo.Π[iz, ia] - endo.τₜ
-    Lower   = a⃗[1]
-    Upper_w = min(Cash_w - c̲, a⃗[end])
-    Upper_e = min(Cash_e - c̲, a⃗[end])
+#     # E. Helper elements 
+#     Cash_w = a⃗[ia] * (1 + endo.rₜ) + endo.wₜ - endo.τₜ
+#     Cash_e = a⃗[ia] * (1 + endo.rₜ) + endo.Π[iz, ia] - endo.τₜ
+#     Lower   = a⃗[1]
+#     Upper_w = min(Cash_w - c̲, a⃗[end])
+#     Upper_e = min(Cash_e - c̲, a⃗[end])
 
-    # F. Computation of assets: Worker 
-    if Upper_w <= Lower
-        A_w = a⃗[1]
-        𝐕ᵂ  = fnUtility(Cash_w - a⃗[1], params) + exp_spline(a⃗[1])
-        𝔼𝐕ᵂ = exp_spline(A_w)
-    else
-        obj_w = AssetObjective(Cash_w, exp_spline, params)
-        ℜʷ    = optimize(obj_w, Lower, Upper_w)
-        A_w   = Optim.minimizer(ℜʷ)
-        𝐕ᵂ    = -Optim.minimum(ℜʷ)
-        𝔼𝐕ᵂ   = exp_spline(A_w)
-    end
+#     # F. Computation of assets: Worker 
+#     if Upper_w <= Lower
+#         A_w = a⃗[1]
+#         𝐕ᵂ  = fnUtility(Cash_w - a⃗[1], params) + exp_spline(a⃗[1])
+#         𝔼𝐕ᵂ = exp_spline(A_w)
+#     else
+#         obj_w = AssetObjective(Cash_w, exp_spline, params)
+#         ℜʷ    = optimize(obj_w, Lower, Upper_w)
+#         A_w   = Optim.minimizer(ℜʷ)
+#         𝐕ᵂ    = -Optim.minimum(ℜʷ)
+#         𝔼𝐕ᵂ   = exp_spline(A_w)
+#     end
 
-    # G. Computation of assets: Entrepreneurs 
-    if Upper_e <= Lower
-        A_e = a⃗[1]
-        𝐕ᴱ  = fnUtility(Cash_e - a⃗[1], params) + exp_spline(a⃗[1])
-        𝔼𝐕ᴱ = exp_spline(A_e)
-    else
-        obj_e = AssetObjective(Cash_e, exp_spline, params)
-        ℜᴱ    = optimize(obj_e, Lower, Upper_e)
-        A_e   = Optim.minimizer(ℜᴱ)
-        𝐕ᴱ    = -Optim.minimum(ℜᴱ)
-        𝔼𝐕ᴱ   = exp_spline(A_e)
+#     # G. Computation of assets: Entrepreneurs 
+#     if Upper_e <= Lower
+#         A_e = a⃗[1]
+#         𝐕ᴱ  = fnUtility(Cash_e - a⃗[1], params) + exp_spline(a⃗[1])
+#         𝔼𝐕ᴱ = exp_spline(A_e)
+#     else
+#         obj_e = AssetObjective(Cash_e, exp_spline, params)
+#         ℜᴱ    = optimize(obj_e, Lower, Upper_e)
+#         A_e   = Optim.minimizer(ℜᴱ)
+#         𝐕ᴱ    = -Optim.minimum(ℜᴱ)
+#         𝔼𝐕ᴱ   = exp_spline(A_e)
+#     end
+    
+#     # H. Returning business  
+#     return A_w, A_e, 𝐕ᵂ, 𝐕ᴱ, 𝔼𝐕ᵂ, 𝔼𝐕ᴱ
+# end
+
+# 4B. Optimised grid search 
+ function fnPureGridSearch(Budget, params, a⃗, 𝔼V_array)
+    
+    # A. Unpacking business
+    @unpack c̲, β = params
+    
+    # B. Initial values 
+    best_val    = -Inf
+    best_a      = a⃗[1]
+    
+    # C. Start the loop 
+    @inbounds for i in eachindex(a⃗)
+        
+        # D. Savings and consumption 
+        a_prime         = a⃗[i]
+        c               = Budget - a_prime
+        
+        # D. Stop searching if consumption hits the minimum bound
+        if c <= c̲
+            v_bound             = fnUtility(c̲, params) + β * 𝔼V_array[i]
+            if v_bound > best_val
+                best_val        = v_bound
+                best_a          = a_prime
+            end
+            break 
+        end
+        
+        # E. Pure array lookup 
+        v                       = fnUtility(c, params) + β * 𝔼V_array[i]
+        if v > best_val
+            best_val            = v
+            best_a              = a_prime
+        end
     end
     
-    # H. Returning business  
-    return A_w, A_e, 𝐕ᵂ, 𝐕ᴱ, 𝔼𝐕ᵂ, 𝔼𝐕ᴱ
+    # F. Returning business 
+    return best_a, best_val
 end
 
 # 5. Value function iteration 
@@ -122,7 +160,7 @@ function fnVFI!(params, endo)
 
     # A. Unpacking business
     @unpack ψ, μ⃗, δᵛᶠⁱ, 𝒾̄ᵛᶠⁱ, z⃗, c̲, a⃗, β, λᵛᶠⁱ, Nᶻ, Nᵃ = params
-
+    
     # B. Static policies
     fnStaticPolicies!(params, endo)
 
@@ -132,24 +170,24 @@ function fnVFI!(params, endo)
     # D. Prepare the VFI loop 
     εᵛᶠⁱ    = 1.0
     𝓃ᵛᶠⁱ    = 1
-    𝔼𝐕ᵂ     = zeros(Nᶻ, Nᵃ) 
-    𝔼𝐕ᴱ     = zeros(Nᶻ, Nᵃ)
+    # 𝔼𝐕ᵂ     = zeros(Nᶻ, Nᵃ) 
+    # 𝔼𝐕ᴱ     = zeros(Nᶻ, Nᵃ)
 
     while (εᵛᶠⁱ > δᵛᶠⁱ && 𝓃ᵛᶠⁱ < 𝒾̄ᵛᶠⁱ)
 
         # D1. Make safe, static copies of the value functions for the splines to read
-        𝐕ᴱ_read     = copy(endo.𝐕ᴱ)
-        𝐕ᵂ_read     = copy(endo.𝐕ᵂ)
+        # 𝐕ᴱ_read     = copy(endo.𝐕ᴱ)
+        # 𝐕ᵂ_read     = copy(endo.𝐕ᵂ)
 
-        # D2. Interpolate the expected value properly using the safe copies.
-        ℑᴱ          = [Spline1D(a⃗, 𝐕ᴱ_read[iz, :]; k=1, bc="nearest") for iz in eachindex(z⃗)]
-        ℑᵂ          = [Spline1D(a⃗, 𝐕ᵂ_read[iz, :]; k=1, bc="nearest") for iz in eachindex(z⃗)]
+        # # D2. Interpolate the expected value properly using the safe copies.
+        # ℑᴱ          = [Spline1D(a⃗, 𝐕ᴱ_read[iz, :]; k=1, bc="nearest") for iz in eachindex(z⃗)]
+        # ℑᵂ          = [Spline1D(a⃗, 𝐕ᵂ_read[iz, :]; k=1, bc="nearest") for iz in eachindex(z⃗)]
         
-        # D3. Define the z-independent expectation closure outside the threaded loop.
-        𝔼_max(a)    = sum(μ⃗[jz] * max(ℑᴱ[jz](a), ℑᵂ[jz](a)) for jz in eachindex(z⃗))
+        # # D3. Define the z-independent expectation closure outside the threaded loop.
+        # 𝔼_max(a)    = sum(μ⃗[jz] * max(ℑᴱ[jz](a), ℑᵂ[jz](a)) for jz in eachindex(z⃗))
         
-        # D4. The final objective closure passed to the optimizer
-        ℑ(iz, a)    = β * (ψ * max(ℑᴱ[iz](a), ℑᵂ[iz](a)) + (1 - ψ) * 𝔼_max(a))
+        # # D4. The final objective closure passed to the optimizer
+        # ℑ(iz, a)    = β * (ψ * max(ℑᴱ[iz](a), ℑᵂ[iz](a)) + (1 - ψ) * 𝔼_max(a))
 
         # D5. Update the expected VF and open the loop for productivity 
         @. endo.𝔼𝐕  = ψ * endo.𝐕 + (1 - ψ) * $(μ⃗' * endo.𝐕)
@@ -159,8 +197,13 @@ function fnVFI!(params, endo)
             @inbounds for iz in eachindex(z⃗)
                 # B1. Solve for each a and z 
                 # I. Find assets
-                ℑᶻ(a) = ℑ(iz, a)
-                endo.𝐚ʷ[iz, ia], endo.𝐚ᵉ[iz, ia], endo.𝐕ᵂ[iz, ia], endo.𝐕ᴱ[iz, ia], 𝔼𝐕ᵂ[iz, ia], 𝔼𝐕ᴱ[iz, ia] = fnFindAssets(iz, ia, ℑᶻ, params, endo)
+                # ℑᶻ(a) = ℑ(iz, a)
+                # endo.𝐚ʷ[iz, ia], endo.𝐚ᵉ[iz, ia], endo.𝐕ᵂ[iz, ia], endo.𝐕ᴱ[iz, ia], 𝔼𝐕ᵂ[iz, ia], 𝔼𝐕ᴱ[iz, ia] = fnFindAssets(iz, ia, ℑᶻ, params, endo)
+                # Budget for workers and entrepreneurs 
+                Yᵂ                                  = a⃗[ia] * (1 + endo.rₜ) + endo.wₜ - endo.τₜ
+                Yᴱ                                  = a⃗[ia] * (1 + endo.rₜ) + endo.Π[iz, ia] - endo.τₜ
+                endo.𝐚ʷ[iz, ia], endo.𝐕ᵂ[iz, ia]    = fnPureGridSearch(Yᵂ, params, a⃗, @views(endo.𝔼𝐕[iz,:]))
+                endo.𝐚ᵉ[iz, ia], endo.𝐕ᴱ[iz, ia]    = fnPureGridSearch(Yᴱ, params, a⃗, @views(endo.𝔼𝐕[iz,:]))
 
                 # II. VFs for different occupations
                 endo.𝐜ʷ[iz, ia] = a⃗[ia] * (1 + endo.rₜ) + endo.wₜ - endo.τₜ - endo.𝐚ʷ[iz, ia]
@@ -177,12 +220,13 @@ function fnVFI!(params, endo)
         # D6. Error and update 
         εᵛᶠⁱ = maximum(abs.(𝐕ᵖʳᵉᵛ .- endo.𝐕))
         𝓃ᵛᶠⁱ += 1
-        # Add this heartbeat print statement!
-        # if 𝓃ᵛᶠⁱ % 50 == 0
-        #     println("→→→→ VFI Iteration: $𝓃ᵛᶠⁱ, εᵛᶠⁱ = $(round(εᵛᶠⁱ, digits=5))")
-        # end
+        if 𝓃ᵛᶠⁱ % 100 == 0
+            println("→→→→ VFI Iteration: $𝓃ᵛᶠⁱ, εᵛᶠⁱ = $(round(εᵛᶠⁱ, digits=8))")
+        end
+        if 𝓃ᵛᶠⁱ == 𝒾̄ᵛᶠⁱ
+            println("Warning: VFI reached the maximum number of iterations")
+        end
     end
-    # println("→→→→ VFI done: 𝓃 = $𝓃ᵛᶠⁱ, ε = $εᵛᶠⁱ")
 end
 
 # -----------------------------------------------
@@ -361,7 +405,7 @@ function fnForwardIteration!(params, endo)
         end
         
         # V. Updating business 
-        εᵈⁱˢᵗ = sum(abs(gⁿᵉˣᵗ[i] - endo.g[i]) for i in eachindex(gⁿᵉˣᵗ))
+        εᵈⁱˢᵗ = maximum(abs(gⁿᵉˣᵗ[i] - endo.g[i]) for i in eachindex(gⁿᵉˣᵗ))
         endo.g .= gⁿᵉˣᵗ
         fill!(gⁿᵉˣᵗ, 0.0)
         fill!(B, 0.0)
@@ -404,46 +448,40 @@ end
 
 # 0. Convex updating 
 function fnConvexUpdating(f, guesses::Tuple, method=nothing; 
-                          loading=0.05, xatol=1e-5, max_iter=2000, 
+                          loading=0.05, xatol=1e-5, max_iter=250, 
                           init=nothing, kwargs...)
     
-    # A. Guesses and setting the stage 
-    if isnothing(init) || init == 0.0
-        xˣ = (guesses[1] + guesses[2]) / 2.0
-    else
-        xˣ = float(init)
-    end
-    ε       = 1.0
-    iter    = 0
-    prev_res= 0.0
+    # A. Start 
+    xˣ          = (isnothing(init) || init == 0.0) ? (guesses[1] + guesses[2]) / 2.0 : float(init)
+    prev_res    = 0.0
 
-    # B. Start the loop 
-    while ε > xatol && iter < max_iter
-
-        # C. Compute and update 
-        residual    = f(xˣ)
-        if iter > 0 && sign(residual) != sign(prev_res)
-            loading *= 0.75
-        end
-        x_new       = xˣ * (1 + loading * residual)
-        x_new       = min(max(guesses[1],x_new),guesses[2])
-        prev_res    = residual
+    for iter in 1:max_iter
+        residual= f(xˣ)
         
-        # Update error and step forward
-        ε           = abs(residual) 
-        xˣ          = x_new
-        iter        += 1
+        # B. Break immediately when tolerance is met!
+        if abs(residual) <= xatol
+            return xˣ
+        end
+        
+        # C. Limit cycle breaker
+        if iter > 1 && sign(residual) != sign(prev_res)
+            loading     *= 0.75
+        end
+        
+        # D. Grid limit failsafe
+        if loading < 1e-1
+            return xˣ 
+        end
+        
+        # E. Update and clamp to bounds
+        x_new       = xˣ * (1.0 + loading * residual)
+        xˣ          = clamp(x_new, guesses[1], guesses[2])
+        prev_res    = residual
     end
 
-    # C. Warning messager 
-    if iter == max_iter
-        @warn "Convex updating hit the ceiling ($max_iter). Final error: $ε. Try adjusting the loading parameter!"
-    end
-
-    # D. Return 
+    @warn "Convex updating hit the ceiling ($max_iter). Final error: $(abs(prev_res))"
     return xˣ
 end
-
 
 # 1. Labour residual.
 function fnLabourResidual!(w, params, endo, r, τ)
@@ -486,11 +524,16 @@ function fnBudgetResidual!(τ, params, endo, r)
     # E. Find the wage that clears labor for THIS tax and interest rate
     Oᴸ      = LabourResidualObjective(params, endo, r, τ)
     wˣ      = fnConvexUpdating(Oᴸ, (w̲, w̅),loading = κᴸ,xatol = δᴸ,init = endo.wₜ)
+    # wˣ      =try
+    #         find_zero(Oᴸ, (endo.wₜ * 0.95, endo.wₜ * 1.05), Bisection(), xatol=δᴸ)
+    #         catch
+    #         find_zero(Oᴸ, (w̲, w̅), Bisection(), xatol=δᴸ)
+    #         end
     endo.wₜ = wˣ 
 
     # C. Return the budget error
     εᵗ      = (endo.U * endo.wₜ / max(endo.τₜ, 1e-4)) - 1.0
-    println("→→ Tax loop        | τ = $(round(τ, digits=4)), εᵗ = $(round(εᵗ, digits=4)) [Cleared w = $(round(endo.wₜ, digits=4))]")
+    println("→→ Tax loop            | τ = $(round(τ, digits=4)), εᵗ = $(round(εᵗ, digits=4)) [Cleared w = $(round(endo.wₜ, digits=4))]")
     return εᵗ
 end
 
@@ -510,12 +553,19 @@ end
 function fnCapitalResidual!(params, endo, r)
         
         # C. Unpacking business 
-        @unpack τ̲, τ̅, δᵗ,κᵗ = params
+        @unpack τ̲, τ̅, δᵗ,κᵗ,w̲, w̅,κᴸ,δᴸ = params
 
         # D. Solve
         Oᵗ      = BudgetResidualObjective(params, endo, r)
         τˣ      = fnConvexUpdating(Oᵗ, (τ̲, τ̅),loading = κᵗ,  xatol = δᵗ,init = endo.τₜ)
+        #τˣ      = find_zero(Oᵗ, (τ̲, τ̅), Bisection(), xatol=δᵗ)
+        # τˣ      = try
+        #         find_zero(Oᵗ, (max(τ̲,endo.τₜ * 0.90), min(τ̅,endo.τₜ * 1.10)), Bisection(), xatol=δᵗ)
+        #         catch
+        #         find_zero(Oᵗ, (τ̲, τ̅), Bisection(), xatol=δᵗ)
+        #         end
         endo.τₜ = τˣ
+
 
         # E. Return error 
         εᴷ = (endo.Kᵈ / max(endo.Kˢ, 1e-4)) - 1.0
@@ -626,8 +676,12 @@ function fnSolveSteadyState!(params, endo)
     @unpack r̲, r̅, δʳ,κʳ = params
 
     # B. The final solve
+    if endo.wₜ == 0.0; endo.wₜ = 1.5; end
+    if endo.τₜ == 0.0; endo.τₜ = 0.07; end
+    if endo.rₜ == 0.0; endo.rₜ = 0.019; end
     Oᶜ          = CapitalResidualObjective(params, endo)
     rˣ          = fnConvexUpdating(Oᶜ, (r̲, r̅),loading=κʳ, xatol = δʳ, init = endo.rₜ)
+    #rˣ          =find_zero(Oᶜ, (r̲, r̅), Bisection(), xatol=δʳ)
     endo.rₜ     = rˣ
 
     # C. Lock in the results
