@@ -190,7 +190,8 @@ function fnVFI!(params, endo)
         # ℑ(iz, a)    = β * (ψ * max(ℑᴱ[iz](a), ℑᵂ[iz](a)) + (1 - ψ) * 𝔼_max(a))
 
         # D5. Update the expected VF and open the loop for productivity 
-        @. endo.𝔼𝐕  = ψ * endo.𝐕 + (1 - ψ) * $(μ⃗' * endo.𝐕)
+        μᵥ          = μ⃗' * endo.𝐕
+        @. endo.𝔼𝐕  = ψ * endo.𝐕 + (1 - ψ) * μᵥ
         𝐕ᵖʳᵉᵛ       = copy(endo.𝐕)
         
         Threads.@threads for ia in eachindex(a⃗)
@@ -291,14 +292,14 @@ function fnComputeFlows(iz, ia, il, iu, params, endo)
     # B. Flow indicators 
     JFR = min(1.0, max(endo.M / (endo.U + endo.JD), 0.0))
     JDR = min(1.0, max(0.0, endo.D / endo.W))
-    WU  = 0.0 + (l⃗[il] == l⃗[1]) * JDR * (1 - JFR) * (iu == 1) * (endo.𝐨[iz, ia] == false)
-    WE  = 0.0 + (l⃗[il] == l⃗[1]) * (endo.𝐨[iz, ia] == true) * (iu == 1)
-    EU  = 0.0 + (l⃗[il] > l⃗[1]) * (endo.𝐨[iz, ia] == false) * (iu == 1) * (1 - JFR)
-    EW  = 0.0 + (l⃗[il] > l⃗[1]) * (endo.𝐨[iz, ia] == false) * (iu == 1) * JFR
+    WU  = 0.0 + (il == 1) * JDR * (1 - JFR) * (iu == 1) * (endo.𝐨[iz, ia] == false)
+    WE  = 0.0 + (il == 1) * (endo.𝐨[iz, ia] == true) * (iu == 1)
+    EU  = 0.0 + (il > 1) * (endo.𝐨[iz, ia] == false) * (iu == 1) * (1 - JFR)
+    EW  = 0.0 + (il > 1) * (endo.𝐨[iz, ia] == false) * (iu == 1) * JFR
     UE  = 0.0 + (endo.𝐨[iz, ia] == true) * (iu == 2)
     UW  = 0.0 + (endo.𝐨[iz, ia] == false) * (iu == 2) * JFR
-    EE  = 0.0 + (l⃗[il] > l⃗[1]) * (endo.𝐨[iz, ia] == true) * (iu == 1)
-    WW  = 0.0 + (l⃗[il] == l⃗[1]) * (endo.𝐨[iz, ia] == false) * (iu == 1) * ((1 - JDR) + (JDR * JFR))
+    EE  = 0.0 + (il > 1) * (endo.𝐨[iz, ia] == true) * (iu == 1)
+    WW  = 0.0 + (il == 1) * (endo.𝐨[iz, ia] == false) * (iu == 1) * ((1 - JDR) + (JDR * JFR))
     UU  = 0.0 + (endo.𝐨[iz, ia] == false) * (iu == 2) * (1 - JFR)
 
     # C. Combine indicators to account for flows that matter
@@ -448,12 +449,13 @@ end
 
 # 0. Convex updating 
 function fnConvexUpdating(f, guesses::Tuple, method=nothing; 
-                          loading=0.05, xatol=1e-5, max_iter=250, 
+                          loading = 0.02, xatol=1e-5, max_iter=250, 
                           init=nothing, kwargs...)
     
     # A. Start 
     xˣ          = (isnothing(init) || init == 0.0) ? (guesses[1] + guesses[2]) / 2.0 : float(init)
     prev_res    = 0.0
+    step        = loading 
 
     for iter in 1:max_iter
         residual= f(xˣ)
@@ -462,19 +464,18 @@ function fnConvexUpdating(f, guesses::Tuple, method=nothing;
         if abs(residual) <= xatol
             return xˣ
         end
-        
-        # C. Limit cycle breaker
-        if iter > 1 && sign(residual) != sign(prev_res)
-            loading     *= 0.75
+
+        # C. Minor acceleration if needed 
+        if iter > 1
+            if sign(residual) != sign(prev_res)
+                step *= 0.5
+            else
+                step = min(step * 1.1, 0.1) 
+            end
         end
-        
-        # D. Grid limit failsafe
-        if loading < 1e-1
-            return xˣ 
-        end
-        
-        # E. Update and clamp to bounds
-        x_new       = xˣ * (1.0 + loading * residual)
+
+        # D. Update and clamp to bounds
+        x_new       = xˣ + (residual * step)
         xˣ          = clamp(x_new, guesses[1], guesses[2])
         prev_res    = residual
     end
@@ -484,11 +485,9 @@ function fnConvexUpdating(f, guesses::Tuple, method=nothing;
 end
 
 # 1. Labour residual.
-function fnLabourResidual!(w, params, endo, r, τ)
+function fnLabourResidual!(w, params, endo)
     # A. Update the state
     endo.wₜ = w
-    endo.rₜ = r
-    endo.τₜ = τ
 
     # B. Run the parallelised engine
     fnVFI!(params, endo)
@@ -500,84 +499,100 @@ function fnLabourResidual!(w, params, endo, r, τ)
     return εᴸ
 end
 
-# 2. Labour market 
-
-# A. A struct to hold the variables needed for the labor residual
-struct LabourResidualObjective{P, E, T}
+# D. A struct to hold the variables needed for the labor residual
+struct LabourResidualObjective{P, E}
     params::P
     endo::E
-    r::T
-    τ::T
 end
 
-# B. Make it callable
+# E. Make it callable
 function (obj::LabourResidualObjective)(w)
-    return fnLabourResidual!(w, obj.params, obj.endo, obj.r, obj.τ)
+    return fnLabourResidual!(w, obj.params, obj.endo)
 end
 
-# C. Start the function 
-function fnBudgetResidual!(τ, params, endo, r)
+# 3. Find the clearing tax
+function fnClearingTax!(params, endo)
 
-    # D. Unpacking business 
-    @unpack w̲, w̅, δᴸ, κᴸ = params
+    # A. Unpacking business 
+    @unpack w̲, w̅, δᴸ,τ̲, τ̅, δᵗ = params
 
-    # E. Find the wage that clears labor for THIS tax and interest rate
-    Oᴸ      = LabourResidualObjective(params, endo, r, τ)
-    wˣ      = fnConvexUpdating(Oᴸ, (w̲, w̅),loading = κᴸ,xatol = δᴸ,init = endo.wₜ)
-    # wˣ      =try
-    #         find_zero(Oᴸ, (endo.wₜ * 0.95, endo.wₜ * 1.05), Bisection(), xatol=δᴸ)
-    #         catch
-    #         find_zero(Oᴸ, (w̲, w̅), Bisection(), xatol=δᴸ)
-    #         end
-    endo.wₜ = wˣ 
+    # B. Prepare the loop 
+    εᵗ      = 10.0
+    
+    # C. Start the loop 
+    while abs(εᵗ) > δᵗ
 
-    # C. Return the budget error
-    εᵗ      = (endo.U * endo.wₜ / max(endo.τₜ, 1e-4)) - 1.0
-    println("→→ Tax loop            | τ = $(round(τ, digits=4)), εᵗ = $(round(εᵗ, digits=4)) [Cleared w = $(round(endo.wₜ, digits=4))]")
-    return εᵗ
-end
+        # C1. Get the wage 
+        Oᴸ      = LabourResidualObjective(params, endo)
+        wˣ = try
+            find_zero(Oᴸ, (endo.wₜ * 0.95, endo.wₜ * 1.05), Bisection(), xatol=δᴸ)
+        catch
+            find_zero(Oᴸ, (w̲, w̅), Bisection(), xatol=δᴸ)
+        end
+        endo.wₜ     = wˣ
 
-# 3. Government budget 
-# A. Struct for the tax residual
-struct BudgetResidualObjective{P, E, T}
-    params::P
-    endo::E
-    r::T
-end
+        # C2. Error & update
+        εᵗ          = endo.wₜ * endo.U - endo.τₜ
+        endo.τₜ     = endo.wₜ * endo.U     
+    end
 
-# B. Make it callable
-function (obj::BudgetResidualObjective)(τ)
-    return fnBudgetResidual!(τ, obj.params, obj.endo, obj.r)
-end
+    # D. Warm message :) 
+println("→→ Tax loop            | τ = $(round(endo.τₜ, digits=4)), εᵗ = $(round(εᵗ, digits=4)) [Cleared w = $(round(endo.wₜ, digits=4))]")
+end 
 
+# 4. Capital residual 
 function fnCapitalResidual!(params, endo, r)
         
-        # C. Unpacking business 
-        @unpack τ̲, τ̅, δᵗ,κᵗ,w̲, w̅,κᴸ,δᴸ = params
+        # A. Unpacking business 
+        @unpack w̲, w̅, δᴸ = params
 
-        # D. Solve
-        Oᵗ      = BudgetResidualObjective(params, endo, r)
-        τˣ      = fnConvexUpdating(Oᵗ, (τ̲, τ̅),loading = κᵗ,  xatol = δᵗ,init = endo.τₜ)
-        #τˣ      = find_zero(Oᵗ, (τ̲, τ̅), Bisection(), xatol=δᵗ)
-        # τˣ      = try
-        #         find_zero(Oᵗ, (max(τ̲,endo.τₜ * 0.90), min(τ̅,endo.τₜ * 1.10)), Bisection(), xatol=δᵗ)
-        #         catch
-        #         find_zero(Oᵗ, (τ̲, τ̅), Bisection(), xatol=δᵗ)
-        #         end
-        endo.τₜ = τˣ
+        # B. Solve 
+        endo.rₜ = r 
+        fnClearingTax!(params, endo)
 
-
-        # E. Return error 
-        εᴷ = (endo.Kᵈ / max(endo.Kˢ, 1e-4)) - 1.0
-        # println("\n --------------")
+        # C. Return error
+        εᴷ      = (endo.Kᵈ / max(endo.Kˢ, 1e-4)) - 1.0
         println("⋆ Capital loop     | r = $(round(r, digits=4)), εᴷ = $(round(εᴷ, digits=4)) [Cleared τ = $(round(endo.τₜ, digits=4))]")
         return εᴷ
     end
 
-# 3. Print the results 
+# D. Struct for the capital residual
+struct CapitalResidualObjective{P, E}
+    params::P
+    endo::E
+end
+
+# E. Make it callable
+function (obj::CapitalResidualObjective)(r)
+    return fnCapitalResidual!(obj.params, obj.endo, r)
+end
+
+# 5. Solve for steady state 
+function fnSolveSteadyState!(params, endo)
+    
+    # A. Unpacking business 
+    @unpack r̲, r̅, δʳ = params
+
+    # B. The final solve
+    if endo.wₜ == 0.0; endo.wₜ = 1.323328; end
+    if endo.τₜ == 0.0; endo.τₜ = 0.083668; end
+    if endo.rₜ == 0.0; endo.rₜ = 0.014272; end
+    Oᶜ          = CapitalResidualObjective(params, endo)
+    rˣ          = fnConvexUpdating(Oᶜ, (r̲, r̅), xatol = δʳ, init = endo.rₜ)
+    endo.rₜ     = rˣ
+
+    # C. Lock in the results
+    fnVFI!(params, endo)
+    fnAggregateStates!(params, endo)
+    println("\n--- Steady state ---")
+    println("Wage (w):   $(round(endo.wₜ, digits=6))")
+    println("Interest(r):$(round(endo.rₜ, digits=6))")
+    println("Tax (τ):    $(round(endo.τₜ, digits=6))")
+end
+ 
+# 6. Print the results 
 
 function fnPrintCalibrationElements(params, endo)
-    
     # A. Unpack parameters to keep code clean
     @unpack Nᶻ, Nᵃ, a⃗, ψ = params
     
@@ -655,40 +670,3 @@ function fnPrintCalibrationElements(params, endo)
     println(repeat("-", 90))
 end
 
-
-# 4. Steady state 
-
-# A. Struct for the capital residual
-struct CapitalResidualObjective{P, E}
-    params::P
-    endo::E
-end
-
-# B. Make it callable
-function (obj::CapitalResidualObjective)(r)
-    return fnCapitalResidual!(obj.params, obj.endo, r)
-end
-
-# C. Start the function 
-function fnSolveSteadyState!(params, endo)
-    
-    # A. Unpacking business 
-    @unpack r̲, r̅, δʳ,κʳ = params
-
-    # B. The final solve
-    if endo.wₜ == 0.0; endo.wₜ = 1.5; end
-    if endo.τₜ == 0.0; endo.τₜ = 0.07; end
-    if endo.rₜ == 0.0; endo.rₜ = 0.019; end
-    Oᶜ          = CapitalResidualObjective(params, endo)
-    rˣ          = fnConvexUpdating(Oᶜ, (r̲, r̅),loading=κʳ, xatol = δʳ, init = endo.rₜ)
-    #rˣ          =find_zero(Oᶜ, (r̲, r̅), Bisection(), xatol=δʳ)
-    endo.rₜ     = rˣ
-
-    # C. Lock in the results
-    fnVFI!(params, endo)
-    fnAggregateStates!(params, endo)
-    println("\n--- Steady state ---")
-    println("Wage (w):   $(round(endo.wₜ, digits=6))")
-    println("Interest(r):$(round(endo.rₜ, digits=6))")
-    println("Tax (τ):    $(round(endo.τₜ, digits=6))")
-end

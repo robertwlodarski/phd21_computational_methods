@@ -20,8 +20,8 @@
 
     # C. Grid sizes  
     Nᶻ::Int             = 40            # Productivity grids (number) 
-    Nᵃ::Int             = 250           # Wealth grids (number)
-    Nˡ::Int             = 100           # Employment grid
+    Nᵃ::Int             = 300           # Wealth grids (number)
+    Nˡ::Int             = 30            # Employment grid
     Nᵘ::Int             = 2             # Unemployment and other states grid 
 
     # D. Productivity grid 
@@ -34,14 +34,14 @@
     # E. Assets grid 
     a⃗::Vector{Float64}  = zeros(Nᵃ)     # Assets grid 
     a̲::Float64          = 0.0           # Minimum assets 
-    a̅::Float64          = 10000         # Maximum assets
-    θᵃ::Float64         = 6.0           # Curvature of the assets grid
+    a̅::Float64          = 8000         # Maximum assets
+    θᵃ::Float64         = 7.0           # Curvature of the assets grid
     c̲::Float64          = 1e-6          # "Zero" consumption  
 
     # F. Employment grid 
     l̲::Float64          = 0.0           # Minimum employment 
     l̅::Float64          = 5000.0        # Maximum employment 
-    θˡ::Float64         = 3.0           # Curvature of employment grid 
+    θˡ::Float64         = 4.0           # Curvature of employment grid 
     l⃗::Vector{Float64}  = zeros(Nˡ)     # Employment grid 
 
     # G. VFI-related and distribution-related parameters
@@ -53,24 +53,22 @@
 
     # H. GE bounds for the prices 
     w̲::Float64          = 0.99              # Minimum wage 
-    w̅::Float64          = 2.50              # Maximum wage 
+    w̅::Float64          = 2.00              # Maximum wage 
     r̲::Float64          = 0.005             # Minimum interest rate 
     r̅::Float64          = 1.0 / β - 1.02    # Maximum interest rate 
     τ̲::Float64          = 0.99 * 0.05       # Minimum tax 
     τ̅::Float64          = 2.50*0.25         # Maximum tax 
 
     # I. Labour market loop updating 
-    δᴸ::Float64         = 0.3*1e-3          # Tolerance 
-    κᴸ::Float64         = 0.30              # Updates
-    λᵗ::Float64         = 0.50              # Tax update
-    κᵗ::Float64         = 0.70              # Updates
-    δᵗ::Float64         = 0.5*1e-3          # Tolerance
-    δʳ::Float64         = 1e-3              # Tolerance
-    κʳ::Float64         = 0.50              # Updates (SS)
-    κʳᴹᴵᵀ::Float64      = 0.15              # Updates (MIT)   
+    δᴸ::Float64         = 0.3*1e-6          # Tolerance 
+    δᵗ::Float64         = 0.5*1e-6          # Tolerance
+    δʳ::Float64         = 1e-5              # Tolerance
 
     # J. MIT shock settings 
     Tᴹᴵᵀ::Int           = 70                # Shock periods 
+    ηˡ::Float64         = 0.3               # Wage update 
+    ηᵗ::Float64         = 0.5               # Tax update 
+    ηᶜ::Float64         = 0.30              # Interest rate update 
 end 
 
 # 1. Parameters (compiler)
@@ -80,31 +78,27 @@ function fnSetUpParameters(params::ModelParameters = ModelParameters())
     @unpack Nᶻ, Nᵃ,Nˡ, z̲, z̅, η,α, a̲, a̅, θᵃ, l̲, l̅, θˡ,θ = params
 
     # B. Productivity process 
-    μ(z)            = 1 - z^(-η)
-    z_of_p(p)       = (1 - p)^(-1/η)
-    z⃗               = zeros(Nᶻ)
-    μ⃗               = zeros(Nᶻ)
-    z̄₁              = z_of_p(0.633)
-    z̄₃₈             = z_of_p(0.998)
-    z⃗[1:Nᶻ-2]       = range(z̄₁, z̄₃₈, length=38)
-    z⃗[Nᶻ-1]         = z_of_p(0.999)
-    z⃗[Nᶻ]           = z_of_p(0.9995)
-    ν               = α + θ
-    ξ               = 1.0 / (1.0 - ν)
-    if η <= ξ
-        error("Pareto tail integral diverges.")
+    μ(z) = 1 - z^(-η)
+    z_of_p(p) = (1 - p)^(-1 / η)
+    z⃗ = zeros(Nᶻ)
+    μ⃗ = zeros(Nᶻ)
+    z⃗[1:Nᶻ-2] = range(z_of_p(0.633), z_of_p(0.998), length=Nᶻ - 2)
+    z⃗[Nᶻ-1] = z_of_p(0.999)
+    z⃗[Nᶻ] = z_of_p(0.9995)
+    ν = α + θ
+    ξ = 1.0 / (1.0 - ν)
+    η <= ξ && error("Pareto tail integral diverges.")
+    μ⃗[1] = μ(z⃗[1])
+    for i in 2:Nᶻ-1
+        μ⃗[i] = μ(z⃗[i]) - μ(z⃗[i-1])
     end
-    # μ⃗[1]            = μ(z⃗[1])
-    # for i in 2:Nᶻ-1
-    #     μ⃗[i]        = μ(z⃗[i]) - μ(z⃗[i-1])
+    μ⃗[Nᶻ] = 1.0 - μ(z⃗[Nᶻ-1])
+    z⃗[Nᶻ] = z_of_p(0.9995) * (η / (η - ξ))^(1 / ξ)
+    
+    # μ⃗[1] = μ(z⃗[1]) / μ(z⃗[Nᶻ])
+    # for i in 2:Nᶻ
+    #     μ⃗[i] = (μ(z⃗[i]) - μ(z⃗[i-1])) / μ(z⃗[Nᶻ])
     # end
-    #μ⃗[Nᶻ]           = 1.0 - μ(z⃗[Nᶻ-1])   
-    μ⃗[1] = μ(z⃗[1]) / μ(z⃗[Nᶻ])
-    for i in 2:Nᶻ
-        μ⃗[i] = (μ(z⃗[i]) - μ(z⃗[i-1])) / μ(z⃗[Nᶻ])
-    end
-    tail_multiplier = (η / (η - ξ)) ^ (1.0 / ξ)
-    z⃗[Nᶻ]           *= tail_multiplier       
 
     # C. Assets grid 
     a⃗       = a̲ .+ (a̅ .- a̲) .* (range(0,1,length=Nᵃ)).^θᵃ
