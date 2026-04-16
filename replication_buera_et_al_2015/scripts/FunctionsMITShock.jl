@@ -179,7 +179,8 @@ function fnBackwardInductionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
         # ℑᵂ                      = [Spline1D(a⃗, mit_endo.𝐕ᵂ[iz, :,it+1]; k=1, bc="nearest") for iz in eachindex(z⃗)]
         # 𝔼_max(a)                = sum(μ⃗[jz] * max(ℑᴱ[jz](a), ℑᵂ[jz](a)) for jz in eachindex(z⃗))
         # ℑ(iz, a)                = β * (ψ * max(ℑᴱ[iz](a), ℑᵂ[iz](a)) + (1 - ψ) * 𝔼_max(a))
-        @. mit_endo.𝔼𝐕[:,:,it]    = ψ * mit_endo.𝐕[:,:,it+1] + (1 - ψ) * $(μ⃗' * mit_endo.𝐕[:,:,it+1])
+        μᵥ                      = μ⃗' * mit_endo.𝐕[:,:,it+1]   
+        @. mit_endo.𝔼𝐕[:,:,it]  = ψ * mit_endo.𝐕[:,:,it+1] + (1 - ψ) * μᵥ
 
         # D2. Open the inner loops 
         Threads.@threads for ia in eachindex(a⃗)
@@ -270,14 +271,14 @@ function fnComputeFlowsMIT(iz, ia, il, iu, it, params, mit_endo)
     # B. Flow indicators 
     JFR = min(1.0, max(mit_endo.M[it] / (mit_endo.U[it] + mit_endo.JD[it]), 0.0))
     JDR = min(1.0, max(0.0, mit_endo.D[it] / mit_endo.W[it]))
-    WU  = 0.0 + (l⃗[il] == l⃗[1]) * JDR * (1 - JFR) * (iu == 1) * (mit_endo.𝐨[iz, ia, it] == false)
-    WE  = 0.0 + (l⃗[il] == l⃗[1]) * (mit_endo.𝐨[iz, ia, it] == true) * (iu == 1)
-    EU  = 0.0 + (l⃗[il] > l⃗[1]) * (mit_endo.𝐨[iz, ia, it] == false) * (iu == 1) * (1 - JFR)
-    EW  = 0.0 + (l⃗[il] > l⃗[1]) * (mit_endo.𝐨[iz, ia, it] == false) * (iu == 1) * JFR
+    WU  = 0.0 + (il== 1) * JDR * (1 - JFR) * (iu == 1) * (mit_endo.𝐨[iz, ia, it] == false)
+    WE  = 0.0 + (il== 1) * (mit_endo.𝐨[iz, ia, it] == true) * (iu == 1)
+    EU  = 0.0 + (il > 1) * (mit_endo.𝐨[iz, ia, it] == false) * (iu == 1) * (1 - JFR)
+    EW  = 0.0 + (il > 1) * (mit_endo.𝐨[iz, ia, it] == false) * (iu == 1) * JFR
     UE  = 0.0 + (mit_endo.𝐨[iz, ia, it] == true) * (iu == 2)
     UW  = 0.0 + (mit_endo.𝐨[iz, ia, it] == false) * (iu == 2) * JFR
-    EE  = 0.0 + (l⃗[il] > l⃗[1]) * (mit_endo.𝐨[iz, ia, it] == true) * (iu == 1)
-    WW  = 0.0 + (l⃗[il] == l⃗[1]) * (mit_endo.𝐨[iz, ia, it] == false) * (iu == 1) * ((1 - JDR) + (JDR * JFR))
+    EE  = 0.0 + (il > 1) * (mit_endo.𝐨[iz, ia, it] == true) * (iu == 1)
+    WW  = 0.0 + (il== 1) * (mit_endo.𝐨[iz, ia, it] == false) * (iu == 1) * ((1 - JDR) + (JDR * JFR))
     UU  = 0.0 + (mit_endo.𝐨[iz, ia, it] == false) * (iu == 2) * (1 - JFR)
 
     # C. Combine indicators to account for flows that matter
@@ -424,218 +425,155 @@ end
 # C. Solving
 # -----------------------------------------------
 
-# 1. Convex updating for MIT shock
-function fnConvexUpdatingMIT(f, bounds::Tuple, method = nothing; 
-                            loading = 0.05, xatol = 1e-5, max_iter=2000, 
-                            init = nothing, step_tol = 1e-3, kwargs...)
+# 1. Implied labour supply error 
+function fnImpliedLabourDemandError(w, params, mit_endo, A⃗, λ⃗, it)
+    # A. Unpacking
+    @unpack α, δ, θ, z⃗, a⃗ = params
     
-    # A. Initialization
-    xˣ = (isnothing(init) || all(init .== 0.0)) ? 
-         fill((bounds[1] + bounds[2]) / 2.0, length(bounds[1])) : copy(init)
-    
-    loadings = fill(loading, length(xˣ))
-    prev_res = zeros(length(xˣ))
-    
-    iter    = 0
-    ε       = 1.0
-    x_old   = fill(0.0, length(xˣ))
+    # B. Individual values 
+    A1 = @. α * A⃗[it] * z⃗ / (mit_endo.rₜ[it] + δ)
+    A2 = θ / α * (mit_endo.rₜ[it] + δ) / w   
+    A3 = A2^θ
+    kˣ   = @. (A1 * A3)^(1 / (1 - α - θ))
+    kⁱᵐᵖ = @. min(kˣ, λ⃗[it] * a⃗')
+    lⁱᵐᵖ = @. (θ * A⃗[it] * z⃗ * kⁱᵐᵖ^α / w)^(1 / (1 - θ)) # 
 
-    # B. Start the loop 
-    while ε > xatol && iter < max_iter
-        residual        = f(xˣ)
-        
-        # C. Limit 
-        if iter > 0
-            @. loadings = ifelse(sign(residual) != sign(prev_res), loadings * 0.7, loadings)
-        end
+    # C. Aggregate demand
+    ωᵃ   = dropdims(sum(@views(mit_endo.g[:, :, :, :, it]), dims=(3, 4)), dims=(3, 4))
+    Lⁱᵐᵖ = sum(ωᵃ .* lⁱᵐᵖ .* @views(mit_endo.𝐨[:, :, it]))
 
-        # D. Safety clause
-        if maximum(loadings) < loading/10 
-            return xˣ 
-        end
-        if iter>3 && maximum(abs, xˣ .- x_old) < step_tol
-            @warn "Solver stagnated at step $iter. Exiting."
-            return xˣ
-        end
-
-        # E. Update 
-        x_old       .= copy(xˣ)
-        @. xˣ       = clamp(xˣ * (1 + loadings * residual), bounds[1], bounds[2])
-        prev_res    .= residual
-        ε           = maximum(abs, residual)
-        iter        += 1
-    end
-
-    if iter == max_iter
-        @warn "MIT Updating reached max_iter. ε = $ε"
-    end
-
-    return xˣ
+    # D. Return error (Supply - Demand for this specific period)
+    return mit_endo.Lˢ[it] - Lⁱᵐᵖ  
 end
 
-# 2. Labour market residual (MIT)
-function fnLabourResidualMIT(w⃗,r⃗, τ⃗, params, mit_endo, ss_endo,  A⃗, λ⃗)
+# 2. Implied capital demand error 
+function fnImpliedCapitalDemandError(r, params, mit_endo, A⃗, λ⃗, it)
+    # A. Unpacking
+    @unpack α, δ, θ, z⃗, a⃗ = params
     
-    # A. Unpacking parameters
-    @unpack Tᴹᴵᵀ = params
+    # B. Individual values 
+    A1 = @. α * A⃗[it] * z⃗ / (r + δ)          
+    A2 = θ / α * (r + δ) / mit_endo.wₜ[it]   
+    A3 = A2^θ
+    kˣ   = @. (A1 * A3)^(1 / (1 - α - θ))
+    kⁱᵐᵖ = @. min(kˣ, λ⃗[it] * a⃗')            
 
-    # B. Update the state
-    mit_endo.wₜ = w⃗
-    mit_endo.rₜ = r⃗
-    mit_endo.τₜ = τ⃗
+    # C. Aggregate demand
+    ωᵃ   = dropdims(sum(@views(mit_endo.g[:, :, :, :, it]), dims=(3, 4)), dims=(3, 4))
+    Kⁱᵐᵖ = sum(ωᵃ .* kⁱᵐᵖ .* @views(mit_endo.𝐨[:, :, it]))
 
-    # C. Run the VFI and aggregate routine 
-    fnBackwardInductionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
-    fnAggregateStatesMIT!(params, mit_endo, ss_endo)
-    
-    # D. Return the labour market error
-    ε⃗ᴸ          = @. (mit_endo.Lᵈ / max(mit_endo.Lˢ, 1e-4)) - 1.0
-    εᴸ          = maximum(ε⃗ᴸ) 
-    ε̃ᴸ          = minimum(ε⃗ᴸ) 
-    𝔼w          = sum(mit_endo.wₜ) / Tᴹᴵᵀ
-    println("→→→ Wage search        | w₄ = $(round(mit_endo.wₜ[4], digits=4)), 𝔼w = $(round(𝔼w, digits=4)), max(εᴸ) = $(round(εᴸ, digits=4)), min(εᴸ) = $(round(ε̃ᴸ, digits=4))")
-    return ε⃗ᴸ
+    # D. Return error 
+    return mit_endo.Kˢ[it] - Kⁱᵐᵖ
+end
+
+# 3. MIT solver 
+function fnSolveMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
+
+    # A. Unpacking business 
+    @unpack Tᴹᴵᵀ, ηˡ, ηᵗ, ηᶜ, δᴸ, δᵗ, δʳ, δ, β = params 
+
+    # B. Initial guesses 
+    error_history   = Float64[]
+    mit_endo.τₜ     .= ss_endo.τₜ
+    for it in 1:Tᴹᴵᵀ
+        mit_endo.rₜ[it] = ss_endo.rₜ * (λ⃗[it] / λ⃗[1])^0.5
+    end 
+    mit_endo.wₜ     .= ss_endo.wₜ 
+
+    # C. Interest and wage limits (for bisections)
+    w̲       = 0.4
+    w̅       = 2.5
+    r̲       = -δ 
+    r̅       = 1.0 / β - 1.02
+
+    # D. Loop settings 
+    εʳ      = 1.0
+    εᵗ      = 1.0
+    εˡ      = 1.0  
+    w̃       = zeros(Tᴹᴵᵀ)
+    τ̃       = zeros(Tᴹᴵᵀ)
+    r̃       = zeros(Tᴹᴵᵀ)
+    # Temporary values 
+    δᴸ = 0.02
+    δᵗ = 0.02
+    δʳ = 0.015
+
+    # E1. Starting the loops 
+    while εʳ > δʳ
+        εᵗ  = 1.0 
+
+        # E2. Start the tax loop 
+        while εᵗ > δᵗ
+            εˡ  = 1.0
+
+            # E3. Start the wage loop 
+            while εˡ > δᴸ
+
+                # I. Solve the model 
+                fnBackwardInductionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
+                fnAggregateStatesMIT!(params, mit_endo, ss_endo)
+
+                # II. Implied wage 
+                for it in 1:Tᴹᴵᵀ
+                    flo = fnImpliedLabourDemandError(w̲, params, mit_endo, A⃗, λ⃗, it)
+                    fhi = fnImpliedLabourDemandError(w̅, params, mit_endo, A⃗, λ⃗, it)
+                    if flo * fhi > 0
+                        @warn "No bracket at t=$it: f(w̲)=$flo, f(w̅)=$fhi"
+                    end
+                    w̃[it] = find_zero(w -> fnImpliedLabourDemandError(w, params, mit_endo, A⃗, λ⃗, it), (w̲, w̅), Bisection())
+                end 
+
+                # III. Error term 
+                ε⃗ᴸ      = @. (mit_endo.Lᵈ / max(mit_endo.Lˢ, 1e-4)) - 1.0
+                εˡ      = maximum(abs, ε⃗ᴸ) 
+                
+                # IV. Update
+                @. mit_endo.wₜ = ηˡ * w̃ + (1 - ηˡ) * mit_endo.wₜ
+
+                # V. Print a fun message for future generations 
+                println("→→→ Wage search        | w₄ = $(round(mit_endo.wₜ[4], digits=4)), max(εᴸ) = $(round(εˡ, digits=7))")
+            end 
+
+            # VI. Calculate the implied tax 
+            @. τ̃            = mit_endo.U * mit_endo.wₜ
+
+            # VII. Error term 
+            ε⃗ᵗ              = @. (mit_endo.U * mit_endo.wₜ / max(mit_endo.τₜ, 1e-4)) - 1.0
+            εᵗ              = maximum(abs, ε⃗ᵗ) 
+
+            # VIII. Update 
+            @. mit_endo.τₜ  = ηᵗ * τ̃ + (1 - ηᵗ) * mit_endo.τₜ
+
+            # IX. Nice message 
+            println("→→ Tax loop            | τ₄ = $(round(mit_endo.τₜ[4], digits=4)), max(εᵗ) = $(round(εᵗ, digits=6))")
+        end 
+
+        # X. Implied interest rate 
+        for it in 1:Tᴹᴵᵀ
+            try
+                r̃[it] = find_zero(r -> fnImpliedCapitalDemandError(r, params, mit_endo, A⃗, λ⃗, it), (r̲, r̅), Bisection())
+            catch
+                r̃[it] = r̲  # keep current guess
+                @warn "No bracket at t=$it, holding r"
+            end
+        end
+
+        # XI. Error term and plot update 
+        ε⃗ᴷ  = @. (mit_endo.Kᵈ / max(mit_endo.Kˢ, 1e-4)) - 1.0
+        εʳ  = maximum(abs,ε⃗ᴷ)
+        push!(error_history, εʳ)
+        fnPlotConvergenceMIT(error_history, mit_endo, ss_endo,params,r̃)
+
+        # XII. Update 
+        @. mit_endo.rₜ  = ηᶜ * r̃ + (1 - ηᶜ) * mit_endo.rₜ
+
+        # XIII. Lovely message
+        println("⋆ Capital loop     | r₄ = $(round(mit_endo.rₜ[4], digits=4)), max(εᴷ) = $(round(εʳ, digits=6))") 
+    end
 end 
 
-# 2. Budget residual (MIT)
-# A. A struct to hold the variables needed for the labor residual
-struct LabourResidualObjectiveMIT{P,T,E1,E2,G}
-    params::P
-    r⃗::T
-    τ⃗::T
-    mit_endo::E1
-    ss_endo::E2
-    A⃗::G 
-    λ⃗::G
-end
-
-# B. Make it callable
-function (obj::LabourResidualObjectiveMIT)(w⃗)
-    return fnLabourResidualMIT(w⃗, obj.r⃗, obj.τ⃗, obj.params, obj.mit_endo,obj.ss_endo,obj.A⃗,obj.λ⃗)
-end
-
-# C. Start the function 
-function fnBudgetResidualMIT!(τ⃗,r⃗, params, mit_endo,ss_endo,A⃗, λ⃗)
-
-    # D. Unpacking business 
-    @unpack δᴸ, κᴸ,Tᴹᴵᵀ = params
-
-    # E. Prepare lower and upper bounds 
-    w̲       = fill(0.1,Tᴹᴵᵀ)
-    w̅       = fill(2.5,Tᴹᴵᵀ)
-
-    # F. Find the wage that clears labor for THIS tax and interest rate
-    Oᴸ              = LabourResidualObjectiveMIT(params, r⃗, τ⃗, mit_endo,ss_endo,A⃗, λ⃗)
-    wˣ              = fnConvexUpdatingMIT(Oᴸ, (w̲, w̅),loading = κᴸ,xatol = 10*δᴸ,init = mit_endo.wₜ,max_iter=20)
-    mit_endo.wₜ     .= wˣ 
-
-    # G. Return the budget error
-    ε⃗ᵗ          = @. (mit_endo.U * mit_endo.wₜ / max(mit_endo.τₜ, 1e-4)) - 1.0
-    εᵗ          = maximum(ε⃗ᵗ)
-    ε̃ᵗ          = minimum(ε⃗ᵗ)
-    𝔼τ          = sum(τ⃗) / Tᴹᴵᵀ
-    println("→→ Tax loop            | τ₄ = $(round(τ⃗[4], digits=4)), 𝔼τ = $(round(𝔼τ, digits=4)), max(εᵗ) = $(round(εᵗ, digits=4)),  min(εᵗ) = $(round(ε̃ᵗ, digits=4))")
-    return ε⃗ᵗ
-end
-
-# 3. Government budget 
-# A. Struct for the tax residual
-struct BudgetResidualObjectiveMIT{P,T,E1,E2,G}
-    params::P
-    r⃗::T
-    mit_endo::E1
-    ss_endo::E2
-    A⃗::G 
-    λ⃗::G
-end
-
-# B. Make it callable
-function (obj::BudgetResidualObjectiveMIT)(τ⃗)
-    return fnBudgetResidualMIT!(τ⃗, obj.r⃗,obj.params, obj.mit_endo,obj.ss_endo,obj.A⃗,obj.λ⃗)
-end
-
-function fnCapitalResidualMIT!(r⃗, params, mit_endo,ss_endo,A⃗, λ⃗, error_history)
-        
-        # C. Unpacking business 
-        @unpack δᵗ,κᵗ,Tᴹᴵᵀ,δᴸ,κᴸ = params
-
-        # D. Prepare lower and upper bounds 
-        τ̲       = fill(0.01,Tᴹᴵᵀ)
-        τ̅       = fill(0.3,Tᴹᴵᵀ)
-        
-        # E. Solve [old, super precise but at risk of looping]
-        Oᵗ      = BudgetResidualObjectiveMIT(params, r⃗, mit_endo,ss_endo,A⃗, λ⃗)
-        τˣ      = fnConvexUpdatingMIT(Oᵗ, (τ̲, τ̅),loading = 0.5*κᵗ,  xatol = 10*δᵗ,init = mit_endo.τₜ)
-        @. mit_endo.τₜ      = τˣ
-
-        # E. Solve: iterate w-search → τ update a few times
-        # for _ in 1:3
-        #     Oᴸ              = LabourResidualObjectiveMIT(params, r⃗, mit_endo.τₜ, mit_endo, ss_endo, A⃗, λ⃗)
-        #     wˣ              = fnConvexUpdatingMIT(Oᴸ, (fill(0.1, Tᴹᴵᵀ), fill(2.5, Tᴹᴵᵀ)), loading=κᴸ, xatol=δᴸ, init=mit_endo.wₜ)
-        #     mit_endo.wₜ     .= wˣ
-        #     @. mit_endo.τₜ  = mit_endo.wₜ * mit_endo.U
-        # end
-
-        # F. Return error 
-        ε⃗ᴷ  = @. (mit_endo.Kᵈ / max(mit_endo.Kˢ, 1e-4)) - 1.0
-        εᴷ  = maximum(abs,ε⃗ᴷ)
-        push!(error_history, εᴷ)
-        fnPlotConvergenceMIT(error_history, mit_endo, ss_endo,params)
-        println("⋆ Capital loop     | r₄ = $(round(r⃗[4], digits=4)), max(εᴷ) = $(round(εᴷ, digits=4))")
-        return ε⃗ᴷ
-end
-
-# 4. Steady state 
-
-# A. Struct for the capital residual
-struct CapitalResidualObjectiveMIT{P,E1,E2,G,H}
-    params::P
-    mit_endo::E1
-    ss_endo::E2
-    A⃗::G 
-    λ⃗::G
-    error_history::H
-end
-
-# B. Make it callable
-function (obj::CapitalResidualObjectiveMIT)(r⃗)
-    return fnCapitalResidualMIT!(r⃗, obj.params, obj.mit_endo,obj.ss_endo,obj.A⃗,obj.λ⃗,obj.error_history)
-end
-
-# C. Start the function 
-function fnTransitionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
-    
-    # D. Unpacking business 
-    @unpack δʳ,κʳᴹᴵᵀ,Tᴹᴵᵀ,δ,r̲,r̅ = params
-
-    # E. Bounds and warm start 
-    r̲⃗               = fill(-δ,Tᴹᴵᵀ)
-    r̅⃗               = fill(0.20,Tᴹᴵᵀ)
-    # fill!(mit_endo.rₜ, ss_endo.rₜ)
-    # fill!(mit_endo.wₜ, ss_endo.wₜ)
-    Multiplier    = min.(A⃗ ./ A⃗[1], λ⃗ ./ λ⃗[1])
-    fill!(mit_endo.τₜ, ss_endo.τₜ)
-    mit_endo.rₜ  .= ss_endo.rₜ .* Multiplier
-    mit_endo.wₜ  .= ss_endo.wₜ .* Multiplier
-
-    # F. The final solve
-    error_history       = Float64[]
-    Oᶜ                  = CapitalResidualObjectiveMIT(params, mit_endo, ss_endo, A⃗, λ⃗,error_history)
-    # logit(x, a, b)      = log((x - a) / (b - x))
-    # invlogit(y, a, b)   = a + (b - a) / (1 + exp(-y))
-    # y₀                  = logit.(mit_endo.rₜ, r̲⃗, r̅⃗)
-    # result              = nlsolve((F, y) -> F .= Oᶜ(invlogit.(y, r̲⃗, r̅⃗)), y₀, method=:anderson, m=5, ftol=10*δʳ)
-    # mit_endo.rₜ         .= invlogit.(result.zero, r̲⃗, r̅⃗)
-
-    rˣ              = fnConvexUpdatingMIT(Oᶜ, (r̲, r̅),loading=κʳᴹᴵᵀ, xatol = δʳ, init = mit_endo.rₜ,step_tol=1e-4)
-    @. mit_endo.rₜ  = rˣ
-    # G. Save convergence plot
-    plt_conv = fnPlotConvergenceMIT(error_history, mit_endo,ss_endo, params)
-    savefig(plt_conv, "plots/MIT_convergence.pdf")
-end
-
-# 5. Live plotting function for MIT transition
-function fnPlotConvergenceMIT(error_history, mit_endo, ss_endo, params)
+# 4. Live plotting function for MIT transition
+function fnPlotConvergenceMIT(error_history, mit_endo, ss_endo, params, r_implied)
     
     @unpack Tᴹᴵᵀ = params
     t_grid = 1:Tᴹᴵᵀ
@@ -647,7 +585,8 @@ function fnPlotConvergenceMIT(error_history, mit_endo, ss_endo, params)
     plot!(p2, t_grid, mit_endo.Kˢ, lw=2, color=:red, ls=:dash, label="Supply")
     hline!(p2, [ss_endo.Kˢ], color=:gray, ls=:dash, label="Steady state")
     
-    p3 = plot(t_grid, mit_endo.rₜ, title="Interest rate", xlabel="t", lw=2, color=:blue, legend=false, grid=true)
+    p3 = plot(t_grid, mit_endo.rₜ, title="Interest rate", xlabel="t", lw=2, color=:blue, legend=false, grid=true, label = "Guess")
+    plot!(p3, t_grid, r_implied, lw=2, color=:blue, ls=:dash, label="Implied")
     hline!(p3, [ss_endo.rₜ], color=:gray, ls=:dash)
 
     # Row 2
