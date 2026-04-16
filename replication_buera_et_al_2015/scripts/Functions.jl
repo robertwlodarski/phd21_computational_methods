@@ -522,10 +522,17 @@ function fnClearingTax!(params, endo)
     # C. Start the loop 
     while abs(εᵗ) > δᵗ
 
-        # C1. Get the wage 
-        Oᴸ      = LabourResidualObjective(params, endo)
+        # C1. Get the wage
+        Oᴸ          = LabourResidualObjective(params, endo)
+        ϵ           = Oᴸ(endo.wₜ)
         wˣ = try
-            find_zero(Oᴸ, (endo.wₜ * 0.95, endo.wₜ * 1.05), Bisection(), xatol=δᴸ)
+        if abs(ϵ) <= δᴸ
+            endo.wₜ
+        elseif ϵ > 0
+            find_zero(Oᴸ, (endo.wₜ, w̅), Bisection(), xatol=δᴸ)
+        else
+            find_zero(Oᴸ, (w̲, endo.wₜ), Bisection(), xatol=δᴸ)
+        end
         catch
             find_zero(Oᴸ, (w̲, w̅), Bisection(), xatol=δᴸ)
         end
@@ -534,10 +541,10 @@ function fnClearingTax!(params, endo)
         # C2. Error & update
         εᵗ          = endo.wₜ * endo.U - endo.τₜ
         endo.τₜ     = endo.wₜ * endo.U     
+    
+        # D. Warm message :) 
+        println("→→ Tax loop            | τ = $(round(endo.τₜ, digits=4)), εᵗ = $(round(εᵗ, digits=4)) [Cleared w = $(round(endo.wₜ, digits=4))]")
     end
-
-    # D. Warm message :) 
-println("→→ Tax loop            | τ = $(round(endo.τₜ, digits=4)), εᵗ = $(round(εᵗ, digits=4)) [Cleared w = $(round(endo.wₜ, digits=4))]")
 end 
 
 # 4. Capital residual 
@@ -576,7 +583,7 @@ function fnSolveSteadyState!(params, endo)
     # B. The final solve
     if endo.wₜ == 0.0; endo.wₜ = 1.323328; end
     if endo.τₜ == 0.0; endo.τₜ = 0.083668; end
-    if endo.rₜ == 0.0; endo.rₜ = 0.014272; end
+    if endo.rₜ == 0.0; endo.rₜ = 0.0099; end
     Oᶜ          = CapitalResidualObjective(params, endo)
     rˣ          = fnConvexUpdating(Oᶜ, (r̲, r̅), xatol = δʳ, init = endo.rₜ)
     endo.rₜ     = rˣ
