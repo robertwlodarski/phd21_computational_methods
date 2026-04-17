@@ -16,7 +16,7 @@ include("scripts/Tables.jl")
 ## 2. Solve the steady state model 
 @time fnSolveSteadyState!(UsedParameters, Endo)
 fnPrintCalibrationElements(UsedParameters, Endo)
-fnPrintCalibrationLaTeX(UsedParameters, Endo; variant = :grid, path = joinpath("tables", "calibration.tex"))
+fnPrintCalibrationLaTeX(UsedParameters, Endo; variant = :interp, path = joinpath("tables", "calibration.tex"))
 
 ## 3. Solve the MIT transition 
 @time fnSolveMIT!(UsedParameters, EndoMIT, Endo, ConstantTechnology, CollateralShock)
