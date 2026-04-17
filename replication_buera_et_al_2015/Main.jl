@@ -5,16 +5,18 @@
 # Remember to change the number of threads 
 ## 1. Packages & load functions 
 
-using Parameters, Dierckx, Optim, NLsolve, QuantEcon, Plots, LinearAlgebra, Roots, Printf
+using Parameters, Dierckx, Optim, NLsolve, QuantEcon, Plots, LinearAlgebra, Roots, Printf, Interpolations
 Threads.nthreads()
 include("scripts/ModelInfrastructure.jl")
 include("scripts/Functions.jl")
 include("scripts/FunctionsMITShock.jl")
 include("scripts/PlottingMIT.jl")
+include("scripts/Tables.jl")
 
 ## 2. Solve the steady state model 
 @time fnSolveSteadyState!(UsedParameters, Endo)
 fnPrintCalibrationElements(UsedParameters, Endo)
+fnPrintCalibrationLaTeX(UsedParameters, Endo; variant = :grid, path = joinpath("tables", "calibration.tex"))
 
 ## 3. Solve the MIT transition 
 @time fnSolveMIT!(UsedParameters, EndoMIT, Endo, ConstantTechnology, CollateralShock)

@@ -93,7 +93,7 @@ function fnFindAssets(iz, ia, exp_spline, params, endo)
         𝔼𝐕ᵂ = exp_spline(A_w)
     else
         obj_w = AssetObjective(Cash_w, exp_spline, params)
-        ℜʷ    = optimize(obj_w, Lower, Upper_w, GoldenSection())
+        ℜʷ    = optimize(obj_w, Lower, Upper_w)
         A_w   = Optim.minimizer(ℜʷ)
         𝐕ᵂ    = -Optim.minimum(ℜʷ)
         𝔼𝐕ᵂ   = exp_spline(A_w)
@@ -106,7 +106,7 @@ function fnFindAssets(iz, ia, exp_spline, params, endo)
         𝔼𝐕ᴱ = exp_spline(A_e)
     else
         obj_e = AssetObjective(Cash_e, exp_spline, params)
-        ℜᴱ    = optimize(obj_e, Lower, Upper_e,GoldenSection())
+        ℜᴱ    = optimize(obj_e, Lower, Upper_e)
         A_e   = Optim.minimizer(ℜᴱ)
         𝐕ᴱ    = -Optim.minimum(ℜᴱ)
         𝔼𝐕ᴱ   = exp_spline(A_e)
@@ -457,7 +457,7 @@ end
 
 # 0. Convex updating 
 function fnConvexUpdating(f, guesses::Tuple, method=nothing; 
-                          loading = 0.02, xatol=1e-5, max_iter=250, 
+                          loading = 0.2, xatol=1e-5, max_iter=250, 
                           init=nothing, kwargs...)
     
     # A. Start 
