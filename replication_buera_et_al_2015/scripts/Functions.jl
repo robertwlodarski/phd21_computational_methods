@@ -589,9 +589,9 @@ function fnSolveSteadyState!(params, endo)
     @unpack r̲, r̅, δʳ = params
 
     # B. The final solve
-    if endo.wₜ == 0.0; endo.wₜ = 1.323328; end
-    if endo.τₜ == 0.0; endo.τₜ = 0.10155290948152587; end
-    if endo.rₜ == 0.0; endo.rₜ = 0.006668660027681105; end
+    if endo.wₜ == 0.0; endo.wₜ = 1.532166; end
+    if endo.τₜ == 0.0; endo.τₜ = 0.101028; end
+    if endo.rₜ == 0.0; endo.rₜ = 0.009158; end
     Oᶜ          = CapitalResidualObjective(params, endo)
     rˣ          = fnConvexUpdating(Oᶜ, (r̲, r̅), xatol = δʳ, init = endo.rₜ)
     endo.rₜ     = rˣ
