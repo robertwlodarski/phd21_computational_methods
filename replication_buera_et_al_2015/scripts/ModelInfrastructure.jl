@@ -20,7 +20,7 @@
 
     # C. Grid sizes  
     Nᶻ::Int             = 40            # Productivity grids (number) 
-    Nᵃ::Int             = 300           # Wealth grids (number)
+    Nᵃ::Int             = 100           # Wealth grids (number)
     Nˡ::Int             = 30            # Employment grid
     Nᵘ::Int             = 2             # Unemployment and other states grid 
 
@@ -50,6 +50,7 @@
     λᵛᶠⁱ::Float64       = 0.0           # Updating loading (VFI)
     δᵈⁱˢᵗ::Float64      = 1e-4          # Distribution iteration tolerance
     λᵈⁱˢᵗ::Float64      = 0.5           # Updating loading for distributions
+    interp::Bool        = true          # Option to use interpolation in VFI 
 
     # H. GE bounds for the prices 
     w̲::Float64          = 0.99              # Minimum wage 
@@ -60,9 +61,9 @@
     τ̅::Float64          = 2.50*0.25         # Maximum tax 
 
     # I. Labour market loop updating 
-    δᴸ::Float64         = 0.3*1e-6          # Tolerance 
-    δᵗ::Float64         = 0.5*1e-6          # Tolerance
-    δʳ::Float64         = 1e-5              # Tolerance
+    δᴸ::Float64         = 2*1e-3          # Tolerance 
+    δᵗ::Float64         = 5*1e-3          # Tolerance
+    δʳ::Float64         = 1e-3              # Tolerance
 
     # J. MIT shock settings 
     Tᴹᴵᵀ::Int           = 70                # Shock periods 
