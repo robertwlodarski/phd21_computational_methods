@@ -35,8 +35,8 @@
     a⃗::Vector{Float64}  = zeros(Nᵃ)     # Assets grid 
     a̲::Float64          = 0.0           # Minimum assets 
     a̅::Float64          = 8000         # Maximum assets
-    θᵃ::Float64         = 7.0           # Curvature of the assets grid
-    c̲::Float64          = 1e-6          # "Zero" consumption  
+    θᵃ::Float64         = 4.0           # Curvature of the assets grid
+    c̲::Float64          = 1e-3          # "Zero" consumption  
 
     # F. Employment grid 
     l̲::Float64          = 0.0           # Minimum employment 
