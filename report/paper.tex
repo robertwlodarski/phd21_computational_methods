@@ -1,0 +1,216 @@
+\documentclass[12pt]{article}
+
+%----------------------------------------------------------------
+% 1. DOCUMENT SETUP & TYPOGRAPHY
+%----------------------------------------------------------------
+\usepackage{math}
+\usepackage[TS1, T1]{fontenc}               % Font encoding for output
+\usepackage[adobe-utopia]{mathdesign}       % Adobe Utopia font
+\usepackage{microtype}                      % Improves typography (line breaking, spacing)
+\usepackage{setspace}                       % For line spacing control (e.g., \doublespacing)
+\usepackage{soul}                           % For strikethrough and underlining (\ul)
+\usepackage{dirtytalk}                      % For inline quotations
+\usepackage{titling}                        % Control over \maketitle
+\usepackage{epigraph}                       % For epigraphs
+\usepackage{booktabs}                       % Required for importing nice tables
+\usepackage[ruled,linesnumbered,algo2e]{algorithm2e}
+
+%----------------------------------------------------------------
+% 2. PAGE LAYOUT & LINKS
+%----------------------------------------------------------------
+\usepackage{geometry}                       % For page margins and layout
+\usepackage{pdflscape}                      % For landscape pages
+\usepackage[dvipsnames]{xcolor}             % Color support
+\usepackage[colorlinks=true]{hyperref}      % PDF hyperlinks (should be loaded late)
+
+%----------------------------------------------------------------
+% 3. MATHS & THEOREMS
+%----------------------------------------------------------------
+\usepackage{amsmath}                        % Core maths tools
+
+% Theorem-like environments
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{assumption}{Assumption}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{conjecture}{Conjecture}[section]
+\newenvironment{proof}[1][Proof]{\noindent\textbf{#1.} }{\ \rule{0.5em}{0.5em}}
+
+%----------------------------------------------------------------
+% 4. TABLES, FIGURES & GRAPHICS
+%----------------------------------------------------------------
+\usepackage{graphicx}                       % For including images
+\usepackage{caption, subcaption}            % Enhanced captions for figures and tables
+\usepackage{booktabs}                       % High-quality table rules (\toprule, \midrule, \bottomrule)
+\usepackage{dcolumn}                        % Align table columns on a decimal point
+\usepackage{longtable, threeparttable, threeparttablex} % For long tables and tables with notes
+\usepackage{multirow, adjustbox}            % For multi-row cells and adjusting box content
+\usepackage{rotating}                       % For rotating elements (e.g., sidewaystable)
+\usepackage{tikz}                           % For drawing graphics
+\usetikzlibrary{positioning}
+
+%----------------------------------------------------------------
+% 5. LISTS
+%----------------------------------------------------------------
+\usepackage{enumitem}                       % Advanced control over lists
+
+%----------------------------------------------------------------
+% 6. BIBLIOGRAPHY (Author-Year Style)
+%----------------------------------------------------------------
+\usepackage[
+    backend=biber,      % Use the Biber engine
+    style=authoryear,   % Set main style to author-year
+    citestyle=authoryear-comp, % Compress citations (e.g., Author 2020, 2021)
+    natbib=true,        % Allow use of natbib commands like \citet and \citep
+    maxcitenames=2,     % Max authors to show in citation before "et al."
+    maxbibnames=99,     % Max authors to show in the bibliography
+    uniquelist=false    % Prevents adding initials to distinguish authors
+]{biblatex}
+\addbibresource{bibliography.bib}           % Specify your .bib file
+
+%----------------------------------------------------------------
+% 7. GLOBAL CONFIGURATIONS & SETTINGS
+%----------------------------------------------------------------
+% Page layout & colours
+\geometry{left=1in, right=1in, top=0.75in, bottom=0.75in}
+\definecolor{maroon}{rgb}{0.5, 0.0, 0.0}
+\hypersetup{
+    urlcolor   = maroon,
+    linkcolor  = maroon,
+    citecolor  = maroon 
+}
+
+% Typesetting adjustments
+\setlength{\parindent}{0pt}
+\interfootnotelinepenalty=10000        
+\setlist[itemize]{noitemsep}
+
+\begin{document}
+%----------------------------------------------------------------
+%% Title
+%----------------------------------------------------------------
+\title{\Large \bfseries \vspace{-5mm} PHD21 Computation methods: Replication report \vspace{-5mm}}
+\author{Rob Włodarski}
+\date{\today}
+\maketitle
+
+\textbf{Note}. I have picked two models which constitute the building blocks of my first-year project.    
+In this context, I put more weight on the intensive rather than the extensive margin of the exercise. 
+I use \texttt{Julia} and teach myself all the key \say{tricks} to speed up the computation process, prioritising precision and replicability. 
+In the case of \citet{buera_anatomy_2015}, who provide no replication package and give scant details on the values of the model's moments, I remain as faithful to the author's described methods.
+In so doing, I like to think that I conduct a \say{stress test}, which I believe the paper does not fully pass.
+When it comes to \citet{elsby_marginal_2013}, which is more widely used and replicated, I translate the model to \texttt{Julia} and use the repeated transition method of \citet{lee_global_2025} to improve on the authors' current methodology \citep{krusell_income_1998}.
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+\section{\citet{elsby_marginal_2013}: Marginal jobs, heterogenous firms}
+
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+\section{\citet{buera_anatomy_2015}: Anatomy of a credit shock}
+\subsection{Overall impression}
+Having initially treated the paper as a potential \say{easy win,} I have been humbled by the model's fragility. 
+The authors' results cannot be fully replicated, which I believe to be mostly attributable to the framework being extremely sensitive to minor changes to the productivity process. 
+I also suspect that \citet{buera_anatomy_2015} use more tricks to find the steady state solution reported in the paper, especially given that the described procedure is a baseline approach to solve the \citet{aiyagari_uninsured_1994} class of models.
+%------------------------------------------------------------------------
+\subsection{Framework}
+The model features agents who are heterogeneous along two dimensions, their wealth ($a$) and entrepreneurial productivity ($z$).
+If an agent chooses to be an entrepreneur, she hires $l$ workers. 
+If she remains a worker, she earns wage $w_t$, irrespective of her employment status.
+Workers can be unemployed, with the job destruction endogenously determined by the downsizing entrepreneurs and the job finding rate, the latter of which is determined by the number of workers and job openings. \\
+
+The value function for agent $i \in \bc{e,w}$ is:
+\begin{equation} \label{eq:buera_value}
+    \begin{aligned}
+        V^i\bp{a,z} = &  \max_{a',c} \bc{u\bp{c} + \beta \E \bs{V\bp{a',z}} } \\
+        \text{s.t} \; \; & c + a' = \bp{1+r}a + \Pi\bp{a,z} \mathbb{1}\bc{i=e}+ w_t \mathbb{1}\bc{i=w} - \tau, 
+    \end{aligned}
+\end{equation}
+where $u\bp{c}$ is the utility of consumption $c$, $\beta$ is the discount rate, $r$ is the interest rate, $\Pi\bp{a,z}$ is the profit level, and $\tau$ is the tax financing the unemployment benefit (which is set to be the same as the wage).\\
+
+Entrepreneur $\bp{a,z}$ earns the following profit:
+\begin{equation}
+    \begin{aligned} \label{eq:buera_profit}
+        \Pi \bp{a,z} = & \max_{k,l} \bc{ A z k^{\alpha} l^{\theta} - w l - \bp{r+\delta} k } \\
+        \text{s.t} \; \; & k = \max \bc{k^\star, \lambda a},
+    \end{aligned}
+\end{equation}
+
+\subsection{Steady state}
+
+Algorithm \ref{alg:buera_ss} fleshes out \citet{buera_anatomy_2015}'s steady state solution approach.
+While pedagogically clean, the method is relatively inefficient -- I keep using it to remain faithful to the paper. 
+To fully test the model's performance, I allow for two methods of solving the value function iteration routine.
+First, I search for a solution on the grid, which is set to have $40$ and $400$ points for productivity and assets respectively.\footnote{
+    \citet{buera_anatomy_2015} only specify the size of the productivity grid, which I keep unchanged in all experiments. 
+}  
+This is fast, but potentially less accurate, with the VFI routine frequently stalling for lower asset grid sizes.
+Second, I search for a solution using the interpolated values (for both $V^e$ and $V^w$ to avoid smoothing over the kink).
+
+\begin{algorithm2e}[H]
+\caption{Stationary equilibrium \citep{buera_anatomy_2015}} \label{alg:buera_ss}
+\KwIn{Parameters $(\sigma,\beta,\alpha,\theta,\delta,\psi,\eta,\lambda)$, grids $\bp{\mathcal{A},\mathcal{Z},\mathcal{L}}$, tolerances $\bp{\delta_r,\delta_\tau,\delta_w,\delta_V, \delta_d}$}
+\KwOut{Prices $(r^\star,w^\star,\tau^\star)$, policies $(c,a',k,l,o)$, distribution $G^\star$, unemployment $U^\star$}
+\BlankLine
+Initialize $r^{(0)}$\;
+\Repeat{$|K^d - K^s| < \varepsilon_r$}{
+  Initialize $\tau^{(0)}$\;
+  \Repeat{$|\tau^{\text{new}} - \tau| < \varepsilon_\tau$}{
+    Initialize $w^{(0)}$\;
+    \Repeat{$|L^d - L^s| < \varepsilon_w$}{
+      \tcp{Value function iteration}
+      \Repeat{$\|V^{n+1}-V^n\|_\infty < \varepsilon_V$}{
+        Compute $v^W(a,z)$ from Equation \eqref{eq:buera_value}\;
+        Compute $v^E(a,z)$ from Equation \eqref{eq:buera_value} using static FOCs for $(k,l)$ s.t.\ $k\le\lambda a$ from Equation \eqref{eq:buera_profit}\;
+        Set $v(a,z)=\max\{v^W,v^E\}$; record $o(a,z)$, $a'(a,z)$\;
+      }
+      \tcp{Forward simulation}
+      Iterate $G_{n+1} = \mathcal{T}(G_n; a',o,\psi,\mu)$ until $\|G_{n+1}-G_n\|<\varepsilon_G$\;
+      Compute $L^d=\int l\, dG$, $L^s = 1 - \int \mathbb{1}\{o=E\}dG - U$\;
+      Update $w$ by bisection\;
+    }
+    Compute $U$, set $\tau^{\text{new}} = wU$\;
+    Update $\tau \leftarrow \eta_\tau \tau^{\text{new}} + (1-\eta_\tau)\tau$\;
+  }
+  Compute $K^d=\int k\,dG$, $K^s=\int a\,dG$\;
+  Update $r$, raising if excess demand and lowering if excess supply. \;
+}
+\end{algorithm2e}
+
+\printbibliography
+\end{document}
+
+
+%------------------------------------------------------------------------
+%Useful Snippets.
+%------------------------------------------------------------------------
+%\section{Own Snippets (Comment Out)}
+%\vspace{3mm}
+%
+%% 1. Code Listing. 
+%\begin{lstlisting}[frame=single,language=Matlab]
+%	An example of Matlab code listing.      
+%\end{lstlisting}
+%
+%% 2. Highlighting.
+%\colorbox{maroon!10}{An example of highlighted text.}	
+%
+%%3. Two Figures Next to Each Other.
+%\begin{figure}[hbt]
+%\centering
+%\begin{subfigure}{.5\textwidth}
+%  \centering
+%  \includegraphics[width=\linewidth]{}
+%  \caption{A}
+%\end{subfigure}%
+%\begin{subfigure}{.5\textwidth}
+%  \centering
+%  \includegraphics[width=\linewidth]{}
+%  \caption{B}
+%\end{subfigure}
+%\caption{Two Figures Next to Each Other}
+%\label{two_figures}
+%\end{figure}	
+
