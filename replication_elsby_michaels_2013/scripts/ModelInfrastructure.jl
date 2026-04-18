@@ -277,3 +277,58 @@ end
 # Π̃: greek letters with a tilde - value functions with aggregate uncertainty
 function fnSetUpKS(UsedParameters)
 end 
+
+#4. Lee (2025) RTM variables (structure)
+# Important note:
+# Time-indexed sequences replace aggregate state grids (RTM key distinction)
+# Π̃: greek letters with a tilde - value functions with aggregate uncertainty
+# {·}ᵀ: time-indexed sequences of length T
+@with_kw mutable struct LeeVariables
+
+    # A. Predicted sequences (nth guess) - the "predicted path"
+    q⃗ᵖ::Vector{Float64}             # Predicted job-filling rate path
+    N⃗ᵖ::Vector{Float64}             # Predicted aggregate employment path
+
+    # B. Realised sequences (implied by forward simulation)
+    q⃗ʳ::Vector{Float64}             # Realised job-filling rate path
+    N⃗ʳ::Vector{Float64}             # Realised aggregate employment path
+
+    # C. Time-indexed value functions [the RTM state: index by t, not (N,Θ)]
+    Π̃ᵖ::Vector{Matrix{Float64}}     # Predicted value function sequence {Π̃ₜ}ᵀ
+    Π̃ʳ::Vector{Matrix{Float64}}     # Realised value function sequence {Π̃ₜ}ᵀ
+
+    # D. Time-indexed policy functions
+    R⃗ᵀ::Vector{Vector{Float64}}     # Firing threshold sequence {R̂ₜ}ᵀ
+    R⃗ᵥᵀ::Vector{Vector{Float64}}    # Hiring threshold sequence {R̂ᵥₜ}ᵀ
+    n⃗ᵀ::Vector{Vector{Float64}}     # Employment grid sequence {n⃗ₜ}ᵀ
+
+    # E. Convergence tracking
+    εᴿᵀᴹ::Float64                   # sup_t |q⃗ᵖ - q⃗ʳ| convergence criterion
+end
+
+# 4. Constructor for Lee variables
+function fnSetUpLee(UsedParameters, Simu; ω = 0.4)
+    @unpack Nₓ, N̅₁, N̅₂               = UsedParameters
+    T                                   = length(Simu.p⃗̂)
+    Nₙ                                  = N̅₁ + N̅₂ - 1      # SS output grid size
+
+    # A. Initialise predicted paths at SS values
+    q⃗ᵖ     = fill(UsedParameters.q̅,  T)
+    N⃗ᵖ     = fill(UsedParameters.L * (1 - 1/UsedParameters.L), T)  
+
+    # B. Initialise value function sequences with zeros
+    Π̃ᵖ     = [zeros(Nₓ, Nₙ) for _ in 1:T]
+    Π̃ʳ     = [zeros(Nₓ, Nₙ) for _ in 1:T]
+    R⃗ᵀ     = [zeros(Nₙ)     for _ in 1:T]
+    R⃗ᵥᵀ    = [zeros(Nₙ)     for _ in 1:T]
+    n⃗ᵀ     = [zeros(Nₙ)     for _ in 1:T]
+
+    return LeeVariables(
+        q⃗ᵖ  = q⃗ᵖ,  N⃗ᵖ  = N⃗ᵖ,
+        q⃗ʳ  = copy(q⃗ᵖ), N⃗ʳ  = copy(N⃗ᵖ),
+        Π̃ᵖ  = Π̃ᵖ,  Π̃ʳ  = Π̃ʳ,
+        R⃗ᵀ  = R⃗ᵀ,  R⃗ᵥᵀ = R⃗ᵥᵀ, n⃗ᵀ = n⃗ᵀ,
+        εᴿᵀᴹ = Inf
+    )
+end
+Lee = fnSetUpLee(UsedParameters, Simu)
