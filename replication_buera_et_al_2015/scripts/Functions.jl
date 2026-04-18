@@ -117,17 +117,18 @@ function fnFindAssets(iz, ia, exp_spline, params, endo)
 end
 
 # 4B. Optimised grid search 
- function fnPureGridSearch(Budget, params, a⃗, 𝔼V_array)
+ function fnPureGridSearch(Budget, params, a⃗, 𝔼V_array,LowerBound_i)
     
     # A. Unpacking business
-    @unpack c̲, β = params
+    @unpack c̲, β, Nᵃ = params
     
     # B. Initial values 
     best_val    = -Inf
-    best_a      = a⃗[1]
+    best_a      = a⃗[LowerBound_i]
+    best_i      = LowerBound_i
     
     # C. Start the loop 
-    @inbounds for i in eachindex(a⃗)
+    @inbounds for i in LowerBound_i:Nᵃ
         
         # D. Savings and consumption 
         a_prime         = a⃗[i]
@@ -139,6 +140,7 @@ end
             if v_bound > best_val
                 best_val        = v_bound
                 best_a          = a_prime
+                best_i          = LowerBound_i
             end
             break 
         end
@@ -148,11 +150,12 @@ end
         if v > best_val
             best_val            = v
             best_a              = a_prime
+            best_i              = i
         end
     end
     
     # F. Returning business 
-    return best_a, best_val
+    return best_a, best_val, best_i
 end
 
 # 5. Value function iteration 
@@ -173,9 +176,12 @@ function fnVFI!(params, endo)
     𝔼𝐕ᵂ     = zeros(Nᶻ, Nᵃ) 
     𝔼𝐕ᴱ     = zeros(Nᶻ, Nᵃ)
     𝐕ᵖʳᵉᵛ   = copy(endo.𝐕)
+    𝐕ᵒ      = similar(endo.𝐕)
 
     while (εᵛᶠⁱ > δᵛᶠⁱ && 𝓃ᵛᶠⁱ < 𝒾̄ᵛᶠⁱ)
         𝐕ᵖʳᵉᵛ       = copy(endo.𝐕)
+        𝐢ʷ          = fill(1,Nᶻ, Nᵃ)
+        𝐢ᵉ          = fill(1,Nᶻ, Nᵃ)
         if interp == true
             # D1. Make safe, static copies of the value functions for the splines to read
             𝐕ᴱ_read     = copy(endo.𝐕ᴱ)
@@ -197,8 +203,9 @@ function fnVFI!(params, endo)
             @. endo.𝔼𝐕  = ψ * endo.𝐕 + (1 - ψ) * μᵥ
         end
 
-        Threads.@threads for ia in eachindex(a⃗)
-            @inbounds for iz in eachindex(z⃗)
+        Threads.@threads for iz in eachindex(z⃗)
+            iʷ, iᵉ = 1, 1      
+            @inbounds for ia in eachindex(a⃗)
                 # B1. Solve for each a and z 
                 # I. Find assets
                 if interp == true
@@ -210,8 +217,10 @@ function fnVFI!(params, endo)
                     # Budget for workers and entrepreneurs 
                     Yᵂ = a⃗[ia] * (1 + endo.rₜ) + endo.wₜ - endo.τₜ
                     Yᴱ = a⃗[ia] * (1 + endo.rₜ) + endo.Π[iz, ia] - endo.τₜ
-                    endo.𝐚ʷ[iz, ia], endo.𝐕ᵂ[iz, ia] = fnPureGridSearch(Yᵂ, params, a⃗, @views(endo.𝔼𝐕[iz, :]))
-                    endo.𝐚ᵉ[iz, ia], endo.𝐕ᴱ[iz, ia] = fnPureGridSearch(Yᴱ, params, a⃗, @views(endo.𝔼𝐕[iz, :]))
+                    endo.𝐚ʷ[iz, ia], endo.𝐕ᵂ[iz, ia], 𝐢ʷ[iz,ia] = fnPureGridSearch(Yᵂ, params, a⃗, @views(endo.𝔼𝐕[iz, :]),iʷ)
+                    endo.𝐚ᵉ[iz, ia], endo.𝐕ᴱ[iz, ia], 𝐢ᵉ[iz,ia] = fnPureGridSearch(Yᴱ, params, a⃗, @views(endo.𝔼𝐕[iz, :]),iᵉ)
+                    iʷ  = 𝐢ʷ[iz,ia]
+                    iᵉ  = 𝐢ᵉ[iz,ia]
                 end
 
                 # II. VFs for different occupations
@@ -234,6 +243,27 @@ function fnVFI!(params, endo)
         end
         if 𝓃ᵛᶠⁱ == 𝒾̄ᵛᶠⁱ
             println("Warning: VFI reached the maximum number of iterations")
+        end
+
+        # E. Howard acceleration: Evaluate current policy
+        if 𝓃ᵛᶠⁱ % 5 == 0 && εᵛᶠⁱ < 1e-1
+            for _ in 1:50
+                𝐕ᵒ .= endo.𝐕
+                
+                # E1. Update expected values 
+                μᵥ              = μ⃗' * endo.𝐕
+                @. endo.𝔼𝐕      = ψ * endo.𝐕 + (1 - ψ) * μᵥ
+                @inbounds for ia in eachindex(a⃗), iz in eachindex(z⃗)
+
+                    # E2. Get new values 
+                    endo.𝐕ᵂ[iz, ia] = fnUtility(endo.𝐜ʷ[iz, ia], params) + β * endo.𝔼𝐕[iz, 𝐢ʷ[iz, ia]]
+                    endo.𝐕ᴱ[iz, ia] = fnUtility(endo.𝐜ᵉ[iz, ia], params) + β * endo.𝔼𝐕[iz, 𝐢ᵉ[iz, ia]]
+
+                    # E3. Save new value
+                    endo.𝐕[iz, ia]  = max(endo.𝐕ᴱ[iz, ia], endo.𝐕ᵂ[iz, ia])
+                end
+                maximum(abs, 𝐕ᵒ .- endo.𝐕) < 1e-8 && break
+            end
         end
     end
 end
@@ -600,9 +630,9 @@ function fnSolveSteadyState!(params, endo)
     fnVFI!(params, endo)
     fnAggregateStates!(params, endo)
     println("\n--- Steady state ---")
-    println("Wage (w):   $(round(endo.wₜ, digits=6))")
-    println("Interest(r):$(round(endo.rₜ, digits=6))")
-    println("Tax (τ):    $(round(endo.τₜ, digits=6))")
+    println("Wage (w):   $(round(endo.wₜ, digits=10))")
+    println("Interest(r):$(round(endo.rₜ, digits=10))")
+    println("Tax (τ):    $(round(endo.τₜ, digits=10))")
 end
  
 # 6. Print the results 

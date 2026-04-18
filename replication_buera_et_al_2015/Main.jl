@@ -16,7 +16,15 @@ include("scripts/Tables.jl")
 ## 2. Solve the steady state model 
 @time fnSolveSteadyState!(UsedParameters, Endo)
 fnPrintCalibrationElements(UsedParameters, Endo)
-fnPrintCalibrationLaTeX(UsedParameters, Endo; variant = :interp, path = joinpath("tables", "calibration.tex"))
+fnPrintCalibrationLaTeX(UsedParameters, Endo; variant = :grid, path = joinpath("tables", "calibration.tex"))
+
+## 2B. Run the model for the values of solved prices 
+# Endo.wₜ = 1.532166
+# Endo.τₜ = 0.101028
+# Endo.rₜ = 0.009158
+# fnVFI!(UsedParameters, Endo)
+# fnAggregateStates!(UsedParameters, Endo)
+# fnPrintCalibrationElements(UsedParameters, Endo)
 
 ## 3. Solve the MIT transition 
 @time fnSolveMIT!(UsedParameters, EndoMIT, Endo, ConstantTechnology, CollateralShock)
