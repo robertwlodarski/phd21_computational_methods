@@ -18,7 +18,7 @@ include("scripts/Tables.jl")
 fnPrintCalibrationElements(UsedParameters, Endo)
 fnPrintCalibrationLaTeX(UsedParameters, Endo; variant = :grid, path = joinpath("tables", "calibration.tex"))
 
-## 2B. Run the model for the values of solved prices 
+## 2B. Run the model for the values of solved prices. I does bad. 
 # Endo.wₜ = 1.532166
 # Endo.τₜ = 0.101028
 # Endo.rₜ = 0.009158
