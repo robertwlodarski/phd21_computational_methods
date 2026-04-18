@@ -118,17 +118,18 @@ end
 # end
 
 # 3B. Optimised grid search 
- function fnPureGridSearchMIT(Budget, params, a⃗, 𝔼V_array)
+ function fnPureGridSearchMIT(Budget, params, a⃗, 𝔼V_array,LowerBound_i)
     
     # A. Unpacking business
-    @unpack c̲, β = params
+    @unpack c̲, β, Nᵃ = params
     
     # B. Initial values 
     best_val    = -Inf
-    best_a      = a⃗[1]
+    best_a      = a⃗[LowerBound_i]
+    best_i      = LowerBound_i
     
     # C. Start the loop 
-    @inbounds for i in eachindex(a⃗)
+    @inbounds for i in LowerBound_i:Nᵃ
         
         # D. Savings and consumption 
         a_prime         = a⃗[i]
@@ -140,6 +141,7 @@ end
             if v_bound > best_val
                 best_val        = v_bound
                 best_a          = a_prime
+                best_i          = LowerBound_i
             end
             break 
         end
@@ -149,11 +151,12 @@ end
         if v > best_val
             best_val            = v
             best_a              = a_prime
+            best_i              = i
         end
     end
     
     # F. Returning business 
-    return best_a, best_val
+    return best_a, best_val, best_i
 end
 
 # 4. Backward VF loop
@@ -183,17 +186,21 @@ function fnBackwardInductionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
         @. mit_endo.𝔼𝐕[:,:,it]  = ψ * mit_endo.𝐕[:,:,it+1] + (1 - ψ) * μᵥ
 
         # D2. Open the inner loops 
-        Threads.@threads for ia in eachindex(a⃗)
-            @inbounds for iz in eachindex(z⃗)
+        Threads.@threads for iz in eachindex(z⃗)
+            iʷ  = 1
+            iᵉ  = 1
+
+            @inbounds for ia in eachindex(a⃗)
 
                 # I. Find assets
                 # ℑᶻ(a)   = ℑ(iz, a)
                 # mit_endo.𝐚ʷ[iz, ia, it], mit_endo.𝐚ᵉ[iz, ia, it], mit_endo.𝐕ᵂ[iz, ia, it], mit_endo.𝐕ᴱ[iz, ia, it], 𝔼𝐕ᵂ[iz, ia, it], 𝔼𝐕ᴱ[iz, ia, it] = fnFindAssetsMIT(iz, ia, it, ℑᶻ, params, mit_endo)
                 Yᵂ                                                  = a⃗[ia] * (1 + mit_endo.rₜ[it]) + mit_endo.wₜ[it] - mit_endo.τₜ[it]
                 Yᴱ                                                  = a⃗[ia] * (1 + mit_endo.rₜ[it]) + mit_endo.Π[iz, ia,it] - mit_endo.τₜ[it]
-                mit_endo.𝐚ʷ[iz, ia,it], mit_endo.𝐕ᵂ[iz, ia, it]     = fnPureGridSearchMIT(Yᵂ, params, a⃗, @views(mit_endo.𝔼𝐕[iz,:,it]))
-                mit_endo.𝐚ᵉ[iz, ia,it], mit_endo.𝐕ᴱ[iz, ia, it]     = fnPureGridSearchMIT(Yᴱ, params, a⃗, @views(mit_endo.𝔼𝐕[iz,:,it]))
-
+                mit_endo.𝐚ʷ[iz, ia,it], mit_endo.𝐕ᵂ[iz, ia, it],iʷ₊ = fnPureGridSearchMIT(Yᵂ, params, a⃗, @views(mit_endo.𝔼𝐕[iz,:,it]),iʷ)
+                mit_endo.𝐚ᵉ[iz, ia,it], mit_endo.𝐕ᴱ[iz, ia, it],iᵉ₊ = fnPureGridSearchMIT(Yᴱ, params, a⃗, @views(mit_endo.𝔼𝐕[iz,:,it]),iᵉ)
+                iʷ  = iʷ₊
+                iᵉ  = iᵉ₊
 
                 # II. VFs for different occupations
                 mit_endo.𝐜ʷ[iz, ia, it] = a⃗[ia] * (1 + mit_endo.rₜ[it]) + mit_endo.wₜ[it] - mit_endo.τₜ[it] - mit_endo.𝐚ʷ[iz, ia, it]
@@ -329,7 +336,7 @@ function fnDistributionIterationMIT!(params, mit_endo, ss_endo)
         end
     end
     
-    # D. Start the largest loop 
+    # D. Start the largest loop  ibₐ, iuₐ, etc
     @inbounds for it in 1:Tᴹᴵᵀ-1
 
         # I. Update the endogenous functions for time t
@@ -342,41 +349,36 @@ function fnDistributionIterationMIT!(params, mit_endo, ss_endo)
                     for iz in eachindex(z⃗)
 
                         # II. Common terms
-                        Mass = mit_endo.g[iz, ia, il, iu, it]
-                        if Mass == 0.0
-                            continue
-                        end
+                        Mass            = mit_endo.g[iz, ia, il, iu, it]
+                        Mass            == 0.0 && continue
 
-                        # III. Update the flows 
-                        # (c) Get flows that matter
-                        f¹², f²¹, f²², f¹¹ = fnComputeFlowsMIT(iz, ia, il, iu, it, params, mit_endo)
-                        FlowU = f¹² + f²²
-                        FlowO = f²¹ + f¹¹
+                        # III. Hoist indices and weights once
+                        ibₐ, iuₐ, wₐ    = ibᵃ[iz,ia,it], iuᵃ[iz,ia,it], wᵃ[iz,ia,it]
+                        ibₗ, iuₗ, wₗ    = ibˡ[iz,ia,it], iuˡ[iz,ia,it], wˡ[iz,ia,it]
 
-                        # IV. With switching productivity
-                        # To unemployment (iu=2)
-                        B[ibᵃ[iz,ia,it], ibˡ[iz,ia,it], 2]      += Mass * wᵃ[iz,ia,it] * wˡ[iz,ia,it] * FlowU
-                        B[ibᵃ[iz,ia,it], iuˡ[iz,ia,it], 2]      += Mass * wᵃ[iz,ia, it] * (1 - wˡ[iz,ia,it]) * FlowU
-                        B[iuᵃ[iz,ia,it], ibˡ[iz,ia,it], 2]      += Mass * (1 - wᵃ[iz,ia,it]) * wˡ[iz,ia,it] * FlowU
-                        B[iuᵃ[iz,ia,it], iuˡ[iz,ia,it], 2]      += Mass * (1 - wᵃ[iz,ia,it]) * (1 - wˡ[iz,ia,it]) * FlowU
-                        # To employment/entrepreneurship (iu=1)
-                        B[ibᵃ[iz,ia,it], ibˡ[iz,ia,it], 1]      += Mass * wᵃ[iz,ia,it] * wˡ[iz,ia,it] * FlowO
-                        B[ibᵃ[iz,ia,it], iuˡ[iz,ia,it], 1]      += Mass * wᵃ[iz,ia,it] * (1 - wˡ[iz,ia,it]) * FlowO
-                        B[iuᵃ[iz,ia,it], ibˡ[iz,ia,it], 1]      += Mass * (1 - wᵃ[iz,ia,it]) * wˡ[iz,ia,it] * FlowO
-                        B[iuᵃ[iz,ia,it], iuˡ[iz,ia,it], 1]      += Mass * (1 - wᵃ[iz,ia,it]) * (1 - wˡ[iz,ia,it]) * FlowO
+                        # IV. Flows
+                        f¹², f²¹, f²², f¹¹  = fnComputeFlowsMIT(iz, ia, il, iu, it, params, mit_endo)
+                        FlowU, FlowO        = f¹² + f²², f²¹ + f¹¹
 
-                        # V. The same productivity
-                        # (c) Update (asset, labour) = (BB, BU, UB, UU)
-                        # To unemployment 
-                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia,it], ibˡ[iz,ia,it], 2]      += ψ * Mass * wᵃ[iz,ia,it] * wˡ[iz,ia,it] * FlowU
-                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia,it], iuˡ[iz,ia,it], 2]      += ψ * Mass * wᵃ[iz,ia,it] * (1 - wˡ[iz,ia,it]) * FlowU
-                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia,it], ibˡ[iz,ia,it], 2]      += ψ * Mass * (1 - wᵃ[iz,ia, it]) * wˡ[iz,ia, it] * FlowU
-                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia,it], iuˡ[iz,ia,it], 2]      += ψ * Mass * (1 - wᵃ[iz,ia, it]) * (1 - wˡ[iz,ia,it]) * FlowU
-                        # To others 
-                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia,it], ibˡ[iz,ia,it], 1]      += ψ * Mass * wᵃ[iz,ia,it] * wˡ[iz,ia,it] * FlowO
-                        gⁿᵉˣᵗ[iz, ibᵃ[iz,ia,it], iuˡ[iz,ia,it], 1]      += ψ * Mass * wᵃ[iz,ia,it] * (1 - wˡ[iz,ia,it]) * FlowO
-                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia,it], ibˡ[iz,ia,it], 1]      += ψ * Mass * (1 - wᵃ[iz,ia,it]) * wˡ[iz,ia,it] * FlowO
-                        gⁿᵉˣᵗ[iz, iuᵃ[iz,ia,it], iuˡ[iz,ia,it], 1]      += ψ * Mass * (1 - wᵃ[iz,ia,it]) * (1 - wˡ[iz,ia,it]) * FlowO
+                        # V. Precomputed corner weights (4 mults instead of 16)
+                        wbb     = wₐ * wₗ
+                        wbu     = wₐ * (1 - wₗ)
+                        wub     = (1 - wₐ) * wₗ
+                        wuu     = (1 - wₐ) * (1 - wₗ)
+                        MU, MO = Mass * FlowU, Mass * FlowO
+
+                        # VI. Write to B (switching productivity block)
+                        B[ibₐ, ibₗ, 2]  += MU * wbb;  B[ibₐ, iuₗ, 2] += MU * wbu
+                        B[iuₐ, ibₗ, 2]  += MU * wub;  B[iuₐ, iuₗ, 2] += MU * wuu
+                        B[ibₐ, ibₗ, 1]  += MO * wbb;  B[ibₐ, iuₗ, 1] += MO * wbu
+                        B[iuₐ, ibₗ, 1]  += MO * wub;  B[iuₐ, iuₗ, 1] += MO * wuu
+
+                        # VII. gⁿᵉˣᵗ gets ψ × same contributions at own iz slice
+                        ψMU, ψMO = ψ * MU, ψ * MO
+                        gⁿᵉˣᵗ[iz, ibₐ, ibₗ, 2]  += ψMU * wbb;  gⁿᵉˣᵗ[iz, ibₐ, iuₗ, 2] += ψMU * wbu
+                        gⁿᵉˣᵗ[iz, iuₐ, ibₗ, 2]  += ψMU * wub;  gⁿᵉˣᵗ[iz, iuₐ, iuₗ, 2] += ψMU * wuu
+                        gⁿᵉˣᵗ[iz, ibₐ, ibₗ, 1]  += ψMO * wbb;  gⁿᵉˣᵗ[iz, ibₐ, iuₗ, 1] += ψMO * wbu
+                        gⁿᵉˣᵗ[iz, iuₐ, ibₗ, 1]  += ψMO * wub;  gⁿᵉˣᵗ[iz, iuₐ, iuₗ, 1] += ψMO * wuu
                     end
                 end
             end
@@ -474,17 +476,17 @@ function fnSolveMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
 
     # B. Initial guesses 
     error_history   = Float64[]
-    mit_endo.τₜ     .= ss_endo.τₜ
     for it in 1:Tᴹᴵᵀ
         mit_endo.rₜ[it] = ss_endo.rₜ * (λ⃗[it] / λ⃗[1])^0.5
     end 
     mit_endo.wₜ     .= ss_endo.wₜ 
+    mit_endo.τₜ     .= mit_endo.wₜ .* ss_endo.U
 
     # C. Interest and wage limits (for bisections)
     w̲       = 0.4
     w̅       = 2.5
-    r̲       = -δ 
-    r̅       = 1.0 / β - 1.02
+    r̲       = -δ +1e-6
+    r̅       = 0.15
 
     # D. Loop settings 
     εʳ      = 1.0
@@ -494,9 +496,9 @@ function fnSolveMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
     τ̃       = zeros(Tᴹᴵᵀ)
     r̃       = zeros(Tᴹᴵᵀ)
     # Temporary values 
-    δᴸ = 0.02
-    δᵗ = 0.02
-    δʳ = 0.015
+    δᴸ      = 5*1e-3
+    δᵗ      = 5*1e-3
+    δʳ      = 5*1e-3
 
     # E1. Starting the loops 
     while εʳ > δʳ
@@ -510,8 +512,8 @@ function fnSolveMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
             while εˡ > δᴸ
 
                 # I. Solve the model 
-                fnBackwardInductionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
-                fnAggregateStatesMIT!(params, mit_endo, ss_endo)
+                tᵇ = @elapsed fnBackwardInductionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
+                tᶠ = @elapsed fnAggregateStatesMIT!(params, mit_endo, ss_endo)
 
                 # II. Implied wage 
                 for it in 1:Tᴹᴵᵀ
@@ -528,10 +530,19 @@ function fnSolveMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
                 εˡ      = maximum(abs, ε⃗ᴸ) 
                 
                 # IV. Update
-                @. mit_endo.wₜ = ηˡ * w̃ + (1 - ηˡ) * mit_endo.wₜ
+                ηˡ_use = if εˡ < 0.01
+                    0.15    
+                elseif εˡ < 0.025
+                    0.35
+                elseif εˡ < 0.05
+                    0.5
+                else
+                    ηˡ      
+                end
+                @. mit_endo.wₜ = ηˡ_use * w̃ + (1 - ηˡ_use) * mit_endo.wₜ
 
                 # V. Print a fun message for future generations 
-                println("→→→ Wage search        | w₄ = $(round(mit_endo.wₜ[4], digits=4)), max(εᴸ) = $(round(εˡ, digits=7))")
+                println("→→→ Wage search        | w₄ = $(round(mit_endo.wₜ[4], digits=4)), max(εᴸ) = $(round(εˡ, digits=7)), tᵇ = $(round(tᵇ,digits=3)), tᶠ = $(round(tᶠ,digits=3))")
             end 
 
             # VI. Calculate the implied tax 
@@ -553,6 +564,9 @@ function fnSolveMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
             try
                 r̃[it] = find_zero(r -> fnImpliedCapitalDemandError(r, params, mit_endo, A⃗, λ⃗, it), (r̲, r̅), Bisection())
             catch
+                flo = fnImpliedCapitalDemandError(r̲, params, mit_endo, A⃗, λ⃗, it)
+                fhi = fnImpliedCapitalDemandError(r̅, params, mit_endo, A⃗, λ⃗, it)
+                @show flo, fhi, r̲, r̅
                 r̃[it] = r̲  # keep current guess
                 @warn "No bracket at t=$it, holding r"
             end
