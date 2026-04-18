@@ -20,7 +20,7 @@
 
     # C. Grid sizes  
     Nᶻ::Int             = 40            # Productivity grids (number) 
-    Nᵃ::Int             = 100           # Wealth grids (number)
+    Nᵃ::Int             = 200           # Wealth grids (number)
     Nˡ::Int             = 30            # Employment grid
     Nᵘ::Int             = 2             # Unemployment and other states grid 
 
@@ -34,7 +34,7 @@
     # E. Assets grid 
     a⃗::Vector{Float64}  = zeros(Nᵃ)     # Assets grid 
     a̲::Float64          = 0.0           # Minimum assets 
-    a̅::Float64          = 8000         # Maximum assets
+    a̅::Float64          = 10000         # Maximum assets
     θᵃ::Float64         = 4.0           # Curvature of the assets grid
     c̲::Float64          = 1e-3          # "Zero" consumption  
 
@@ -50,7 +50,7 @@
     λᵛᶠⁱ::Float64       = 0.0           # Updating loading (VFI)
     δᵈⁱˢᵗ::Float64      = 1e-4          # Distribution iteration tolerance
     λᵈⁱˢᵗ::Float64      = 0.5           # Updating loading for distributions
-    interp::Bool        = true          # Option to use interpolation in VFI 
+    interp::Bool        = false         # Option to use interpolation in VFI 
 
     # H. GE bounds for the prices 
     w̲::Float64          = 0.99              # Minimum wage 
@@ -67,7 +67,7 @@
 
     # J. MIT shock settings 
     Tᴹᴵᵀ::Int           = 70                # Shock periods 
-    ηˡ::Float64         = 0.3               # Wage update 
+    ηˡ::Float64         = 0.7               # Wage update 
     ηᵗ::Float64         = 0.5               # Tax update 
     ηᶜ::Float64         = 0.30              # Interest rate update 
 end 
