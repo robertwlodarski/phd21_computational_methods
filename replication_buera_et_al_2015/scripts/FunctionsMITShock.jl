@@ -496,20 +496,25 @@ function fnSolveMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
     τ̃       = zeros(Tᴹᴵᵀ)
     r̃       = zeros(Tᴹᴵᵀ)
     # Temporary values 
-    δᴸ      = 5*1e-3
-    δᵗ      = 5*1e-3
+    δᴸ      = 5*1e-4
+    δᵗ      = 1e-3
     δʳ      = 5*1e-3
 
     # E1. Starting the loops 
     while εʳ > δʳ
         εᵗ  = 1.0 
+        η⃗ˡ  = fill(ηˡ, Tᴹᴵᵀ)
+        𝓃ᵗ  = 0
+        𝓃̄ᵗ  = 15
 
         # E2. Start the tax loop 
-        while εᵗ > δᵗ
+        while εᵗ > δᵗ && 𝓃ᵗ <= 𝓃̄ᵗ
             εˡ  = 1.0
+            𝓃ʷ  = 0
+            𝓃̄ʷ = εʳ > 0.05 ? 50 : 20
 
             # E3. Start the wage loop 
-            while εˡ > δᴸ
+            while εˡ > δᴸ && 𝓃ʷ < 𝓃̄ʷ
 
                 # I. Solve the model 
                 tᵇ = @elapsed fnBackwardInductionMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
@@ -530,19 +535,17 @@ function fnSolveMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
                 εˡ      = maximum(abs, ε⃗ᴸ) 
                 
                 # IV. Update
-                ηˡ_use = if εˡ < 0.01
-                    0.15    
-                elseif εˡ < 0.025
-                    0.35
-                elseif εˡ < 0.05
-                    0.5
-                else
-                    ηˡ      
-                end
-                @. mit_endo.wₜ = ηˡ_use * w̃ + (1 - ηˡ_use) * mit_endo.wₜ
+                @. η⃗ˡ = ifelse(abs(ε⃗ᴸ) < 0.0025, 0.25, ifelse(abs(ε⃗ᴸ) < 0.025, 0.15, ifelse(abs(ε⃗ᴸ) < 0.075, 0.5, ηˡ)))
+                @. mit_endo.wₜ = η⃗ˡ * w̃ + (1 - η⃗ˡ) * mit_endo.wₜ
 
                 # V. Print a fun message for future generations 
                 println("→→→ Wage search        | w₄ = $(round(mit_endo.wₜ[4], digits=4)), max(εᴸ) = $(round(εˡ, digits=7)), tᵇ = $(round(tᵇ,digits=3)), tᶠ = $(round(tᶠ,digits=3))")
+            
+                # VI. Iteration limits 
+                𝓃ʷ += 1
+                if 𝓃ʷ == 𝓃̄ʷ
+                    println("⚠ Wage cap hit: εᴸ = $εˡ")
+                end
             end 
 
             # VI. Calculate the implied tax 
