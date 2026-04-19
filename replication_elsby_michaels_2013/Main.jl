@@ -3,10 +3,12 @@
 # January 2026
 
 ## 1. Packages
+import Pkg; Pkg.add("Accessors")
 using Preferences, Parameters, Accessors, StaticArrays, Adapt, QuantEcon
 using Base.Cartesian, LinearAlgebra, SparseArrays, LoopVectorization, Interpolations
 using Distributions, Random, StatsBase, FastGaussQuadrature, Optim, Roots, Dierckx
 using BenchmarkTools, AllocCheck, MAT
+Threads.nthreads()
 
 ## 2. Load macros, infrastructure, and functions
 include("scripts/Macros.jl")

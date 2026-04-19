@@ -301,11 +301,17 @@ function fAggregation(params,endo,p,f,q)
     return N, Y, S, M, A 
 end 
 
-# 7. Update the job finding rate 
+# 7A. Update the job finding rate 
 function fUpdatedJobFindingRate(q,params)
      @unpack μ,ε   = params
     return μ * (q / μ)^((ε-1)/ε)
-end 
+end
+
+# 7B. Update the job finding rate (inverse)
+function fUpdatedJobFindingRateInverse(f,params)
+     @unpack μ,ε   = params
+    return μ * (f / μ)^(ε/(ε-1))
+end
 
 # 8. Equilibrium residual 
 function fEqResidual(q,p,params, endo)
