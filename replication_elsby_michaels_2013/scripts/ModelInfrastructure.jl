@@ -62,6 +62,13 @@
     Ñₙ::Int         = 7                     # Number of aggregate employment grids
     Ñₜ::Int         = 11                    # Number of aggregate theta grids 
 
+    # F. RTM sensitivity settings 
+    δᴿᵀᴹ::Float64   = 1e-4                  # RTM sensitivity 
+    δᵍ::Float64     = 1e-5                  # Forward simulation sensitivity 
+    ωᵍ::Float64     = 0.3                   # Updating parameter for the forward transition 
+    ωᴿᵀᴹ₁::Float64  = 0.5                   # RTM update: Job-finding rate 
+    ωᴿᵀᴹ₂::Float64  = 0.5                   # RTM update: Employment 
+    ωᴿᵀᴹ₃::Float64  = 0.2                   # RTM update: Value function
 end
 
 # 1. The constructor 
@@ -192,10 +199,11 @@ Endo    = fnSetUpEndo(UsedParameters)
     S⃗::Vector{Float64}          # Separations 
     M⃗::Vector{Float64}          # Matches 
     Y⃗::Vector{Float64}          # Output 
+    A⃗::Vector{Float64}          # Marginal product 
 end 
 
 # 3. Simulated variables (constructor)
-function fnSetUpSimulated(UsedParameters; T = 52*75 +52*5, seed = 1997)
+function fnSetUpSimulated(UsedParameters; T = 52*20, seed = 1997)
 
     # A. Unpacking and caring about reproducibility 
     @unpack P, p⃗, Nₚ            = UsedParameters
@@ -223,6 +231,7 @@ function fnSetUpSimulated(UsedParameters; T = 52*75 +52*5, seed = 1997)
     S⃗               = zeros(T)
     M⃗               = zeros(T)
     Y⃗               = zeros(T)
+    A⃗               = zeros(T)
 
     # Returning
     return SimulationVariables(
@@ -234,7 +243,8 @@ function fnSetUpSimulated(UsedParameters; T = 52*75 +52*5, seed = 1997)
         f⃗   = f⃗,
         S⃗   = S⃗,
         M⃗   = M⃗,
-        Y⃗   = Y⃗
+        Y⃗   = Y⃗,
+        A⃗   = A⃗
     )
 end 
 
@@ -292,13 +302,16 @@ end
 @with_kw mutable struct LeeVariables
 
     # A. Sequences
-    q⃗::Vector{Float64}             # Predicted job-filling rate path
-    N⃗::Vector{Float64}             # Predicted aggregate employment path
+    q⃗::Vector{Float64}              # Predicted job-filling rate path
+    N⃗::Vector{Float64}              # Predicted aggregate employment path
+    q⃗ⁱᵐᵖ::Vector{Float64}           # Implied job-filling rate path
+    N⃗ⁱᵐᵖ::Vector{Float64}           # Implied aggregate employment path
     
     # B. Time-indexed value functions [the RTM state: index by t, not (N,Θ)]
-    Π̃::Vector{Matrix{Float64}}     # Value function sequence {Π̃ₜ}ᵀ
+    Π̃::Vector{Matrix{Float64}}      # Value function sequence {Π̃ₜ}ᵀ
+    Π̃ⁱᵐᵖ::Vector{Matrix{Float64}}   # Implied value function sequence {Π̃ₜ}ᵀ
 
-    # D. Time-indexed policy functions
+    # C. Time-indexed policy functions
     R⃗::Vector{Vector{Float64}}     # Firing threshold sequence {R̂ₜ}ᵀ
     R⃗ᵥ::Vector{Vector{Float64}}    # Hiring threshold sequence {R̂ᵥₜ}ᵀ
     n⃗::Vector{Vector{Float64}}     # Employment grid sequence {n⃗ₜ}ᵀ
@@ -306,11 +319,11 @@ end
     ∂R⃗ᵥ::Vector{Vector{Float64}}   # Threshold derivative 
 
     # D. Convergence tracking
-    εᴿᵀᴹ::Float64                   # sup_t |q⃗ᵖ - q⃗ʳ| convergence criterion
+    εᴿᵀᴹ::Float64                   # sup_t |q⃗ - q⃗ⁱᵐᵖ| convergence criterion
 end
 
 # 4. Constructor for Lee variables
-function fnSetUpLee(UsedParameters, Simu; ω = 0.4)
+function fnSetUpLee(UsedParameters, Simu)
     @unpack Nₓ, N̅₁, N̅₂  = UsedParameters
     T       = length(Simu.p⃗̂)
     Nₙ      = N̅₁ + N̅₂ - 1      
@@ -328,15 +341,18 @@ function fnSetUpLee(UsedParameters, Simu; ω = 0.4)
     ∂R⃗ᵥ     = [zeros(Nₙ)     for _ in 1:T]
 
     return LeeVariables(
-        q⃗  = q⃗,  
-        N⃗  = N⃗,
-        Π̃  = Π̃,
-        R⃗  = R⃗,  
-        R⃗ᵥ = R⃗ᵥ, 
-        n⃗ = n⃗,
-        εᴿᵀᴹ = Inf,
-        ∂R⃗  = ∂R⃗,
-        ∂R⃗ᵥ =∂R⃗ᵥ
+        q⃗       = q⃗,  
+        N⃗       = N⃗,
+        q⃗ⁱᵐᵖ    = copy(q⃗),
+        N⃗ⁱᵐᵖ    = copy(N⃗),
+        Π̃       = Π̃,
+        Π̃ⁱᵐᵖ    = [zeros(Nₓ, Nₙ) for _ in 1:T],
+        R⃗       = R⃗,  
+        R⃗ᵥ      = R⃗ᵥ, 
+        n⃗       = n⃗,
+        ∂R⃗      = ∂R⃗,
+        ∂R⃗ᵥ     = ∂R⃗ᵥ,
+        εᴿᵀᴹ    = Inf
     )
 end
 Lee = fnSetUpLee(UsedParameters, Simu)

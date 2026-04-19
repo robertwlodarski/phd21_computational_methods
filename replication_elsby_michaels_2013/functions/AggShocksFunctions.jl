@@ -3,10 +3,35 @@
 # N⃗: standard letters:              Simulation  
 # Π̃: greek letters with a tilde:    Value functions
 
+# 1. Aggregation with aggregate uncertainty 
+function fAggregationAggregateUncertainty(params,R⃗ᵥ,∂R⃗ᵥ,R⃗,∂R⃗,n⃗,p)
+
+    # A. Unpacking business 
+    @unpack x̲, x⃗, ξ, p̄ₓ, α, λ = params 
+
+    # B. Compute CDFs, PDFs, and expectation 
+    𝐆R⃗ᵥ     = (1 .- (x̲ ./ R⃗ᵥ).^ξ) ./ p̄ₓ
+    𝐠R⃗ᵥ     = ((1 / p̄ₓ) * ξ * x̲^ξ) ./ ((R⃗ᵥ).^(ξ+1)) 
+    𝐆R⃗      = (1 .- (x̲ ./ R⃗).^ξ) ./ p̄ₓ
+    𝐠R⃗      = ((1 / p̄ₓ) * ξ * x̲^ξ) ./ ((R⃗).^(ξ+1)) 
+    𝐇n⃗      = 𝐆R⃗ ./ (1 .- 𝐆R⃗ᵥ .+ 𝐆R⃗)
+    𝐡n⃗      = ((1 .- 𝐆R⃗ᵥ) .* 𝐠R⃗ .* ∂R⃗ + 𝐆R⃗ .* 𝐠R⃗ᵥ .* ∂R⃗ᵥ) ./ ((1 .- 𝐆R⃗ᵥ .+ 𝐆R⃗).^2)
+    𝔼x      = (1 / p̄ₓ) * x̲^ξ * (ξ /(ξ - 1)) * (R⃗.^(-ξ+1)-R⃗ᵥ.^(-ξ+1)) ./ (𝐆R⃗ᵥ .- 𝐆R⃗)
+
+    # C. Compute aggregate values 
+    N       = fSimpsonRule(n⃗ .*𝐡n⃗, n⃗)                   # Employed
+    Y       = fSimpsonRule(𝔼x .* n⃗.^α .*𝐡n⃗,n⃗)           # Production
+    S       = λ * fSimpsonRule((1 .- 𝐇n⃗).*𝐆R⃗,n⃗)         # Separations 
+    M       = λ * fSimpsonRule(𝐇n⃗.*(1 .- 𝐆R⃗ᵥ),n⃗)        # Matches 
+    A       = fSimpsonRule(p .* 𝔼x .* n⃗.^(α-1).*𝐡n⃗,n⃗)   # Total marginal product of labour  
+    return N, Y, S, M, A 
+end 
+
+# 2. Solve using the repeated transition method 
 function fnSolveAggregateRTM!(params, ss_endo, simu, lee)
 
     #%% 1. Unpacking business 
-    @unpack P, p⃗, Nₚ, L, δᴿᵀᴹ, δᵍ, x⃗, α, β, c = params
+    @unpack P, p⃗, Nₚ, L, δᴿᵀᴹ, δᵍ, x⃗, α, β, c, Nₓ, ωᵍ, ωᴿᵀᴹ₁, ωᴿᵀᴹ₂, ωᴿᵀᴹ₃ = params
     @unpack p⃗̂, p⃗̂ᵢ, N⃗, q⃗, f⃗, S⃗, M⃗, Y⃗     = simu
     T                                   = length(p⃗̂)
 
@@ -16,11 +41,11 @@ function fnSolveAggregateRTM!(params, ss_endo, simu, lee)
     lee.N⃗   .= ss_endo.N .* (1 .+ 1e-2 *randn(T))
     # Initialise Π̃ with SS value functions via fVFI!
     ℑˢˢ = [Spline1D(ss_endo.n⃗, ss_endo.Π[i,:]; k=3, bc="extrapolate") for i in 1:Nₓ]
-    @. f⃗ = fUpdatedJobFindingRate(lee.q⃗ᵖ, Ref(params))
+    @. f⃗ = fUpdatedJobFindingRate(lee.q⃗, Ref(params))
     for t in 1:T
-        lee.n⃗ᵀ[t]           = fn⃗(params, p⃗̂[t], f⃗[t], lee.q⃗ᵖ[t])
+        lee.n⃗[t]            = fn⃗(params, p⃗̂[t], f⃗[t], lee.q⃗[t])
         for i in 1:Nₓ
-            lee.Π̃[t][i,:]  .= ℑˢˢ[i](lee.n⃗ᵀ[t])
+            lee.Π̃[t][i,:]  .= ℑˢˢ[i](lee.n⃗[t])
         end
     end
 
@@ -42,7 +67,7 @@ function fnSolveAggregateRTM!(params, ss_endo, simu, lee)
             # A. Retrieve current period's exogenous state and nth-iteration conjectured price
             pₜ  = p⃗̂[t]
             pᵢₜ = p⃗̂ᵢ[t]
-            qₜ  = lee.q⃗ᵖ[t]
+            qₜ  = lee.q⃗[t]
             
             # B. Construct 𝔼ₜ[Π̃ₜ₊₁] via RTM matching
             Π̃ₜ₊₁        = Vector{Matrix{Float64}}(undef, Nₚ)
@@ -50,7 +75,7 @@ function fnSolveAggregateRTM!(params, ss_endo, simu, lee)
             Π̃ₜ₊₁[pᵢₜ] = t == T ? lee.Π̃[1] : lee.Π̃[t+1]
             # For the realised p′: use Π̃ʳ[t+1] directly from this backward pass
             # For each counterfactual p′ ≠ pₜ₊₁: find τ s.t. N⃗ᵖ[τ] ≈ N⃗ᵖ[t+1] and p⃗̂ᵢ[τ] == p′
-            for pⱼ in filter(!=(pᵢₜ), 1:Nₚ)
+            Threads.@threads for pⱼ in filter(!=(pᵢₜ), 1:Nₚ)
 
                 # i. Find matching period τ via interpolation on N
                 τ⃗ᶜ              = findall(p⃗̂ᵢ .== pⱼ)
@@ -59,11 +84,11 @@ function fnSolveAggregateRTM!(params, ss_endo, simu, lee)
                 idx             = sortperm(abs.(N⃗ᶜ .- Nᵉᶠᶠ))
                 τ̲               = τ⃗ᶜ[idx[1]]
                 τ̅               = τ⃗ᶜ[idx[2]]
-                ωτ              = (lee.N⃗[τ̅] - lee.N⃗[t+1]) / (lee.N⃗[τ̅] - lee.N⃗[τ̲])
+                ωτ              = (lee.N⃗[τ̅] - Nᵉᶠᶠ) / (lee.N⃗[τ̅] - lee.N⃗[τ̲])
                 ωτ              = clamp(ωτ, 0.0, 1.0)
 
                 # ii. Borrow and interpolate Π̃ for this counterfactual state
-                Π̃ₜ₊₁[pⱼ]        = ωτ .* lee.Π̃[τ_low] .+ (1 - ωτ) .* lee.Π̃[τ_high]
+                Π̃ₜ₊₁[pⱼ]        = ωτ .* lee.Π̃[τ̲] .+ (1 - ωτ) .* lee.Π̃[τ̅]
 
             end
 
@@ -71,22 +96,23 @@ function fnSolveAggregateRTM!(params, ss_endo, simu, lee)
             𝔼Π̃ = sum(P[pᵢₜ, pⱼ] .* Π̃ₜ₊₁[pⱼ] for pⱼ in 1:Nₚ)
             
             # D. Single Bellman update and policy extraction
-            W           = fW(params, pₜ, f⃗[t], qₜ, lee.n⃗[t])
-            Πᶠˡᵒʷ       = pₜ .* x⃗ .* (lee.n⃗[t]' .^ α) .- W .* lee.n⃗[t]'
+            n⃗ₜ          = lee.n⃗[t]
+            W           = fW(params, pₜ, f⃗[t], qₜ, n⃗ₜ)
+            Πᶠˡᵒʷ       = pₜ .* x⃗ .* (n⃗ₜ' .^ α) .- W .* n⃗ₜ'
             Πᶜ          = Πᶠˡᵒʷ .+ β .* 𝔼Π̃
             for i in 1:Nₓ
                 # Fire 
                 valᶠ, idᶠ   = findmax(view(Πᶜ, i, :))
                 vᶠ[i]       = valᶠ
-                nᶠ[i]       = lee.n⃗[t][idᶠ]
+                nᶠ[i]       = n⃗ₜ[idᶠ]
                 # Hire 
-                valʰ, idʰ   = findmax(view(Πᶜ, i, :) .- (c / qₜ) .* lee.n⃗[t])
+                valʰ, idʰ   = findmax(view(Πᶜ, i, :) .- (c / qₜ) .* n⃗ₜ)
                 vʰ[i]       = valʰ
-                nʰ[i]       = lee.n⃗[t][idʰ]
+                nʰ[i]       = n⃗ₜ[idʰ]
             end
-            Πᶠ              .= vᶠ .* (nᶠ .< lee.n⃗[t]') .- 1e8 .* (nᶠ .>= lee.n⃗[t]')
-            Πʰ              .= (vʰ .+ c / qₜ .* lee.n⃗[t]') .* (nʰ .> lee.n⃗[t]') .- 1e8 .* (nʰ .<= lee.n⃗[t]')
-            lee.Π̃[t]        .= max.(Πᶠ, max.(Πʰ, Πᶜ))
+            Πᶠ              .= vᶠ .* (nᶠ .< n⃗ₜ') .- 1e8 .* (nᶠ .>= n⃗ₜ')
+            Πʰ              .= (vʰ .+ c / qₜ .* n⃗ₜ') .* (nʰ .> n⃗ₜ') .- 1e8 .* (nʰ .<= n⃗ₜ')
+            lee.Π̃ⁱᵐᵖ[t]        .= max.(Πᶠ, max.(Πʰ, Πᶜ))
 
             # E. Extract and store policy functions R⃗ₜ, R⃗ᵥₜ, n⃗ₜ into lee.R⃗ᵀ[t] etc.
             ℑⁿˡ         = Spline1D(x⃗, nᶠ; k=3, bc="extrapolate")
@@ -107,48 +133,59 @@ function fnSolveAggregateRTM!(params, ss_endo, simu, lee)
             𝒾ᴿⱽ         = unique(i -> 𝕟ᴿⱽ[i], 1:length(𝕟ᴿⱽ))
             𝕩ᴿⱽ         = x⃗[𝓃₂:end]
             ℑᴿⱽ         = Spline1D(𝕟ᴿⱽ[𝒾ᴿⱽ], 𝕩ᴿⱽ[𝒾ᴿⱽ]; k=3, bc="extrapolate")
-            lee.R⃗ᵥ[t]   = min.(ℑᴿⱽ(lee.n⃗[t]), x̅)
-            lee.∂R⃗ᵥ[t]  = Dierckx.derivative(ℑᴿⱽ, lee.n⃗[t])
+            lee.R⃗ᵥ[t]   = min.(ℑᴿⱽ(n⃗ₜ), x̅)
+            lee.∂R⃗ᵥ[t]  = Dierckx.derivative(ℑᴿⱽ, n⃗ₜ)
         end 
 
         #%% 3.2. Forward simulation (t = 1 → T)
         for t in 1:T
 
             # A. Retrieve pₜ and Nₜ₋₁
+            pₜ      = p⃗̂[t]
+            Nₜ₋₁    = t == 1 ? lee.N⃗[T] : lee.N⃗[t-1]
 
             # B. Solve equilibrium q loop (reuse fEqResidual logic)
             # Inner loop: given q guess, compute f, run fAggregation,
             # update N from Beveridge curve N = Nₜ₋₁ + M - S, iterate until convergence
-            qₜ      = lee.q⃗ᵖ[t]     # initialise from predicted path
-            Nₜ      = lee.N⃗ᵖ[t]
-            εᵍ      = Inf
+            qₜ          = lee.q⃗[t]     
+            Nₜ          = lee.N⃗[t]
+            lee.n⃗[t]    = fn⃗(params, pₜ, f⃗[t], qₜ)
+            εᵍ          = Inf
             while εᵍ > δᵍ
 
-                # i. Compute f from q
+                # i. fAggregation → N*, S*, M*
+                n⃗ₜ              = lee.n⃗[t]
+                _, _, S, M, _   = fAggregationAggregateUncertainty(params,view(lee.R⃗ᵥ[t][:]),view(lee.∂R⃗ᵥ[t][:]),view(lee.R⃗[t][:]),view(lee.∂R⃗[t]),n⃗ₜ,pₜ)
 
-                # ii. fAggregation → N*, S*, M*
+                # ii. Beveridge: N¹ = Nₜ₋₁ + M - S, f¹ = M/(L - N¹)
+                N⁺¹             = Nₜ₋₁ + M - S
+                f⃗[t]            = M / (L - N⁺¹ + 1e-8) 
 
-                # iii. Beveridge: N¹ = Nₜ₋₁ + M - S, f¹ = M/(L - N¹)
-
-                # iv. Update q and check convergence
+                # iii. Update q and check convergence
+                q¹          = fUpdatedJobFindingRateInverse(f⃗[t], params)  
+                εᵍ          = abs(N⁺¹ - Nₜ)
+                Nₜ          = N⁺¹
+                qₜ          = ωᵍ * q¹ + (1 - ωᵍ) * qₜ
+                lee.n⃗[t]    = fn⃗(params, pₜ, f⃗[t], qₜ)
 
             end  
 
             # C. Store realised paths
-            lee.q⃗ʳ[t]  = qₜ
-            lee.N⃗ʳ[t]  = Nₜ
-            simu.S⃗[t]  = x # separations
-            simu.M⃗[t]  = x # matches
-            simu.Y⃗[t]  = x # output
-
+            _, Y, S, M, A   = fAggregationAggregateUncertainty(params,view(lee.R⃗ᵥ[t][:]),view(lee.∂R⃗ᵥ[t][:]),view(lee.R⃗[t][:]),view(lee.∂R⃗[t]),view(lee.n⃗[t][:]),pₜ)
+            lee.q⃗ⁱᵐᵖ[t]     = qₜ
+            lee.N⃗ⁱᵐᵖ[t]     = Nₜ
+            simu.S⃗[t]       = S 
+            simu.M⃗[t]       = M 
+            simu.Y⃗[t]       = Y
+            simu.A⃗[t]       = A
         end
 
-        #%% 3.3. Convergence check and damped update
-        εᴿᵀᴹ            = maximum(abs.(lee.q⃗ʳ .- lee.q⃗ᵖ))
-        lee.q⃗ᵖ         .= params.ω .* lee.q⃗ʳ .+ (1 - params.ω) .* lee.q⃗ᵖ
-        lee.N⃗ᵖ         .= params.ω .* lee.N⃗ʳ .+ (1 - params.ω) .* lee.N⃗ᵖ
+        #%% 3.3. Convergence check and damped update 
+        εᴿᵀᴹ            = maximum(abs.(lee.q⃗ .- lee.q⃗ⁱᵐᵖ))
+        lee.q⃗           .= ωᴿᵀᴹ₁ .* lee.q⃗ⁱᵐᵖ .+ (1 - ωᴿᵀᴹ₁) .* lee.q⃗
+        lee.N⃗           .= ωᴿᵀᴹ₂ .* lee.N⃗ⁱᵐᵖ .+ (1 - ωᴿᵀᴹ₂) .* lee.N⃗
         for t in 1:T
-            lee.Π̃ᵖ[t]  .= params.ω .* lee.Π̃ʳ[t] .+ (1 - params.ω) .* lee.Π̃ᵖ[t]
+            lee.Π̃[t]    .= ωᴿᵀᴹ₃ .* lee.Π̃ⁱᵐᵖ[t] .+ (1 -  ωᴿᵀᴹ₃) .* lee.Π̃[t]
         end
         lee.εᴿᵀᴹ        = εᴿᵀᴹ
 
@@ -157,10 +194,10 @@ function fnSolveAggregateRTM!(params, ss_endo, simu, lee)
         nᴿᵀᴹ           += 1
     end
 
-    #%% 4. Collect results into simu
-    simu.N⃗ .= lee.N⃗ʳ
-    simu.q⃗ .= lee.q⃗ʳ
-    simu.f⃗ .= fUpdatedJobFindingRate.(lee.q⃗ʳ, Ref(params))
+    #%% 4. Collect results into the simu structure 
+    simu.N⃗ .= lee.N⃗
+    simu.q⃗ .= lee.q⃗
+    simu.f⃗ .= fUpdatedJobFindingRate.(lee.q⃗, Ref(params))
 end
 
 # Old Krussel and Smith (1998) draft → May continue it if I find time 
