@@ -1,27 +1,43 @@
 # Important note on notation with aggregate uncertainty 
 # 𝒩⃗: caligraphic letters:           State space
-# N⃗: standard letters:              simulation  
+# N⃗: standard letters:              Simulation  
 # Π̃: greek letters with a tilde:    Value functions
-
 
 function fnSolveAggregateRTM!(params, ss_endo, simu, lee)
 
-    #%% 1. Unpacking
-    @unpack P, p⃗, Nₚ, L, δᴿᵀᴹ,  δᵍ      = params
+    #%% 1. Unpacking business 
+    @unpack P, p⃗, Nₚ, L, δᴿᵀᴹ, δᵍ, x⃗, α, β, c = params
     @unpack p⃗̂, p⃗̂ᵢ, N⃗, q⃗, f⃗, S⃗, M⃗, Y⃗     = simu
     T                                   = length(p⃗̂)
 
     #%% 2. Initialise predicted paths
-    # Use SS values as starting conjecture for {qₜ⁽⁰⁾, Nₜ⁽⁰⁾}ᵀ
-    # Initialise Π̃ᵖ with SS value functions via fVFI!
+    # A. Use SS values as starting conjecture for {qₜ⁽⁰⁾, Nₜ⁽⁰⁾}ᵀ
+    lee.q⃗   .= ss_endo.q̂
+    lee.N⃗   .= ss_endo.N .* (1 .+ 1e-2 *randn(T))
+    # Initialise Π̃ with SS value functions via fVFI!
+    ℑˢˢ = [Spline1D(ss_endo.n⃗, ss_endo.Π[i,:]; k=3, bc="extrapolate") for i in 1:Nₓ]
+    @. f⃗ = fUpdatedJobFindingRate(lee.q⃗ᵖ, Ref(params))
+    for t in 1:T
+        lee.n⃗ᵀ[t]           = fn⃗(params, p⃗̂[t], f⃗[t], lee.q⃗ᵖ[t])
+        for i in 1:Nₓ
+            lee.Π̃[t][i,:]  .= ℑˢˢ[i](lee.n⃗ᵀ[t])
+        end
+    end
 
     #%% 3. RTM outer loop
     εᴿᵀᴹ    = Inf
     nᴿᵀᴹ    = 1
+    vᶠ      = zeros(Nₓ)
+    nᶠ      = zeros(Nₓ)
+    vʰ      = zeros(Nₓ)
+    nʰ      = zeros(Nₓ)
     while εᴿᵀᴹ > δᴿᵀᴹ
 
         #%% 3.1. Backward solution (t = T → 1)
         for t in T:-1:1
+            Nₙₜ = length(lee.n⃗[t])
+            Πᶠ  = zeros(Nₓ, Nₙₜ)
+            Πʰ  = zeros(Nₓ, Nₙₜ)
 
             # A. Retrieve current period's exogenous state and nth-iteration conjectured price
             pₜ  = p⃗̂[t]
@@ -29,22 +45,70 @@ function fnSolveAggregateRTM!(params, ss_endo, simu, lee)
             qₜ  = lee.q⃗ᵖ[t]
             
             # B. Construct 𝔼ₜ[Π̃ₜ₊₁] via RTM matching
+            Π̃ₜ₊₁        = Vector{Matrix{Float64}}(undef, Nₚ)
+            # Realised state handled directly
+            Π̃ₜ₊₁[pᵢₜ] = t == T ? lee.Π̃[1] : lee.Π̃[t+1]
             # For the realised p′: use Π̃ʳ[t+1] directly from this backward pass
             # For each counterfactual p′ ≠ pₜ₊₁: find τ s.t. N⃗ᵖ[τ] ≈ N⃗ᵖ[t+1] and p⃗̂ᵢ[τ] == p′
-            for pⱼ in 1:Nₚ
+            for pⱼ in filter(!=(pᵢₜ), 1:Nₚ)
 
-                # i. Find matching period τ (the RTM "repeated transition" step)
+                # i. Find matching period τ via interpolation on N
+                τ⃗ᶜ              = findall(p⃗̂ᵢ .== pⱼ)
+                N⃗ᶜ              = lee.N⃗[τ⃗ᶜ]
+                Nᵉᶠᶠ            = t == T ? lee.N⃗[1] : lee.N⃗[t+1]
+                idx             = sortperm(abs.(N⃗ᶜ .- Nᵉᶠᶠ))
+                τ̲               = τ⃗ᶜ[idx[1]]
+                τ̅               = τ⃗ᶜ[idx[2]]
+                ωτ              = (lee.N⃗[τ̅] - lee.N⃗[t+1]) / (lee.N⃗[τ̅] - lee.N⃗[τ̲])
+                ωτ              = clamp(ωτ, 0.0, 1.0)
 
-                # ii. Borrow Π̃ᵖ[τ] for this counterfactual state
+                # ii. Borrow and interpolate Π̃ for this counterfactual state
+                Π̃ₜ₊₁[pⱼ]        = ωτ .* lee.Π̃[τ_low] .+ (1 - ωτ) .* lee.Π̃[τ_high]
 
             end
 
             # C. Assemble expected value: 𝔼ₜ[Π̃ₜ₊₁] = Σⱼ P[pᵢ,j] × Π̃ₜ₊₁(·; pⱼ)
-
+            𝔼Π̃ = sum(P[pᵢₜ, pⱼ] .* Π̃ₜ₊₁[pⱼ] for pⱼ in 1:Nₚ)
+            
             # D. Single Bellman update and policy extraction
+            W           = fW(params, pₜ, f⃗[t], qₜ, lee.n⃗[t])
+            Πᶠˡᵒʷ       = pₜ .* x⃗ .* (lee.n⃗[t]' .^ α) .- W .* lee.n⃗[t]'
+            Πᶜ          = Πᶠˡᵒʷ .+ β .* 𝔼Π̃
+            for i in 1:Nₓ
+                # Fire 
+                valᶠ, idᶠ   = findmax(view(Πᶜ, i, :))
+                vᶠ[i]       = valᶠ
+                nᶠ[i]       = lee.n⃗[t][idᶠ]
+                # Hire 
+                valʰ, idʰ   = findmax(view(Πᶜ, i, :) .- (c / qₜ) .* lee.n⃗[t])
+                vʰ[i]       = valʰ
+                nʰ[i]       = lee.n⃗[t][idʰ]
+            end
+            Πᶠ              .= vᶠ .* (nᶠ .< lee.n⃗[t]') .- 1e8 .* (nᶠ .>= lee.n⃗[t]')
+            Πʰ              .= (vʰ .+ c / qₜ .* lee.n⃗[t]') .* (nʰ .> lee.n⃗[t]') .- 1e8 .* (nʰ .<= lee.n⃗[t]')
+            lee.Π̃[t]        .= max.(Πᶠ, max.(Πʰ, Πᶜ))
 
             # E. Extract and store policy functions R⃗ₜ, R⃗ᵥₜ, n⃗ₜ into lee.R⃗ᵀ[t] etc.
+            ℑⁿˡ         = Spline1D(x⃗, nᶠ; k=3, bc="extrapolate")
+            ℑⁿʰ         = Spline1D(x⃗, nʰ; k=3, bc="extrapolate")
+            𝓃₁          = findlast(nᶠ .< nʰ[Nₓ])
+            𝓃₂          = findfirst(nʰ .> nᶠ[1])
 
+            # E1. Firing threshold 
+            𝕟ᴿ          = nᶠ[1:𝓃₁]
+            𝒾ᴿ          = unique(i -> 𝕟ᴿ[i], 1:length(𝕟ᴿ))
+            𝕩ᴿ          = x⃗[1:𝓃₁]
+            ℑᴿ          = Spline1D(𝕟ᴿ[𝒾ᴿ], 𝕩ᴿ[𝒾ᴿ]; k=3, bc="extrapolate")
+            lee.R⃗[t]    = ℑᴿ(lee.n⃗[t])
+            lee.∂R⃗[t]   = Dierckx.derivative(ℑᴿ, lee.n⃗[t])
+
+            # E2. Hiring threshold 
+            𝕟ᴿⱽ         = nʰ[𝓃₂:end]
+            𝒾ᴿⱽ         = unique(i -> 𝕟ᴿⱽ[i], 1:length(𝕟ᴿⱽ))
+            𝕩ᴿⱽ         = x⃗[𝓃₂:end]
+            ℑᴿⱽ         = Spline1D(𝕟ᴿⱽ[𝒾ᴿⱽ], 𝕩ᴿⱽ[𝒾ᴿⱽ]; k=3, bc="extrapolate")
+            lee.R⃗ᵥ[t]   = min.(ℑᴿⱽ(lee.n⃗[t]), x̅)
+            lee.∂R⃗ᵥ[t]  = Dierckx.derivative(ℑᴿⱽ, lee.n⃗[t])
         end 
 
         #%% 3.2. Forward simulation (t = 1 → T)

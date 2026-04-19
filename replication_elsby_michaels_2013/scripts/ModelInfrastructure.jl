@@ -107,7 +107,11 @@ UsedParameters = fnSetUpParameters()
     f::Float64      = 0         # Workers' contact rate 
     q::Float64      = 1         # Firms' contact rate 
     U::Float64      = 0         # Mass of unemployed 
-    E::Float64      = 1         # Mass of employed 
+    N::Float64      = 1         # Mass of employed
+    S::Float64      = 0         # Mass of searchers
+    M::Float64      = 0         # Mass of matches 
+    A::Float64      = 1         # Marginal product 
+    Y::Float64      = 1         # Production  
 
     # B. Value functions 
     J::Matrix{Float64}          # Value function of a marginal job 
@@ -141,14 +145,16 @@ function fnSetUpEndo(params::ModelParameters)
     Nₓ      = params.Nₓ
     Nₙ      = length(n⃗⁰)
 
-    # C. Allocate & return the structure 
+    # C. 
+
+    # D. Allocate & return the structure 
     # Initialise with zeros, as the VFI will take care of the business 
     return EndogenousVariables(
         θ   = 0.0,
         f   = f⁰,
         q   = q⁰,
         U   = 0.0,
-        E   = 0.0,
+        N   = 0.0,
         Υ   = 0.0,
         n⃗   = n⃗⁰,
         J   = zeros(Nₓ,Nₙ),
@@ -285,50 +291,52 @@ end
 # {·}ᵀ: time-indexed sequences of length T
 @with_kw mutable struct LeeVariables
 
-    # A. Predicted sequences (nth guess) - the "predicted path"
-    q⃗ᵖ::Vector{Float64}             # Predicted job-filling rate path
-    N⃗ᵖ::Vector{Float64}             # Predicted aggregate employment path
-
-    # B. Realised sequences (implied by forward simulation)
-    q⃗ʳ::Vector{Float64}             # Realised job-filling rate path
-    N⃗ʳ::Vector{Float64}             # Realised aggregate employment path
-
-    # C. Time-indexed value functions [the RTM state: index by t, not (N,Θ)]
-    Π̃ᵖ::Vector{Matrix{Float64}}     # Predicted value function sequence {Π̃ₜ}ᵀ
-    Π̃ʳ::Vector{Matrix{Float64}}     # Realised value function sequence {Π̃ₜ}ᵀ
+    # A. Sequences
+    q⃗::Vector{Float64}             # Predicted job-filling rate path
+    N⃗::Vector{Float64}             # Predicted aggregate employment path
+    
+    # B. Time-indexed value functions [the RTM state: index by t, not (N,Θ)]
+    Π̃::Vector{Matrix{Float64}}     # Value function sequence {Π̃ₜ}ᵀ
 
     # D. Time-indexed policy functions
-    R⃗ᵀ::Vector{Vector{Float64}}     # Firing threshold sequence {R̂ₜ}ᵀ
-    R⃗ᵥᵀ::Vector{Vector{Float64}}    # Hiring threshold sequence {R̂ᵥₜ}ᵀ
-    n⃗ᵀ::Vector{Vector{Float64}}     # Employment grid sequence {n⃗ₜ}ᵀ
+    R⃗::Vector{Vector{Float64}}     # Firing threshold sequence {R̂ₜ}ᵀ
+    R⃗ᵥ::Vector{Vector{Float64}}    # Hiring threshold sequence {R̂ᵥₜ}ᵀ
+    n⃗::Vector{Vector{Float64}}     # Employment grid sequence {n⃗ₜ}ᵀ
+    ∂R⃗::Vector{Vector{Float64}}    # Threshold derivative 
+    ∂R⃗ᵥ::Vector{Vector{Float64}}   # Threshold derivative 
 
-    # E. Convergence tracking
+    # D. Convergence tracking
     εᴿᵀᴹ::Float64                   # sup_t |q⃗ᵖ - q⃗ʳ| convergence criterion
 end
 
 # 4. Constructor for Lee variables
 function fnSetUpLee(UsedParameters, Simu; ω = 0.4)
-    @unpack Nₓ, N̅₁, N̅₂               = UsedParameters
-    T                                   = length(Simu.p⃗̂)
-    Nₙ                                  = N̅₁ + N̅₂ - 1      # SS output grid size
+    @unpack Nₓ, N̅₁, N̅₂  = UsedParameters
+    T       = length(Simu.p⃗̂)
+    Nₙ      = N̅₁ + N̅₂ - 1      
 
-    # A. Initialise predicted paths at SS values
-    q⃗ᵖ     = fill(UsedParameters.q̅,  T)
-    N⃗ᵖ     = fill(UsedParameters.L * (1 - 1/UsedParameters.L), T)  
+    # A. Initialise the paths 
+    q⃗       = fill(0.0, T)
+    N⃗       = fill(0.0, T)  
 
     # B. Initialise value function sequences with zeros
-    Π̃ᵖ     = [zeros(Nₓ, Nₙ) for _ in 1:T]
-    Π̃ʳ     = [zeros(Nₓ, Nₙ) for _ in 1:T]
-    R⃗ᵀ     = [zeros(Nₙ)     for _ in 1:T]
-    R⃗ᵥᵀ    = [zeros(Nₙ)     for _ in 1:T]
-    n⃗ᵀ     = [zeros(Nₙ)     for _ in 1:T]
+    Π̃       = [zeros(Nₓ, Nₙ) for _ in 1:T]
+    R⃗       = [zeros(Nₙ)     for _ in 1:T]
+    R⃗ᵥ      = [zeros(Nₙ)     for _ in 1:T]
+    n⃗       = [zeros(Nₙ)     for _ in 1:T]
+    ∂R⃗      = [zeros(Nₙ)     for _ in 1:T]
+    ∂R⃗ᵥ     = [zeros(Nₙ)     for _ in 1:T]
 
     return LeeVariables(
-        q⃗ᵖ  = q⃗ᵖ,  N⃗ᵖ  = N⃗ᵖ,
-        q⃗ʳ  = copy(q⃗ᵖ), N⃗ʳ  = copy(N⃗ᵖ),
-        Π̃ᵖ  = Π̃ᵖ,  Π̃ʳ  = Π̃ʳ,
-        R⃗ᵀ  = R⃗ᵀ,  R⃗ᵥᵀ = R⃗ᵥᵀ, n⃗ᵀ = n⃗ᵀ,
-        εᴿᵀᴹ = Inf
+        q⃗  = q⃗,  
+        N⃗  = N⃗,
+        Π̃  = Π̃,
+        R⃗  = R⃗,  
+        R⃗ᵥ = R⃗ᵥ, 
+        n⃗ = n⃗,
+        εᴿᵀᴹ = Inf,
+        ∂R⃗  = ∂R⃗,
+        ∂R⃗ᵥ =∂R⃗ᵥ
     )
 end
 Lee = fnSetUpLee(UsedParameters, Simu)
