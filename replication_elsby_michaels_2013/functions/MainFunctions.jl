@@ -6,7 +6,7 @@
 
 
 # 1. Compute the steady state equilibrium
-function fSteadyState(params::ModelParameters,endo::EndogenousVariables,p)
+function fSteadyState!(params::ModelParameters,endo::EndogenousVariables,p)
 
     # A. Unpacking business 
     @unpack q̅,q̲         = params 
@@ -24,11 +24,18 @@ function fSteadyState(params::ModelParameters,endo::EndogenousVariables,p)
     f̂           = fUpdatedJobFindingRate(q̂,params)
     fVFI!(params, endo,p,f̂,q̂)
     N̂,Ŷ,Ŝ,M̂,Â   = fAggregation(params, endo, p, f̂,q̂) 
+    
+    # E. Save the results into the structure 
+    endo.Y, endo.S, endo.M, endo.A = Ŷ, Ŝ, M̂, Â
+    endo.q, endo.f = q̂, f̂
+    endo.U = Ŝ / f̂
+    endo.N = N̂
+
+    # E. Print the headline results  
     println("===============================================")
     println("Steady state equilibrium results:")
     println("Employment: $N̂")
     println("Production: $Ŷ")
-    return q̂, f̂, N̂,Ŷ,Ŝ,M̂,Â
 end 
 
 
