@@ -1,0 +1,13 @@
+# Julia
+/Manifest.toml
+
+# Large RTM warm start file
+*.jld2
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
