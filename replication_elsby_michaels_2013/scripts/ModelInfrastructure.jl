@@ -56,7 +56,7 @@
     ρₚ::Float64     = 0.9925                # Productivity persistence 
     σ̃ₚ::Float64     = 0.0275                # Unconditional variance 
     σₚ::Float64     = σ̃ₚ * sqrt(1-ρₚ^2)     # Productivity update variance 
-    Nₚ::Int         = 11                    # Number of Rouwenhorst grids
+    Nₚ::Int         = 7                    # Number of Rouwenhorst grids
     P::Matrix{Float64}                      # Transition probability 
     p⃗::Vector{Float64}                      # Productivity grid  
     Ñₙ::Int         = 7                     # Number of aggregate employment grids
@@ -66,13 +66,13 @@
     δᴿᵀᴹ::Float64   = 1e-4                  # RTM sensitivity 
     δᵍ::Float64     = 1e-5                  # Forward simulation sensitivity 
     ωᵍ::Float64     = 0.3                   # Updating parameter for the forward transition 
-    ωᴿᵀᴹ₁::Float64  = 0.5                   # RTM update: Job-finding rate 
-    ωᴿᵀᴹ₂::Float64  = 0.5                   # RTM update: Employment 
-    ωᴿᵀᴹ₃::Float64  = 0.2                   # RTM update: Value function
+    ωᴿᵀᴹ₁::Float64  = 0.2                   # RTM update: Job-finding rate 
+    ωᴿᵀᴹ₂::Float64  = 0.2                   # RTM update: Employment 
+    ωᴿᵀᴹ₃::Float64  = 0.05                   # RTM update: Value function
 end
 
 # 1. The constructor 
-function fnSetUpParameters(; σ=0.25, Nₓ=45, ρₚ = 0.9925, σ̃ₚ = 0.0275, Nₚ = 11)
+function fnSetUpParameters(; σ=0.25, Nₓ=45, ρₚ = 0.9925, σ̃ₚ = 0.0275, Nₚ = 7)
     # A. Calibrate Pareto
     σ̂               = 1.04 * σ
     ξ               = 1 + sqrt(1 + (1 / σ̂)^2)
@@ -128,6 +128,7 @@ UsedParameters = fnSetUpParameters()
     Υ::Float64                  # Unemployment flow value 
     𝔼Π::Matrix{Float64}         # Expected value of firm value function
     n⃗::Vector{Float64}          # Employment grid
+    n⃗ᵛᶠⁱ::Vector{Float64}       # VFI employment grid
     R⃗::Vector{Float64}          # Firing threshold 
     ∂R⃗::Vector{Float64}         # Its partial derivative 
     R⃗ᵥ::Vector{Float64}         # Hiring threshold 
@@ -164,6 +165,7 @@ function fnSetUpEndo(params::ModelParameters)
         N   = 0.0,
         Υ   = 0.0,
         n⃗   = n⃗⁰,
+        n⃗ᵛᶠⁱ= n⃗⁰,
         J   = zeros(Nₓ,Nₙ),
         Π   = zeros(Nₓ,Nₙ),
         Πᶜ  = zeros(Nₓ,Nₙ),
@@ -203,7 +205,7 @@ Endo    = fnSetUpEndo(UsedParameters)
 end 
 
 # 3. Simulated variables (constructor)
-function fnSetUpSimulated(UsedParameters; T = 52*20, seed = 1997)
+function fnSetUpSimulated(UsedParameters; T = 52*100, seed = 1997)
 
     # A. Unpacking and caring about reproducibility 
     @unpack P, p⃗, Nₚ            = UsedParameters

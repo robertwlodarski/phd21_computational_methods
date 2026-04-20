@@ -235,6 +235,8 @@ function fVFI!(params,endo,p,f,q)
             Πⁿᵉʷ                = zeros(Nₓ, Nₙ)
         end 
     end  
+    endo.Π      = Πⁿᵉʷ
+    endo.n⃗ᵛᶠⁱ   = n⃗
 
     # H. Produce the policy functions of interest
     # H1. Employment policy
