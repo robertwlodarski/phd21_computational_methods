@@ -3,7 +3,7 @@
 # January 2026
 
 ## 1. Packages
-using DelimitedFiles, JLD, DataInterpolations
+using DelimitedFiles, JLD2, DataInterpolations
 using Preferences, Parameters, Accessors, StaticArrays, Adapt, QuantEcon, Printf
 using Base.Cartesian, LinearAlgebra, SparseArrays, LoopVectorization, Interpolations
 using Distributions, Random, StatsBase, FastGaussQuadrature, Optim, Roots, Dierckx
