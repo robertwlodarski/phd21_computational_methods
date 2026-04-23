@@ -4,7 +4,6 @@
 # March 2026
 # Remember to change the number of threads 
 ## 1. Packages & load functions 
-
 using Parameters, Dierckx, Optim, NLsolve, QuantEcon, Plots, LinearAlgebra, Roots, Printf, Interpolations
 Threads.nthreads()
 include("scripts/ModelInfrastructure.jl")
