@@ -18,13 +18,17 @@ function fn⃗(params,p,f,q)
     # A. Unpacking business 
     @unpack η, α, x̲, b, β, c, x̅, s̅ₙ, s̲ₙ, Δₙ,N₁,N₂,N₃,N₄= params
 
-    # B. Define n̲ and n̅
-    n̲       =  s̲ₙ * ( ((1 - η*(1-α)) / (p*x̲*α)) * (b + (1/(1-η)) * (η*β*c*(f/q) + (1 - η*(1-α))*c/q)) )^(-1/(1-α))
-    n̅       = s̅ₙ * ( (1 - η * (1 - α)) / (p * x̅ * α) * (b + (1 / (1 - η)) *  (η * β * f * c / q)) )^(- 1 / (1 - α))
+    # B. Safety checks 
+    inner̲ = (1 - η*(1-α)) / (p*x̲*α) * (b + (1/(1-η)) * (η*β*c*(f/q) + (1 - η*(1-α))*c/q))
+    inner̅ = (1 - η*(1-α)) / (p*x̅*α) * (b + (1/(1-η)) * (η*β*f*c/q))
+    inner̲ = max(inner̲, 1e-12)
+    inner̅ = max(inner̅, 1e-12)
 
-    # C. Define the n grid 
-    return exp.(collect(log(n̲) : Δₙ : log(n̅)))     
-end 
+    # C. Bounds 
+    n̲ = s̲ₙ * inner̲^(-1/(1-α))
+    n̅ = s̅ₙ * inner̅^(-1/(1-α))
+    return exp.(collect(log(n̲) : Δₙ : log(n̅)))
+end
 
 # 2. Bargained wage
 
