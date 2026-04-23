@@ -1,4 +1,4 @@
-\documentclass[12pt]{article}
+\documentclass[12pt, leqno]{article}
 
 %----------------------------------------------------------------
 % 1. DOCUMENT SETUP & TYPOGRAPHY
@@ -14,7 +14,7 @@
 \usepackage{epigraph}                       % For epigraphs
 \usepackage{booktabs}                       % Required for importing nice tables
 \usepackage[ruled,linesnumbered,algo2e]{algorithm2e}
-
+\usepackage{float}
 %----------------------------------------------------------------
 % 2. PAGE LAYOUT & LINKS
 %----------------------------------------------------------------
@@ -102,13 +102,92 @@ In the case of \citet{buera_anatomy_2015}, who provide no replication package an
 In so doing, I like to think that I conduct a \say{stress test}, which I believe the paper does not fully pass.
 When it comes to \citet{elsby_marginal_2013}, which is more widely used and replicated, I translate the model to \texttt{Julia} and use the repeated transition method of \citet{lee_global_2025} to improve on the authors' current methodology \citep{krusell_income_1998}.\\
 
-\textbf{Note}. The code extensively uses \texttt{Julia}'s functionality by allowing for a wide range of \textsc{unicode} characters, such as Greek letters.
-My GitHub page provides further instructions on how to install the special font which allows for using those. 
+\textbf{Note}. The code extensively uses \texttt{Julia}'s functionality by allowing for a wide range of \textsc{unicode} characters, such as Greek letters and vector symbols.
+My GitHub page provides further instructions on how to install the special font need to use these extra characters. 
+Without doing so, the code may be quite difficult to read. 
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
 \section{\citet{elsby_marginal_2013}: Marginal jobs, heterogenous firms}
+\subsection{Overall impressions}
+\citet{elsby_marginal_2013}'s model is quite elegant and parsimonious, as is the case with its original algorithm. 
+Their \texttt{MATLAB} version is quite slow, so I have taken it to \texttt{Julia} to speed it up, on top of making it a bit more concise. 
+This has remained a challenge, as the authors apply many tricks to tackle the non-linearity around the hiring and firing decisions.
+Specifically, they update the labour grid every period, which yields a very clean solution, though throwing sand in the gears of \texttt{Julia}'s engine. 
+This is especially the case in the RTM adaptation of the model, which gets quite slow (still very fun, though). 
+%------------------------------------------------------------------------
+\subsection{Framework}
+In the model, there's a unit mass of firms which are heterogeneous along their idiosyncratic productivity ($x$) dimension. 
+They hire $n$ workers, which is subject to search and matching frictions. 
+The authors adapt \citet{stole_intra-firm_1996}'s bargaining protocol to a setting with diminishing returns. \\
+
+With the hiring costs sunk at the time of negotiations, the marginal surplus is given by:
+\begin{equation}
+    J\bp{n,x}=px F'\bp{n}- w\bp{n,x}- w_n \bp{n,x}n + \beta D\bp{n,x},
+\end{equation}
+where the last term represents the marginal effect of current employment decisions on the firm's value. 
+The firm's decision is to choose the number of workers given $x$ and the previous period's number of employees.
+\begin{equation}
+    n\bp{n_{-1},x}=
+    \begin{cases}
+        R_v^{-1}\bp{x}  & \text{if} \quad x > R_v\bp{n_{-1}} \\
+        n_{-1}          & \text{if} \quad x \in \bs{R\bp{n_{-1}},R_v\bp{n_{-1}}} \\
+        R^{-1}\bp{x}    & \text{if} \quad x < R_v\bp{n_{-1}},
+    \end{cases}
+\end{equation}
+where $R_v\bp{n_{-1}}$ and $R\bp{n_{-1}}$ are hiring and firing policies. 
+$n\bp{n_{-1},x}$'s piece-wise nature is what makes the computation a challenge. 
+The rest of the model is standard. 
+%------------------------------------------------------------------------
+\subsection{Steady state}
+
+Algorithm \ref{alg:em_ss} outlines how the steady state equilibrium is calculated. 
+The repeated cubic interpolations (necessitated by the ever-adjusting labour grid, $\mathcal{N}$) are the algorithm's main bottleneck.
+Still, the convergence comes quickly, after around $3-8$ seconds. 
+Table \ref{tab:em_ss_summary} compares my replication with \citet{elsby_marginal_2013}'s results.
+
+
+\begin{table}[H] \centering
+    \caption{Steady state equilibrium}
+    \label{tab:em_ss_summary}
+    \input{../replication_elsby_michaels_2013/tables/ss_table.tex}
+\end{table}
+%------------------------------------------------------------------------
+\subsection{Aggregate uncertainty: Repeated transition method}
+
+Algorithm \ref{alg:em_rtm_agg} outlines the application of the RTM to this model \citep{lee_global_2025}.
+
+\begin{figure}[H]\centering
+    \caption{Simulated and estimated variable paths}
+    \label{fig:em_simu}
+    \includegraphics[width=\columnwidth]{../replication_elsby_michaels_2013/plots/simulated_paths.pdf}
+    \begin{minipage}{\columnwidth}
+    \scriptsize
+    \textit{Notes:} The figure plots simulated paths of aggregate productivity $p_t$, 
+    employment $N_t$, and the job-filling rate $q_t$ from the RTM solution \citep{lee_global_2025}. 
+    The thin lines denote weekly values while the bold lines denote the HP-filtered trend with smoothing parameter $\lambda = 100{,}000$,
+    which matches \citet{elsby_marginal_2013}'s approach. 
+    The shaded regions indicate episodes in which aggregate productivity remains below its steady-state value for at least two consecutive quarters, 24 weeks (take it, NBER).
+    \end{minipage}
+\end{figure}
+
+\begin{table}[H] \centering
+    \caption{Elasticities}
+    \label{tab:em_elasticities}
+    \input{../replication_elsby_michaels_2013/tables/elasticity_table.tex}
+\end{table}
+
+\begin{figure}[H]\centering
+    \caption{Beveridge curve}
+    \label{fig:em_simu}
+    \includegraphics[width=0.8\columnwidth]{../replication_elsby_michaels_2013/plots/beveridge_curve.pdf}
+    
+    \begin{minipage}{\columnwidth}
+    \scriptsize
+    \textit{Notes:} 
+\end{minipage}
+\end{figure}
 
 %------------------------------------------------------------------------
 %------------------------------------------------------------------------
@@ -117,7 +196,9 @@ My GitHub page provides further instructions on how to install the special font 
 \subsection{Overall impression}
 Having initially treated the paper as a potential \say{easy win,} I have been humbled by the model's fragility. 
 The authors' results cannot be fully replicated, which I believe to be mostly attributable to the framework being extremely sensitive to minor changes to the productivity process. 
-I also suspect that \citet{buera_anatomy_2015} use more tricks to find the steady state solution reported in the paper, especially given that the described procedure is a baseline approach to solve the \citet{aiyagari_uninsured_1994} class of models.
+I also suspect that \citet{buera_anatomy_2015} use more tricks to find the MIT shock paths reported in the paper, especially given that the described procedure is a baseline approach to solve the \citet{aiyagari_uninsured_1994} class of models.
+Needless to say, I have learnt a lot while working on this model. 
+
 %------------------------------------------------------------------------
 \subsection{Framework}
 The model features agents who are heterogeneous along two dimensions, their wealth ($a$) and entrepreneurial productivity ($z$).
@@ -141,34 +222,182 @@ Entrepreneur $\bp{a,z}$ earns the following profit:
         \text{s.t} \; \; & k = \max \bc{k^\star, \lambda a},
     \end{aligned}
 \end{equation}
+where $\lambda$ introduces the collateral constraint. 
 
 \subsection{Steady state}
 
 Algorithm \ref{alg:buera_ss} fleshes out \citet{buera_anatomy_2015}'s steady state solution approach.
-While pedagogically clean, the method is relatively inefficient -- I keep using it to remain faithful to the paper. 
-To fully test the model's performance, I allow for two methods of solving the value function iteration routine.
+While pedagogically clean, the method is relatively inefficient -- I keep using it to remain faithful to the paper.
+Table \ref{tab:buera_ss} summarises how my replication fares against the authors' values. 
+While I manage to match the top $10\%$ earnings share, the establishment exit rate, and the credit market instruments to non-financial assets,
+I struggle with the real interest rate and the top $10\%$ employment share. 
+
+\begin{table}[H]
+    \caption{Comparing data, original model, and replication}
+    \label{tab:buera_ss}
+    \input{../replication_buera_et_al_2015/tables/calibration.tex}
+\end{table}
+
+In my experiments, I find that this is likely attributable to the construction of the productivity grid.
+\citet{buera_anatomy_2015} discuss the construction process in the paper's appendix, where they outline the manual procedure employed to construct the Pareto grid.
+If they instead use a standard package that treats the grid's last two points even slightly more differently, the two mismatched moments behave slightly better (still not perfectly in line with the Table \ref{tab:buera_ss}).\footnote{
+    I have tried and failed to backward-engineer an \say{ideal} productivity process that would simultaneously match the moments and instructions.
+    The only time when I got closer was when I significantly departed from their procedure.
+} 
+The idea is that even small adjustments to the grid lead to a smaller average size of the most productive establishments. 
+This in turn leads to lower savings of their owners, pushing up the real interest rate.
+If I \say{naively} run the model with $40-80$ wealth grid points or with a very restrictive value for the maximum wealth, the result also gets closer to that of \citet{buera_anatomy_2015}.
+\\
+
+To further test the model's performance, I compare and contrast two alternative methods of solving the value function iteration routine.
 First, I search for a solution on the grid, which is set to have $40$ and $400$ points for productivity and assets respectively.\footnote{
     \citet{buera_anatomy_2015} only specify the size of the productivity grid, which I keep unchanged in all experiments. 
-}  
+    The wealth grid does not matter as much as I expected - the presented steady state result remains relatively similar for all values of $N_a \geq 100$.
+    }  
 This is fast, but potentially less accurate, with the VFI routine frequently stalling for lower asset grid sizes.
 Second, I search for a solution using the interpolated values (for both $V^e$ and $V^w$ to avoid smoothing over the kink).
+The values are essentially the same. 
+
+%------------------------------------------------------------------------
+\subsection{Aggregate dynamics: A MIT shock}
+
+Algorithm \ref{alg:mit_shock} sets out the method for computing the MIT shock-induced transition dynamics.
+The algorithm consists of three nested loops, which I have found to be quite sensitive. 
+Following \citet{buera_anatomy_2015}, I set the number of periods to $70$ (like them, I have also tested the model for $100$ periods) and a path for the borrowing constraint shock.
+In what follows, I argue that a solution matching the paper's results is near-impossible to find, which I believe to stem from the algorithm's construction. \\
+
+Specifically, for price $x \in \bc{w,\tau,r}$, they find $x^{\text{implied}}$ -- the value clearing the market at the current distribution, which is used to update the next guess. 
+Consider the $r^{\bp{n}}$ guess. 
+Given $r^{\bp{n}}$, we compute the distribution, $G^{\star \bp{n}}\bp{\cdot}$, and the prices, $\tau^{\star \bp{n}}$ and $w^{\star \bp{n}}$.
+From there, we get $r^{\text{implied}, \bp{n}}$, which informs $r^{\bp{n+1}}$ via convex updating. 
+The real interest rate, like all prices, informs the occupational policy, which may jump in certain areas of $r$'s support, making the result jittery.
+This is precisely what is happening in Figure \ref{fig:mit_shock}, which shows the convergence pattern for $r$.
+
+\begin{figure}[H]\centering
+    \caption{MIT shock convergence dashboard}
+    \label{fig:mit_shock}
+    \includegraphics[width=\columnwidth]{../replication_buera_et_al_2015/plots/MIT_convergence.jpeg}
+\end{figure}
+
+It's worth bearing in mind that this problem happens for all variables, not just $r$, making the solution rather unstable.
+A few alternative solutions are possible:
+\begin{enumerate}
+    \item an enormous asset grid ($N_a > 1000$)
+    \item smart interpolations combined with letting the code run for hours or days\footnote{
+        Given time constraints, I opted against using cubic interpolations while solving this model.
+        The steady state equilibrium is the same whether I solve it on the grid or interpolate everything that moves.
+        At the same time, using any interpolation method massively increases the time needed to solve the model.
+        Another common problem with non-linear interpolation is that extra care needs to be exercised to avoid \say{unreasonable} numbers. 
+    }
+    \item the endogenous grid method (which is what the authors definitely didn't do according to the paper)
+    \item another solver (at least for $w$ and $\tau$)
+    \item non-convex updating\footnote{
+        This is what I did in one experiment a few weeks ago. 
+        It didn't move things much further, but it was generally more well-behaved.
+    }
+    \item adapting the grid during every iteration to capture the area around the kink.
+\end{enumerate}
+
+Figure \ref{fig:mit_statics} replicates Figures 6 and 7 from \citet{buera_anatomy_2015}'s work. 
+What honestly surprises me that this less than perfect solution is not far when it comes to the output, TFP, unemployment, wages, and interest rate.
+The main difference lies in the investment rate, which is considerably off (I find the shock's persistence much higher).
+For a solution that works mostly thanks to the very generous exit conditions and my weariness, this isn't bad. 
+
+\begin{figure}[H]\centering
+    \caption{MIT shock transitional dynamics}
+    \label{fig:mit_statics}
+    \includegraphics[width=\columnwidth]{../replication_buera_et_al_2015/plots/MIT_transitions.pdf}
+\end{figure}
+
+
+
+\printbibliography
+
+\appendix
+
+\section{\citet{elsby_marginal_2013}'s algorithms}
+
+\begin{algorithm2e}[H]
+\caption{Stationary equilibrium \citep{elsby_marginal_2013}  } \label{alg:em_ss}
+\KwIn{Parameters $\bp{\eta,\alpha,\beta,c,b,\mu,\varepsilon,\lambda,\xi}$, aggregate productivity $p$, grids $\bp{\mathcal{X},\mathcal{N}}$}
+\KwOut{Job-filling rate $q^\star$, policies $(R(n),R_v(n))$, aggregates $(N,Y,S,M)$}
+\BlankLine
+\tcp{Outer loop: find $q^\star$ via bisection}
+\Repeat{$|N^{\mathrm{implied}} - N^{\mathrm{aggregated}}| < \varepsilon_q$}{
+  Compute $f = \mu\left(\frac{q}{\mu}\right)^{(\varepsilon-1)/\varepsilon}$ from the matching function\;
+  Construct endogenous grid $\mathcal{N}\bp{p,f,q}$ and wage matrix $W\bp{x,n}$\;
+  \BlankLine
+  \tcp{Stage 1: Coarse VFI on initial grid}
+  Initialize $\Pi^0\bp{x,n}$ from scaled flow profits\;
+  \Repeat{$\frac{\|\Pi^{k+1}-\Pi^k\|_\infty}{\|\Pi^k\|_\infty} < \delta^{\mathrm{ref}}$}{
+    Compute $\Pi^c = \Pi^{\mathrm{flow}} + \beta\,\mathbb{E}_x\bs{\Pi^k}$\;
+    Solve $n^f\bp{x} = \arg\max_n \Pi^c\bp{x,n}$ and $n^h\bp{x} = \arg\max_n \Pi^c\bp{x,n} - \frac{c}{q}n$\;
+    Set $\Pi^{k+1}\bp{x,n} = \max\bc{\Pi^f\bp{x,n},\;\Pi^h\bp{x,n},\;\Pi^c\bp{x,n}}$\;
+  }
+  \tcp{Stage 2: Refined VFI on adaptive grid}
+  Refine $\mathcal{N}$ around $\bs{n^h_1, n^f_{N_x}}$; interpolate $\E_x\bs{\Pi}$ onto new grid\;
+  \For{$s = 1,\ldots,\bar{n}^s$}{
+    Solve firing/hiring via (cubic) spline optimisation over $n$\;
+    Update $\Pi^{k+1}$ as above\;
+  }
+  \BlankLine
+  \tcp{Extract policies and aggregate}
+  Invert $n^f\bp{x} \to R\bp{n}$ and $n^h\bp{x} \to R_v\bp{n}$ via spline interpolation\;
+  Compute $N$, $S$, and $U$\;
+  Update $q$ by bisection on residual $N^{\mathrm{implied}} - N$\;
+}
+\end{algorithm2e}
+
+
+\begin{algorithm2e}[H]
+\caption{Aplication of \citet{lee_global_2025}'s RTM to \citet{elsby_marginal_2013}'s model} \label{alg:em_rtm_agg}
+\KwIn{Parameters, shock path $\bc{p_t}_{t=1}^T$, tolerance $\delta_{RTM}$, relaxation weights $\bp{\omega_1, \omega_2, \omega_3}$}
+\KwOut{Equilibrium paths $\bc{q_t^\star, N_t^\star, \Pi_t^\star, R_t^\star, R_{vt}^\star}$}
+\BlankLine
+Initialise predicted paths $\bc{q_t, N_t, \Pi_t}_{t=1}^T$ from steady state or warm start\;
+\Repeat{$\varepsilon_{RTM} < \delta_{RTM}$}{
+  \tcp{A. Backward induction}
+  \For{$t = T$ \KwTo $1$}{
+    Construct $\mathbb{E}_t \bs{\tilde{\Pi}_{t+1}}$ via interpolation matching counterfactual $N$ and $p_{t+1}$ states\;
+    Solve Bellman equation for target firm value $\Pi_t^{\text{imp}}$\;
+    Extract firing threshold $R_t$ and hiring threshold $R_{vt}$\;
+  }
+  
+  \tcp{B. Forward simulation station}
+  Set $N_0$ to initial steady-state employment\;
+  \For{$t = 1$ \KwTo $T$}{
+    Compute aggregate separations $S_t$ and matches $M_t$ using thresholds $\bp{R_t, R_{vt}}$\;
+    Update employment: $N_{t}^{\text{imp}} = N_{t-1} + M_t - S_t$\;
+    Find implied job finding rate $f_t$ and compute implied tightness $q_t^{\text{imp}}$\;
+    Clamp $q_t^{\text{imp}}$ bounds and store implied paths\;
+  }
+  
+  \tcp{C. Convergence and dampening}
+  $\varepsilon_{RTM} \leftarrow \max_t |q_t - q_t^{\text{imp}}|$\;
+  Update $q_t \leftarrow \omega_1 q_t^{\text{imp}} + \bp{1 - \omega_1} q_t$\;
+  Update $N_t \leftarrow \omega_2 N_t^{\text{imp}} + \bp{1 - \omega_2} N_t$\;
+  Update $\Pi_t \leftarrow \omega_3 \Pi_t^{\text{imp}} + \bp{1 - \omega_3} \Pi_t$\;
+}
+\end{algorithm2e}
+
+\section{\citet{buera_anatomy_2015} algorithms}
 
 \begin{algorithm2e}[H]
 \caption{Stationary equilibrium \citep{buera_anatomy_2015}} \label{alg:buera_ss}
-\KwIn{Parameters $(\sigma,\beta,\alpha,\theta,\delta,\psi,\eta,\lambda)$, grids $\bp{\mathcal{A},\mathcal{Z},\mathcal{L}}$, tolerances $\bp{\delta_r,\delta_\tau,\delta_w,\delta_V, \delta_d}$}
-\KwOut{Prices $(r^\star,w^\star,\tau^\star)$, policies $(c,a',k,l,o)$, distribution $G^\star$, unemployment $U^\star$}
+\KwIn{Parameters $\bp{\sigma,\beta,\alpha,\theta,\delta,\psi,\eta,\lambda}$, grids $\bp{\mathcal{A},\mathcal{Z},\mathcal{L}}$, tolerances $\bp{\delta_r,\delta_\tau,\delta_w,\delta_V, \delta_d}$}
+\KwOut{Prices $\bp{r^\star,w^\star,\tau^\star}$, policies $\bp{c,a',k,l,o}$, distribution $G^\star$, unemployment $U^\star$}
 \BlankLine
 Initialize $r^{(0)}$\;
 \Repeat{$|K^d - K^s| < \varepsilon_r$}{
-  Initialize $\tau^{(0)}$\;
+  Initialize $\tau^{\bp{0}}$\;
   \Repeat{$|\tau^{\text{new}} - \tau| < \varepsilon_\tau$}{
-    Initialize $w^{(0)}$\;
+    Initialize $w^{\bp{0}}$\;
     \Repeat{$|L^d - L^s| < \varepsilon_w$}{
       \tcp{Value function iteration}
       \Repeat{$\|V^{n+1}-V^n\|_\infty < \varepsilon_V$}{
         Compute $v^W(a,z)$ from Equation \eqref{eq:buera_value}\;
         Compute $v^E(a,z)$ from Equation \eqref{eq:buera_value} using static FOCs for $(k,l)$ s.t.\ $k\le\lambda a$ from Equation \eqref{eq:buera_profit}\;
-        Set $v(a,z)=\max\{v^W,v^E\}$; record $o(a,z)$, $a'(a,z)$\;
+        Set $v(a,z)=\max\bc{v^W,v^E}$; record $o(a,z)$, $a'(a,z)$\;
       }
       \tcp{Forward simulation}
       Iterate $G_{n+1} = \mathcal{T}(G_n; a',o,\psi,\mu)$ until $\|G_{n+1}-G_n\|<\varepsilon_G$\;
@@ -183,7 +412,52 @@ Initialize $r^{(0)}$\;
 }
 \end{algorithm2e}
 
-\printbibliography
+
+\begin{algorithm2e}[H]
+\caption{MIT shock transition algorithm \citep{buera_anatomy_2015} } \label{alg:mit_shock}
+\KwIn{Parameters, shock paths $\bc{A_t, \lambda_t}_{t=1}^T$, steady state $\bc{V_{ss}, G_{ss}, \dots}$.}
+\KwOut{Price paths $\bc{r_t^\star, w_t^\star, \tau_t^\star}$, distributions $G_t^\star$, aggregates}
+\BlankLine
+Initialise paths $r_t^{\bp{0}}, w_t^{\bp{0}}, \tau_t^{\bp{0}}$ for $t \in 1,\dots,T$\;
+\Repeat{$\max_t |K_t^d - K_t^s| < \varepsilon_r$}{
+  Initialise $\tau_t^{\bp{0}}$\;
+  \Repeat{$\max_t |\tau_t^{\text{new}} - \tau_t| < \varepsilon_\tau$}{
+    Initialise $w_t^{\bp{0}}$\;
+    \Repeat{$\max_t |L_t^d - L_t^s| < \varepsilon_l$}{
+      \tcp{A. Backward logic}
+      Set $V_T, o_T, k_T, a'_T, l_T$ to steady state\;
+      \For{$t = T-1$ \KwTo $1$}{
+        Compute expected value $\mathbb{E}V_t$ using $V_{t+1}$\;
+        Solve static policies for workers and entrepreneurs\;
+        Solve for asset choices $a'_t$, occupational choice $o_t$, and $V_t$\;
+      }
+      \tcp{B. Forward simulation}
+      Set $G_1 = G_{ss}$\;
+      \For{$t = 1$ \KwTo $T-1$}{
+        Compute job destruction and labour market aggregates\;
+        Compute transition flows\;
+        Update distribution $G_{t+1}$\;
+      }
+      \tcp{C1. Labour market residual}
+      \For{$t = 1$ \KwTo $T$}{
+        Compute aggregates $L_t^d$ and $L_t^s$\;
+        Find implied $w_t$ by bisection to clear labour market\;
+        Update $w_t \leftarrow \eta_l w_t^{\text{implied}} + \bp{1-\eta_l}w_t$\;
+      }
+    }
+    \tcp{C2. Government balance}
+    Set $\tau_t^{\text{new}} = w_t U_t$ for all $t$\;
+    Update $\tau_t \leftarrow \eta_\tau \tau_t^{\text{new}} + \bp{1-\eta_\tau}\tau_t$\;
+  }
+  \tcp{C3. Convex updating for MIT shock}
+  \For{$t = 1$ \KwTo $T$}{
+    Compute aggregates $K_t^d$ and $K_t^s$\;
+    Find implied $r_t$ by bisection to clear capital market\;
+    Update $r_t \leftarrow \eta_c r_t^{\text{implied}} + \bp{1-\eta_c}r_t$\;
+  }
+}
+\end{algorithm2e}
+
 \end{document}
 
 

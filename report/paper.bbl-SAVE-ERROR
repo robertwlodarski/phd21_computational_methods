@@ -1,0 +1,337 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{nyt/global//global/global/global}
+    \entry{aiyagari_uninsured_1994}{article}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=28c77d69524694c36b446bb6d236a745}{%
+           family={Aiyagari},
+           familyi={A\bibinitperiod},
+           given={S.\bibnamedelimi R.},
+           giveni={S\bibinitperiod\bibinitdelim R\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \strng{namehash}{28c77d69524694c36b446bb6d236a745}
+      \strng{fullhash}{28c77d69524694c36b446bb6d236a745}
+      \strng{fullhashraw}{28c77d69524694c36b446bb6d236a745}
+      \strng{bibnamehash}{28c77d69524694c36b446bb6d236a745}
+      \strng{authorbibnamehash}{28c77d69524694c36b446bb6d236a745}
+      \strng{authornamehash}{28c77d69524694c36b446bb6d236a745}
+      \strng{authorfullhash}{28c77d69524694c36b446bb6d236a745}
+      \strng{authorfullhashraw}{28c77d69524694c36b446bb6d236a745}
+      \field{sortinit}{A}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{issn}{0033-5533, 1531-4650}
+      \field{journaltitle}{The Quarterly Journal of Economics}
+      \field{month}{8}
+      \field{number}{3}
+      \field{title}{Uninsured {Idiosyncratic} {Risk} and {Aggregate} {Saving}}
+      \field{urlday}{17}
+      \field{urlmonth}{10}
+      \field{urlyear}{2025}
+      \field{volume}{109}
+      \field{year}{1994}
+      \field{urldateera}{ce}
+      \field{pages}{659\bibrangedash 684}
+      \range{pages}{26}
+      \verb{doi}
+      \verb 10.2307/2118417
+      \endverb
+      \verb{file}
+      \verb Submitted Version:C\:\\Users\\rjw240\\Zotero\\storage\\7DYN6VPE\\Aiyagari - 1994 - Uninsured Idiosyncratic Risk and Aggregate Saving.pdf:application/pdf
+      \endverb
+      \verb{urlraw}
+      \verb https://academic.oup.com/qje/article-lookup/doi/10.2307/2118417
+      \endverb
+      \verb{url}
+      \verb https://academic.oup.com/qje/article-lookup/doi/10.2307/2118417
+      \endverb
+    \endentry
+    \entry{buera_anatomy_2015}{article}{}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=719290305a74f0d5d640352b29ac2d40}{%
+           family={Buera},
+           familyi={B\bibinitperiod},
+           given={Francisco\bibnamedelima J.},
+           giveni={F\bibinitperiod\bibinitdelim J\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=53f12c52a5cf61075a810aec5ce9d4c9}{%
+           family={Fattal\bibnamedelima Jaef},
+           familyi={F\bibinitperiod\bibinitdelim J\bibinitperiod},
+           given={Roberto\bibnamedelima N.},
+           giveni={R\bibinitperiod\bibinitdelim N\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=650361d953fa030c26579098f1045521}{%
+           family={Shin},
+           familyi={S\bibinitperiod},
+           given={Yongseok},
+           giveni={Y\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \strng{namehash}{fa6506022c6dc4d7dff4b3f790174bfe}
+      \strng{fullhash}{ff6ecf80186fa0ebf1cdfefb5312271e}
+      \strng{fullhashraw}{ff6ecf80186fa0ebf1cdfefb5312271e}
+      \strng{bibnamehash}{ff6ecf80186fa0ebf1cdfefb5312271e}
+      \strng{authorbibnamehash}{ff6ecf80186fa0ebf1cdfefb5312271e}
+      \strng{authornamehash}{fa6506022c6dc4d7dff4b3f790174bfe}
+      \strng{authorfullhash}{ff6ecf80186fa0ebf1cdfefb5312271e}
+      \strng{authorfullhashraw}{ff6ecf80186fa0ebf1cdfefb5312271e}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{shorttitle}
+      \field{issn}{10942025}
+      \field{journaltitle}{Review of Economic Dynamics}
+      \field{month}{1}
+      \field{number}{1}
+      \field{shorttitle}{Anatomy of a credit crunch}
+      \field{title}{Anatomy of a credit crunch: {From} capital to labor markets}
+      \field{urlday}{17}
+      \field{urlmonth}{4}
+      \field{urlyear}{2026}
+      \field{volume}{18}
+      \field{year}{2015}
+      \field{urldateera}{ce}
+      \field{pages}{101\bibrangedash 117}
+      \range{pages}{17}
+      \verb{doi}
+      \verb 10.1016/j.red.2014.11.001
+      \endverb
+      \verb{file}
+      \verb Submitted Version:C\:\\Users\\rjw240\\Zotero\\storage\\DW92LJHE\\Buera et al. - 2015 - Anatomy of a credit crunch From capital to labor markets.pdf:application/pdf
+      \endverb
+      \verb{urlraw}
+      \verb https://linkinghub.elsevier.com/retrieve/pii/S1094202514000714
+      \endverb
+      \verb{url}
+      \verb https://linkinghub.elsevier.com/retrieve/pii/S1094202514000714
+      \endverb
+    \endentry
+    \entry{elsby_marginal_2013}{article}{}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=8870028ea8d2e89a4230154522f956b1}{%
+           family={Elsby},
+           familyi={E\bibinitperiod},
+           given={Michael\bibnamedelimb W.\bibnamedelimi L},
+           giveni={M\bibinitperiod\bibinitdelim W\bibinitperiod\bibinitdelim L\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=f856ef5955648f1122d93257234c91ae}{%
+           family={Michaels},
+           familyi={M\bibinitperiod},
+           given={Ryan},
+           giveni={R\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \strng{namehash}{cff9a1159b8a10d9cefa741fa8521df4}
+      \strng{fullhash}{cff9a1159b8a10d9cefa741fa8521df4}
+      \strng{fullhashraw}{cff9a1159b8a10d9cefa741fa8521df4}
+      \strng{bibnamehash}{cff9a1159b8a10d9cefa741fa8521df4}
+      \strng{authorbibnamehash}{cff9a1159b8a10d9cefa741fa8521df4}
+      \strng{authornamehash}{cff9a1159b8a10d9cefa741fa8521df4}
+      \strng{authorfullhash}{cff9a1159b8a10d9cefa741fa8521df4}
+      \strng{authorfullhashraw}{cff9a1159b8a10d9cefa741fa8521df4}
+      \field{sortinit}{E}
+      \field{sortinithash}{8da8a182d344d5b9047633dfc0cc9131}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{This paper introduces a notion of firm size into a search and matching model with endogenous job destruction. The outcome is a rich, yet analytically tractable framework that can be used to analyze a broad set of features of both the cross-section and aggregate dynamics of the labor market. The model provides a coherent account of the distributions of employer size and employment growth across establishments, the amplitude and propagation of cyclical fluctuations in worker flows, the negative comovement of unemployment and vacancies, and the dynamics of the distribution of employer size over the business cycle. (JEL E24, E32, J63, J64)}
+      \field{issn}{1945-7707, 1945-7715}
+      \field{journaltitle}{American Economic Journal: Macroeconomics}
+      \field{month}{1}
+      \field{number}{1}
+      \field{title}{Marginal {Jobs}, {Heterogeneous} {Firms}, and {Unemployment} {Flows}}
+      \field{urlday}{17}
+      \field{urlmonth}{4}
+      \field{urlyear}{2026}
+      \field{volume}{5}
+      \field{year}{2013}
+      \field{urldateera}{ce}
+      \field{pages}{1\bibrangedash 48}
+      \range{pages}{48}
+      \verb{doi}
+      \verb 10.1257/mac.5.1.1
+      \endverb
+      \verb{file}
+      \verb Full Text:C\:\\Users\\rjw240\\Zotero\\storage\\FGLD22JT\\Elsby and Michaels - 2013 - Marginal Jobs, Heterogeneous Firms, and Unemployment Flows.pdf:application/pdf
+      \endverb
+      \verb{urlraw}
+      \verb https://pubs.aeaweb.org/doi/10.1257/mac.5.1.1
+      \endverb
+      \verb{url}
+      \verb https://pubs.aeaweb.org/doi/10.1257/mac.5.1.1
+      \endverb
+    \endentry
+    \entry{krusell_income_1998}{article}{}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=8b0641dea388438dc1762be628be0d0f}{%
+           family={Krusell},
+           familyi={K\bibinitperiod},
+           given={Per},
+           giveni={P\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=dbd3e5198ab47a60c6038937c54dbf14}{%
+           family={Smith},
+           familyi={S\bibinitperiod},
+           given={Anthony\bibnamedelima A.},
+           giveni={A\bibinitperiod\bibinitdelim A\bibinitperiod},
+           givenun=0,
+           suffix={Jr.},
+           suffixi={J\bibinitperiod},
+           suffixun=0}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \strng{namehash}{96b42cf1a6fefd197f5897b487c76d95}
+      \strng{fullhash}{96b42cf1a6fefd197f5897b487c76d95}
+      \strng{fullhashraw}{96b42cf1a6fefd197f5897b487c76d95}
+      \strng{bibnamehash}{96b42cf1a6fefd197f5897b487c76d95}
+      \strng{authorbibnamehash}{96b42cf1a6fefd197f5897b487c76d95}
+      \strng{authornamehash}{96b42cf1a6fefd197f5897b487c76d95}
+      \strng{authorfullhash}{96b42cf1a6fefd197f5897b487c76d95}
+      \strng{authorfullhashraw}{96b42cf1a6fefd197f5897b487c76d95}
+      \field{sortinit}{K}
+      \field{sortinithash}{c02bf6bff1c488450c352b40f5d853ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{issn}{0022-3808, 1537-534X}
+      \field{journaltitle}{Journal of Political Economy}
+      \field{month}{10}
+      \field{number}{5}
+      \field{title}{Income and {Wealth} {Heterogeneity} in the {Macroeconomy}}
+      \field{urlday}{10}
+      \field{urlmonth}{10}
+      \field{urlyear}{2025}
+      \field{volume}{106}
+      \field{year}{1998}
+      \field{urldateera}{ce}
+      \field{pages}{867\bibrangedash 896}
+      \range{pages}{30}
+      \verb{doi}
+      \verb 10.1086/250034
+      \endverb
+      \verb{urlraw}
+      \verb https://www.journals.uchicago.edu/doi/10.1086/250034
+      \endverb
+      \verb{url}
+      \verb https://www.journals.uchicago.edu/doi/10.1086/250034
+      \endverb
+    \endentry
+    \entry{lee_global_2025}{unpublished}{}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=b55afac3e47a65c00a10600100ecb361}{%
+           family={Lee},
+           familyi={L\bibinitperiod},
+           given={Hanbaek},
+           giveni={H\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{b55afac3e47a65c00a10600100ecb361}
+      \strng{fullhash}{b55afac3e47a65c00a10600100ecb361}
+      \strng{fullhashraw}{b55afac3e47a65c00a10600100ecb361}
+      \strng{bibnamehash}{b55afac3e47a65c00a10600100ecb361}
+      \strng{authorbibnamehash}{b55afac3e47a65c00a10600100ecb361}
+      \strng{authornamehash}{b55afac3e47a65c00a10600100ecb361}
+      \strng{authorfullhash}{b55afac3e47a65c00a10600100ecb361}
+      \strng{authorfullhashraw}{b55afac3e47a65c00a10600100ecb361}
+      \field{sortinit}{L}
+      \field{sortinithash}{7c47d417cecb1f4bd38d1825c427a61a}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Global non-linear solutions in sequence space and the generalised transition function}
+      \field{year}{2025}
+    \endentry
+    \entry{stole_intra-firm_1996}{article}{}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=345282bdb7ab7d492606a9ec624ec979}{%
+           family={Stole},
+           familyi={S\bibinitperiod},
+           given={Lars\bibnamedelima A.},
+           giveni={L\bibinitperiod\bibinitdelim A\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=c809985823e07bc0883718663b5e1402}{%
+           family={Zwiebel},
+           familyi={Z\bibinitperiod},
+           given={Jeffrey},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{6609d28bfe0ba2146197b60414ef8b8a}
+      \strng{fullhash}{6609d28bfe0ba2146197b60414ef8b8a}
+      \strng{fullhashraw}{6609d28bfe0ba2146197b60414ef8b8a}
+      \strng{bibnamehash}{6609d28bfe0ba2146197b60414ef8b8a}
+      \strng{authorbibnamehash}{6609d28bfe0ba2146197b60414ef8b8a}
+      \strng{authornamehash}{6609d28bfe0ba2146197b60414ef8b8a}
+      \strng{authorfullhash}{6609d28bfe0ba2146197b60414ef8b8a}
+      \strng{authorfullhashraw}{6609d28bfe0ba2146197b60414ef8b8a}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{issn}{00346527}
+      \field{journaltitle}{The Review of Economic Studies}
+      \field{month}{7}
+      \field{number}{3}
+      \field{title}{Intra-{Firm} {Bargaining} under {Non}-{Binding} {Contracts}}
+      \field{urlday}{23}
+      \field{urlmonth}{4}
+      \field{urlyear}{2026}
+      \field{volume}{63}
+      \field{year}{1996}
+      \field{urldateera}{ce}
+      \field{pages}{375}
+      \range{pages}{1}
+      \verb{doi}
+      \verb 10.2307/2297888
+      \endverb
+      \verb{urlraw}
+      \verb https://academic.oup.com/restud/article-lookup/doi/10.2307/2297888
+      \endverb
+      \verb{url}
+      \verb https://academic.oup.com/restud/article-lookup/doi/10.2307/2297888
+      \endverb
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+
