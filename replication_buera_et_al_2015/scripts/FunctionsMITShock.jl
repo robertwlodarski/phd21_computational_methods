@@ -505,7 +505,7 @@ function fnSolveMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
         εᵗ  = 1.0 
         η⃗ˡ  = fill(ηˡ, Tᴹᴵᵀ)
         𝓃ᵗ  = 0
-        𝓃̄ᵗ  = 15
+        𝓃̄ᵗ  = 12
 
         # E2. Start the tax loop 
         while εᵗ > δᵗ && 𝓃ᵗ <= 𝓃̄ᵗ
@@ -535,7 +535,7 @@ function fnSolveMIT!(params, mit_endo, ss_endo, A⃗, λ⃗)
                 εˡ      = maximum(abs, ε⃗ᴸ) 
                 
                 # IV. Update
-                @. η⃗ˡ = ifelse(abs(ε⃗ᴸ) < 0.0025, 0.25, ifelse(abs(ε⃗ᴸ) < 0.025, 0.15, ifelse(abs(ε⃗ᴸ) < 0.075, 0.5, ηˡ)))
+                @. η⃗ˡ = ifelse(abs(ε⃗ᴸ) < 0.0025, 0.1, ifelse(abs(ε⃗ᴸ) < 0.025, 0.15, ifelse(abs(ε⃗ᴸ) < 0.075, 0.5, ηˡ)))
                 @. mit_endo.wₜ = η⃗ˡ * w̃ + (1 - η⃗ˡ) * mit_endo.wₜ
 
                 # V. Print a fun message for future generations 
