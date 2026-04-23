@@ -67,7 +67,7 @@
 
     # J. MIT shock settings 
     Tᴹᴵᵀ::Int           = 70                # Shock periods 
-    ηˡ::Float64         = 0.7               # Wage update 
+    ηˡ::Float64         = 0.55              # Wage update 
     ηᵗ::Float64         = 0.5               # Tax update 
     ηᶜ::Float64         = 0.30              # Interest rate update 
 end 
