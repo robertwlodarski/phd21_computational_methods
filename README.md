@@ -44,7 +44,7 @@ On top of the required assignments, I've also used the course methods to solve t
 
 # Replications (graded assignments)
 
-1. Jarosch (2023): Unemployment trap model
+1. Buera et al. (2015): Anatomy of a credit shock 
 2. Elsby and Michaels (2013): Marginal jobs and heterogeneous firms.
 
 # Other items
@@ -55,8 +55,18 @@ No rocket science here.
 - `LaTeX`: I use the standard VSCode for that. You may need to follow their instructions. 
 - `Julia`: I try to translate some assignments to Julia, as well. I recommend using it with VSCode.
 
+### Font installation
+
+This project uses Unicode characters and mathematical symbols to make the Julia code as readable and closely aligned to the formal notation as possible. 
+
+To ensure these special characters render correctly in your IDE or terminal, please install the **JuliaMono** typeface:
+
+* **Download and instructions:** [JuliaMono GitHub Repository](https://github.com/cormullion/juliamono)
+* **Setup:** Once downloaded, install the font files to your system and update your code editor's font family settings to `JuliaMono`.
+
 ## Bibliography
 - S. Rao Aiyagari, "Uninsured Idiosyncratic Risk and Aggregate Saving," *The Quarterly Journal of Economics*, Volume 109, Issue 3, August 1994, Pages 659–684, [https://doi.org/10.2307/2118417]
+- Francisco J. Buera & Roberto Fattal-Jaef & Yongseok Shin,  "Anatomy of a Credit Crunch: From Capital to Labor Markets, *Review of Economic Dynamics*, 2015
 - Elsby, Michael W. L., and Ryan Michaels. 2013. "Marginal Jobs, Heterogeneous Firms, and Unemployment Flows." *American Economic Journal: Macroeconomics* 5 (1): 1–48.
 - Jarosch, G. (2023), Searching for Job Security and the Consequences of Job Loss. *Econometrica*, 91: 903-942. [https://doi.org/10.3982/ECTA14008]
 - Khan, A. and Thomas, J.K. (2008), Idiosyncratic Shocks and the Role of Nonconvexities in Plant and Aggregate Investment Dynamics. *Econometrica*, 76: 395-436. [https://doi.org/10.1111/j.1468-0262.2008.00837.x]
