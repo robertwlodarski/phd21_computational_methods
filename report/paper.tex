@@ -103,7 +103,7 @@ In so doing, I like to think that I conduct a \say{stress test}, which I believe
 When it comes to \citet{elsby_marginal_2013}, which is more widely used and replicated, I translate the model to \texttt{Julia} and use the repeated transition method of \citet{lee_global_2025} to improve on the authors' current methodology \citep{krusell_income_1998}.\\
 
 \textbf{Note}. The code extensively uses \texttt{Julia}'s functionality by allowing for a wide range of \textsc{unicode} characters, such as Greek letters and vector symbols.
-My GitHub page provides further instructions on how to install the special font need to use these extra characters. 
+My \href{https://github.com/robertwlodarski/phd21_computational_methods/tree/main}{GitHub page} provides further instructions on how to install the special font need to use these extra characters. 
 Without doing so, the code may be quite difficult to read. 
 
 %------------------------------------------------------------------------
@@ -114,7 +114,7 @@ Without doing so, the code may be quite difficult to read.
 \citet{elsby_marginal_2013}'s model is quite elegant and parsimonious, as is the case with its original algorithm. 
 Their \texttt{MATLAB} version is quite slow, so I have taken it to \texttt{Julia} to speed it up, on top of making it a bit more concise. 
 This has remained a challenge, as the authors apply many tricks to tackle the non-linearity around the hiring and firing decisions.
-Specifically, they update the labour grid every period, which yields a very clean solution, though throwing sand in the gears of \texttt{Julia}'s engine. 
+Specifically, they update the labour grid every period, which yields a very clean solution, though it throws sand in the gears of \texttt{Julia}'s engine. 
 This is especially the case in the RTM adaptation of the model, which gets quite slow (still very fun, though). 
 %------------------------------------------------------------------------
 \subsection{Framework}
@@ -145,7 +145,7 @@ The rest of the model is standard.
 Algorithm \ref{alg:em_ss} outlines how the steady state equilibrium is calculated. 
 The repeated cubic interpolations (necessitated by the ever-adjusting labour grid, $\mathcal{N}$) are the algorithm's main bottleneck.
 Still, the convergence comes quickly, after around $3-8$ seconds. 
-Table \ref{tab:em_ss_summary} compares my replication with \citet{elsby_marginal_2013}'s results.
+Table \ref{tab:em_ss_summary} compares my replication with the results in \citet{elsby_marginal_2013}.
 
 
 \begin{table}[H] \centering
@@ -157,6 +157,20 @@ Table \ref{tab:em_ss_summary} compares my replication with \citet{elsby_marginal
 \subsection{Aggregate uncertainty: Repeated transition method}
 
 Algorithm \ref{alg:em_rtm_agg} outlines the application of the RTM to this model \citep{lee_global_2025}.
+The model performs quite well in the RTM environment, but given its design, it's very slow.
+What I'm presenting below is the best result coming from a week of experimentation. \\
+
+Figure \ref{fig:em_simu} illustrates the behaviour of the key macro aggregates. 
+The top plot shows the simulated path of productivity.
+The productivity process is the same as the one used by \citet{elsby_marginal_2013}.
+For exposition purposes, I smooth it using the HP filter, picking the smoothing parameter from the original paper.
+I also shade \say{recessions} --- the periods when $p_t$ has been less than the mean for at least two quarters.
+This allows for distinguishing the variables' behaviour in booms and recessions. 
+The remaining two panels flesh out the dynamics of the key macroeconomic aggregates.
+When it comes to the aggregate employment, the direction of travel is satisfactory, but not volatile enough.
+This is entirely attributable to the very small updating weight I've been using in the updating procedure.
+The story is similar, albeit a bit better, for the job-filling rate.
+In what will follow beyond the deadline, I need to tinker with the updating weights for the key variables.
 
 \begin{figure}[H]\centering
     \caption{Simulated and estimated variable paths}
@@ -168,9 +182,14 @@ Algorithm \ref{alg:em_rtm_agg} outlines the application of the RTM to this model
     employment $N_t$, and the job-filling rate $q_t$ from the RTM solution \citep{lee_global_2025}. 
     The thin lines denote weekly values while the bold lines denote the HP-filtered trend with smoothing parameter $\lambda = 100{,}000$,
     which matches \citet{elsby_marginal_2013}'s approach. 
-    The shaded regions indicate episodes in which aggregate productivity remains below its steady-state value for at least two consecutive quarters, 24 weeks (take it, NBER).
+    The shaded regions indicate episodes in which aggregate productivity remains below its steady-state value for at least two consecutive quarters, 24 weeks (take that, NBER).
     \end{minipage}
 \end{figure}
+
+Table \ref{tab:em_elasticities} compares the key variables' estimates of the elasticity with respect to the productivity.
+I'm still way off, which is mostly attributable to the low volatility of the aggregate employment and job-filling rate.
+With the low updating weights, the model stagnated in a very \say{stable} place. 
+
 
 \begin{table}[H] \centering
     \caption{Elasticities}
@@ -178,14 +197,18 @@ Algorithm \ref{alg:em_rtm_agg} outlines the application of the RTM to this model
     \input{../replication_elsby_michaels_2013/tables/elasticity_table.tex}
 \end{table}
 
+
+Figure \ref{fig:em_bc} reproduces \citet{elsby_marginal_2013}'s Beveridge curve.
+Believe it or not, as I have seen multiple runs of the model, this is actually getting closer to what the original version shows. 
+To improve it, I need to find a right set of updating weights that do not make the model stagnate and do not make it explode (I genuinely think it's not an empty set).
+
 \begin{figure}[H]\centering
     \caption{Beveridge curve}
-    \label{fig:em_simu}
+    \label{fig:em_bc}
     \includegraphics[width=0.8\columnwidth]{../replication_elsby_michaels_2013/plots/beveridge_curve.pdf}
-    
     \begin{minipage}{\columnwidth}
     \scriptsize
-    \textit{Notes:} 
+    \textit{Notes:} Variables are demeaned to match the construction of Figure 5 in \citet{elsby_marginal_2013}.
 \end{minipage}
 \end{figure}
 
@@ -227,7 +250,7 @@ where $\lambda$ introduces the collateral constraint.
 \subsection{Steady state}
 
 Algorithm \ref{alg:buera_ss} fleshes out \citet{buera_anatomy_2015}'s steady state solution approach.
-While pedagogically clean, the method is relatively inefficient -- I keep using it to remain faithful to the paper.
+While pedagogically clean, the method is relatively inefficient -- I keep using it to remain faithful to the paper (which does not have a replication package).
 Table \ref{tab:buera_ss} summarises how my replication fares against the authors' values. 
 While I manage to match the top $10\%$ earnings share, the establishment exit rate, and the credit market instruments to non-financial assets,
 I struggle with the real interest rate and the top $10\%$ employment share. 
@@ -245,7 +268,7 @@ If they instead use a standard package that treats the grid's last two points ev
     The only time when I got closer was when I significantly departed from their procedure.
 } 
 The idea is that even small adjustments to the grid lead to a smaller average size of the most productive establishments. 
-This in turn leads to lower savings of their owners, pushing up the real interest rate.
+This, in turn, leads to lower savings of their owners, pushing up the real interest rate.
 If I \say{naively} run the model with $40-80$ wealth grid points or with a very restrictive value for the maximum wealth, the result also gets closer to that of \citet{buera_anatomy_2015}.
 \\
 
@@ -273,7 +296,7 @@ From there, we get $r^{\text{implied}, \bp{n}}$, which informs $r^{\bp{n+1}}$ vi
 The real interest rate, like all prices, informs the occupational policy, which may jump in certain areas of $r$'s support, making the result jittery.
 This is precisely what is happening in Figure \ref{fig:mit_shock}, which shows the convergence pattern for $r$.
 
-\begin{figure}[H]\centering
+\begin{figure}[]\centering
     \caption{MIT shock convergence dashboard}
     \label{fig:mit_shock}
     \includegraphics[width=\columnwidth]{../replication_buera_et_al_2015/plots/MIT_convergence.jpeg}
@@ -303,7 +326,7 @@ What honestly surprises me that this less than perfect solution is not far when 
 The main difference lies in the investment rate, which is considerably off (I find the shock's persistence much higher).
 For a solution that works mostly thanks to the very generous exit conditions and my weariness, this isn't bad. 
 
-\begin{figure}[H]\centering
+\begin{figure}[]\centering
     \caption{MIT shock transitional dynamics}
     \label{fig:mit_statics}
     \includegraphics[width=\columnwidth]{../replication_buera_et_al_2015/plots/MIT_transitions.pdf}

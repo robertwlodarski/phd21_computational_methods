@@ -54,42 +54,59 @@ end
 # 3. Solve using the repeated transition method 
 function fnSolveAggregateRTM!(params, ss_endo, simu, lee; warm = true)
 
-    #%% 1. Unpacking business 
-    @unpack P, p⃗, Nₚ, L, δᴿᵀᴹ, δᵍ, x⃗, α, β, c, Nₓ, ωᵍ, ωᴿᵀᴹ₁, ωᴿᵀᴹ₂, ωᴿᵀᴹ₃, x̅, x̲ = params
+    # A. Unpacking business 
+    @unpack P, p⃗, Nₚ, L, δᴿᵀᴹ, δᵍ, x⃗, α, β, c, Nₓ, ωᵍ, ωᴿᵀᴹ₁, ωᴿᵀᴹ₂, ωᴿᵀᴹ₃, x̅, x̲,q̲, q̅ = params
     @unpack p⃗̂, p⃗̂ᵢ, N⃗, q⃗, f⃗, S⃗, M⃗, Y⃗     = simu
     T                                   = length(p⃗̂)
 
-    #%% 2. Initialise predicted paths
-    # A. Load q⃗ and N⃗ — warm start if available, cold otherwise
+    # B. Initialise predicted paths
     if isfile("results/rtm_warm_start.jld2") && warm
-        println("Happy to announce there exists a sensible starting point!")
+        println("I don't have eternity - warm start: Loading q, N, Π̃, n⃗")
         jldopen("results/rtm_warm_start.jld2", "r") do file
             lee.q⃗ .= file["warm_q"]
             lee.N⃗ .= file["warm_N"]
+            for t in 1:T
+                lee.n⃗[t]     = file["warm_n"][t]
+                Nₙₜ          = length(lee.n⃗[t])
+                lee.Π̃[t]     = file["warm_Pi"][t]
+                lee.Π̃ⁱᵐᵖ[t]  = zeros(Nₓ, Nₙₜ)
+                lee.R⃗[t]     = zeros(Nₙₜ)
+                lee.R⃗ᵥ[t]    = zeros(Nₙₜ)
+                lee.∂R⃗[t]    = zeros(Nₙₜ)
+                lee.∂R⃗ᵥ[t]   = zeros(Nₙₜ)
+            end
         end
+        f⃗ .= fUpdatedJobFindingRate.(lee.q⃗, Ref(params))
     else
-        lee.q⃗ .= ss_endo.q̂
-        lee.N⃗ .= ss_endo.N .* (1 .+ 1e-2 .* randn(T))
-    end
-
-    # B. Build grids and SS-interpolated Π̃ (same for warm and cold)
-    f⃗ .= fUpdatedJobFindingRate.(lee.q⃗, Ref(params))
-    ℑˢˢ = [Spline1D(ss_endo.n⃗ᵛᶠⁱ, ss_endo.Π[i, :]; k=3, bc="extrapolate") for i in 1:Nₓ]
-    for t in 1:T
-        lee.n⃗[t]    = fn⃗(params, p⃗̂[t], f⃗[t], lee.q⃗[t])
-        Nₙₜ         = length(lee.n⃗[t])
-        lee.Π̃[t]    = zeros(Nₓ, Nₙₜ)
-        lee.Π̃ⁱᵐᵖ[t] = zeros(Nₓ, Nₙₜ)
-        lee.R⃗[t]    = zeros(Nₙₜ)
-        lee.R⃗ᵥ[t]   = zeros(Nₙₜ)
-        lee.∂R⃗[t]   = zeros(Nₙₜ)
-        lee.∂R⃗ᵥ[t]  = zeros(Nₙₜ)
-        for i in 1:Nₓ
-            lee.Π̃[t][i, :] .= ℑˢˢ[i](lee.n⃗[t])
+        q̂ˢˢ = zeros(Nₚ)
+        N̂ˢˢ = zeros(Nₚ)
+        for j in 1:Nₚ
+            êⱼ      = fnSetUpEndo(params)
+            q̂ˢˢ[j]  = find_zero(q -> fEqResidual(q, p⃗[j], params, êⱼ), (q̲, q̅), Bisection())
+            fⱼ      = fUpdatedJobFindingRate(q̂ˢˢ[j], params)
+            N̂ˢˢ[j], _, _, _, _ = fAggregation(params, êⱼ, p⃗[j], fⱼ, q̂ˢˢ[j])
+        end
+        lee.q⃗ .= q̂ˢˢ[p⃗̂ᵢ]
+        lee.N⃗ .= N̂ˢˢ[p⃗̂ᵢ] .* (1 .+ 1e-3 .* randn(T))
+        f⃗ .= fUpdatedJobFindingRate.(lee.q⃗, Ref(params))
+        ℑˢˢ = [Spline1D(ss_endo.n⃗ᵛᶠⁱ, ss_endo.Π[i, :]; k=3, bc="extrapolate") for i in 1:Nₓ]
+        for t in 1:T
+            lee.n⃗[t]    = fn⃗(params, p⃗̂[t], f⃗[t], lee.q⃗[t])
+            Nₙₜ         = length(lee.n⃗[t])
+            lee.Π̃[t]    = zeros(Nₓ, Nₙₜ)
+            lee.Π̃ⁱᵐᵖ[t] = zeros(Nₓ, Nₙₜ)
+            lee.R⃗[t]    = zeros(Nₙₜ)
+            lee.R⃗ᵥ[t]   = zeros(Nₙₜ)
+            lee.∂R⃗[t]   = zeros(Nₙₜ)
+            lee.∂R⃗ᵥ[t]  = zeros(Nₙₜ)
+            for i in 1:Nₓ
+                lee.Π̃[t][i, :] .= ℑˢˢ[i](lee.n⃗[t])
+            end
         end
     end
+    println("Done with setting the starting point")
     
-    #%% 3. RTM outer loop
+    # C. RTM outer loop
     εᴿᵀᴹ    = Inf
     nᴿᵀᴹ    = 1
     vᶠ      = zeros(Nₓ)
@@ -99,18 +116,18 @@ function fnSolveAggregateRTM!(params, ss_endo, simu, lee; warm = true)
     ϵʰⁱˢᵗ   = Float64[]
     while εᴿᵀᴹ > δᴿᵀᴹ
 
-        #%% 3.1. Backward solution (t = T → 1)
+        # D. Backward solution (t = T → 1)
         for t in T:-1:1
             Nₙₜ = length(lee.n⃗[t])
             Πᶠ  = zeros(Nₓ, Nₙₜ)
             Πʰ  = zeros(Nₓ, Nₙₜ)
 
-            # A. Retrieve current period's exogenous state and nth-iteration conjectured price
+            # E. Retrieve current period's exogenous state and nth-iteration conjectured price
             pₜ  = p⃗̂[t]
             pᵢₜ = p⃗̂ᵢ[t]
             qₜ  = lee.q⃗[t]
             
-            # B. Construct 𝔼ₜ[Π̃ₜ₊₁] via RTM matching
+            # F. Construct 𝔼ₜ[Π̃ₜ₊₁] via RTM matching
             Π̃ₜ₊₁        = Vector{Matrix{Float64}}(undef, Nₚ)
             # Realised state handled directly (remember about grid resizing)
             τʳ          = t == T ? 1 : t+1
@@ -144,10 +161,10 @@ function fnSolveAggregateRTM!(params, ss_endo, simu, lee; warm = true)
 
             end
 
-            # C. Assemble expected value: 𝔼ₜ[Π̃ₜ₊₁] = Σⱼ P[pᵢ,j] × Π̃ₜ₊₁(·; pⱼ)
+            # G. Assemble expected value: 𝔼ₜ[Π̃ₜ₊₁] = Σⱼ P[pᵢ,j] × Π̃ₜ₊₁(·; pⱼ)
             𝔼Π̃ = sum(P[pᵢₜ, pⱼ] .* Π̃ₜ₊₁[pⱼ] for pⱼ in 1:Nₚ)
             
-            # D. Single Bellman update and policy extraction
+            # H. Single Bellman update and policy extraction
             n⃗ₜ          = lee.n⃗[t]
             W           = fW(params, pₜ, f⃗[t], qₜ, n⃗ₜ)
             Πᶠˡᵒʷ       = pₜ .* x⃗ .* (n⃗ₜ' .^ α) .- W .* n⃗ₜ'
@@ -166,89 +183,140 @@ function fnSolveAggregateRTM!(params, ss_endo, simu, lee; warm = true)
             Πʰ              .= (vʰ .+ c / qₜ .* n⃗ₜ') .* (nʰ .> n⃗ₜ') .- 1e8 .* (nʰ .<= n⃗ₜ')
             lee.Π̃ⁱᵐᵖ[t]     = max.(Πᶠ, max.(Πʰ, Πᶜ))
 
-            # E. Extract and store policy functions R⃗ₜ, R⃗ᵥₜ, n⃗ₜ into lee.R⃗ᵀ[t] etc.
+            # I. Extract and store policy functions R⃗ₜ, R⃗ᵥₜ, n⃗ₜ into lee.R⃗ᵀ[t] etc.
             𝓃₁              = findlast(nᶠ .< nʰ[Nₓ])
             𝓃₂              = findfirst(nʰ .> nᶠ[1])
             isnothing(𝓃₁) && (𝓃₁ = Nₓ)
             isnothing(𝓃₂) && (𝓃₂ = 1)
 
-            # E1. Firing threshold 
+            # I1. Firing threshold 
             𝕟ᴿ                  = nᶠ[1:𝓃₁]
             𝕩ᴿ                  = x⃗[1:𝓃₁]
-            lee.R⃗[t], lee.∂R⃗[t] = fRobustSplineAggregateUncertainty(𝕟ᴿ, 𝕩ᴿ, lee.n⃗[t])
+            if length(𝕟ᴿ) < 2
+                lee.R⃗[t]  .= x̲
+                lee.∂R⃗[t] .= 0.0
+            else
+                lee.R⃗[t], lee.∂R⃗[t] = fRobustSplineAggregateUncertainty(𝕟ᴿ, 𝕩ᴿ, lee.n⃗[t])
+            end
             lee.R⃗[t]            = clamp.(lee.R⃗[t], x̲, x̅)
 
-            # E2. Hiring threshold 
+            # I2. Hiring threshold 
             𝕟ᴿⱽ             = nʰ[𝓃₂:end]
             𝕩ᴿⱽ             = x⃗[𝓃₂:end]
-            R⃗ᵥᵗᵐᵖ, ∂R⃗ᵥᵗᵐᵖ   = fRobustSplineAggregateUncertainty(𝕟ᴿⱽ, 𝕩ᴿⱽ, lee.n⃗[t])
-            lee.R⃗ᵥ[t]       = clamp.(min.(R⃗ᵥᵗᵐᵖ, x̅), x̲, x̅)
-            lee.∂R⃗ᵥ[t]      = ∂R⃗ᵥᵗᵐᵖ
+            # R⃗ᵥᵗᵐᵖ, ∂R⃗ᵥᵗᵐᵖ   = fRobustSplineAggregateUncertainty(𝕟ᴿⱽ, 𝕩ᴿⱽ, lee.n⃗[t])
+            # lee.R⃗ᵥ[t]       = clamp.(min.(R⃗ᵥᵗᵐᵖ, x̅), x̲, x̅)
+            # lee.∂R⃗ᵥ[t]      = ∂R⃗ᵥᵗᵐᵖ
+            if length(𝕟ᴿⱽ) < 2
+                lee.R⃗ᵥ[t]       .= x̅
+                lee.∂R⃗ᵥ[t]      .= 0.0
+            else
+                R⃗ᵥᵗᵐᵖ, ∂R⃗ᵥᵗᵐᵖ   = fRobustSplineAggregateUncertainty(𝕟ᴿⱽ, 𝕩ᴿⱽ, lee.n⃗[t])
+                lee.R⃗ᵥ[t]       = clamp.(min.(R⃗ᵥᵗᵐᵖ, x̅), x̲, x̅)
+                lee.∂R⃗ᵥ[t]      = ∂R⃗ᵥᵗᵐᵖ
+            end 
 
-            # E3. Ensure no impossible results 
+            # I3. Ensure no impossible results 
             lee.R⃗ᵥ[t]       = max.(lee.R⃗ᵥ[t], lee.R⃗[t] .* (1 + 1e-3))
         end 
 
-        #%% 3.2. Forward simulation (t = 1 → T)
+        #%% J. Forward simulation (t = 1 → T)
+        Nₜᵖʳᵉᵛ = lee.N⃗[T]
         for t in 1:T
 
-            # A. Retrieve pₜ and Nₜ₋₁
+            # J1. Retrieve pₜ and Nₜ₋₁
             pₜ      = p⃗̂[t]
-            Nₜ₋₁    = t == 1 ? lee.N⃗[T] : lee.N⃗[t-1]
+            Nₜ₋₁    = Nₜᵖʳᵉᵛ
 
-            # B. Solve equilibrium q loop (reuse fEqResidual logic)
-            # Inner loop: given q guess, compute f, run fAggregation,
-            # update N from Beveridge curve N = Nₜ₋₁ + M - S, iterate until convergence
-            qₜ          = lee.q⃗[t]     
-            Nₜ          = lee.N⃗[t]
-            # lee.n⃗[t]    = fn⃗(params, pₜ, f⃗[t], qₜ) ← Commenting out to avoid the curse of changing dimensions
-            εᵍ          = Inf
-            nᵍ          = 0
-            while εᵍ > δᵍ && nᵍ < 500
+            # J2. Solve equilibrium q loop (reuse fEqResidual logic)
+            # qₜ          = lee.q⃗[t]     
+            # Nₜ          = lee.N⃗[t]
+            # εᵍ          = Inf
+            # nᵍ          = 0
+            # while εᵍ > δᵍ && nᵍ < 500
 
-                # !!!. DIAGNOSTIC WINDOW 
-                N_t, Y_t, S_t, M_t, A_t = fAggregationAggregateUncertainty(params, lee.R⃗ᵥ[t], lee.∂R⃗ᵥ[t], lee.R⃗[t], lee.∂R⃗[t], lee.n⃗[t], pₜ)
-                if isnan(N_t) || isnan(S_t) || isnan(M_t) || minimum(lee.R⃗ᵥ[t] .- lee.R⃗[t]) < 1e-6
-                    @show t, qₜ, Nₜ
-                    @show minimum(lee.R⃗[t]), maximum(lee.R⃗[t])
-                    @show minimum(lee.R⃗ᵥ[t]), maximum(lee.R⃗ᵥ[t])
-                    @show minimum(lee.R⃗ᵥ[t] .- lee.R⃗[t])
-                    @show N_t, S_t, M_t
-                    error("NaN or collapsed inaction region at t=$t")
-                end
+            #     # !!!. DIAGNOSTIC WINDOW (delete once life is good again)
+            #     N_t, Y_t, S_t, M_t, A_t = fAggregationAggregateUncertainty(params, lee.R⃗ᵥ[t], lee.∂R⃗ᵥ[t], lee.R⃗[t], lee.∂R⃗[t], lee.n⃗[t], pₜ)
+            #     if isnan(N_t) || isnan(S_t) || isnan(M_t) || minimum(lee.R⃗ᵥ[t] .- lee.R⃗[t]) < 1e-6
+            #         @show t, qₜ, Nₜ
+            #         @show minimum(lee.R⃗[t]), maximum(lee.R⃗[t])
+            #         @show minimum(lee.R⃗ᵥ[t]), maximum(lee.R⃗ᵥ[t])
+            #         @show minimum(lee.R⃗ᵥ[t] .- lee.R⃗[t])
+            #         @show N_t, S_t, M_t
+            #         @warn "NaN at t=$t, skipping forward update"
+            #         break
+            #     end
 
-                # i. fAggregation → N*, S*, M*
-                n⃗ₜ              = lee.n⃗[t]
-                _, _, S, M, _   = fAggregationAggregateUncertainty(params, lee.R⃗ᵥ[t], lee.∂R⃗ᵥ[t], lee.R⃗[t], lee.∂R⃗[t], n⃗ₜ, pₜ)
-                # ii. Beveridge: N¹ = Nₜ₋₁ + M - S, f¹ = M/(L - N¹)
-                N⁺¹             = Nₜ₋₁ + M - S
-                f⃗[t]            = M / (L - N⁺¹ + 1e-8) 
+            #     # i. fAggregation → N*, S*, M*
+            #     n⃗ₜ              = lee.n⃗[t]
+            #     _, _, S, M, _   = fAggregationAggregateUncertainty(params, lee.R⃗ᵥ[t], lee.∂R⃗ᵥ[t], lee.R⃗[t], lee.∂R⃗[t], n⃗ₜ, pₜ)
+            #     # ii. Beveridge: N¹ = Nₜ₋₁ + M - S, f¹ = M/(L - N¹)
+            #     N⁺¹             = Nₜ₋₁ + M - S
+            #     f⃗[t]            = M / (L - N⁺¹ + 1e-8) 
 
-                # iii. Update q and check convergence
-                q¹          = fUpdatedJobFindingRateInverse(f⃗[t], params)  
-                εᵍ          = abs(N⁺¹ - Nₜ)
-                Nₜ          = N⁺¹
-                qₜ          = ωᵍ * q¹ + (1 - ωᵍ) * qₜ
-                # lee.n⃗[t]    = fn⃗(params, pₜ, f⃗[t], qₜ) ← Commenting out to avoid the curse of changing dimensions
+            #     # iii. Update q and check convergence
+            #     q¹          = fUpdatedJobFindingRateInverse(f⃗[t], params)  
+            #     εᵍ          = abs(N⁺¹ - Nₜ)
+            #     Nₜ          = N⁺¹
+            #     qₜ          = ωᵍ * q¹ + (1 - ωᵍ) * qₜ
+            #     qₜ          = clamp(qₜ, q̲, q̅)
 
-                # Diagnostic 
-                if nᵍ % 25 == 0 && (t == 1 || t % 200 == 0)
-                    @printf "  t=%4d | εᵍ=%.3e | qₜ=%.4f | Nₜ=%.4f | f=%.4f \n" t εᵍ qₜ Nₜ f⃗[t]
-                end
-                nᵍ += 1
-            end  
+            #     # Diagnostic 
+            #     if nᵍ % 25 == 0 && (t <= 3 || t >= T-2 || t % 200 == 0)
+            #         @printf "  t=%4d | εᵍ=%.3e | qₜ=%.4f | Nₜ=%.4f | f=%.4f \n" t εᵍ qₜ Nₜ f⃗[t]
+            #     end
+            #     nᵍ += 1
+            # end
 
-            # C. Store realised paths
-            _, Y, S, M, A   = fAggregationAggregateUncertainty(params,lee.R⃗ᵥ[t],lee.∂R⃗ᵥ[t],lee.R⃗[t],lee.∂R⃗[t],lee.n⃗[t],pₜ)
+            # J2. Single-pass forward step
+            n⃗ₜ              = lee.n⃗[t]
+            _, Y, S, M, A   = fAggregationAggregateUncertainty(params, lee.R⃗ᵥ[t], lee.∂R⃗ᵥ[t], lee.R⃗[t], lee.∂R⃗[t], n⃗ₜ, pₜ)
+            Nₜ              = Nₜ₋₁ + M - S
+            f⃗[t]            = M / (L - Nₜ + 1e-8)
+            qₜ              = fUpdatedJobFindingRateInverse(f⃗[t], params)
+            qₜ              = clamp(qₜ, q̲, q̅)
+            if isnan(Nₜ)
+                lee.q⃗ⁱᵐᵖ[t] = lee.q⃗[t]
+                lee.N⃗ⁱᵐᵖ[t] = Nₜ₋₁
+                Nₜᵖʳᵉᵛ      = Nₜ₋₁
+                continue
+            end
+            Nₜᵖʳᵉᵛ          = Nₜ
+
+            # J3. Store realised paths
             lee.q⃗ⁱᵐᵖ[t]     = qₜ
             lee.N⃗ⁱᵐᵖ[t]     = Nₜ
-            simu.S⃗[t]       = S 
-            simu.M⃗[t]       = M 
+            simu.S⃗[t]       = S
+            simu.M⃗[t]       = M
             simu.Y⃗[t]       = Y
             simu.A⃗[t]       = A
+
+
+            # # (iv) Correct the grid error 
+            # n⃗ₒₗₐ                    = lee.n⃗[t]
+            # lee.n⃗[t]                = fn⃗(params, pₜ, f⃗[t], qₜ)
+            # lee.R⃗[t], lee.∂R⃗[t]     = fRobustSplineAggregateUncertainty(n⃗ₒₗₐ, lee.R⃗[t], lee.n⃗[t])
+            # lee.R⃗ᵥ[t], lee.∂R⃗ᵥ[t]   = fRobustSplineAggregateUncertainty(n⃗ₒₗₐ, lee.R⃗ᵥ[t], lee.n⃗[t])
+            # lee.R⃗[t]  = clamp.(lee.R⃗[t], x̲, x̅)
+            # lee.R⃗ᵥ[t] = clamp.(lee.R⃗ᵥ[t], x̲, x̅)
+            # lee.R⃗ᵥ[t] = max.(lee.R⃗ᵥ[t], lee.R⃗[t] .* (1 + 1e-3))   
+            # Π̃ₒₗₐ                    = lee.Π̃[t]
+            # lee.Π̃[t]                = zeros(Nₓ, length(lee.n⃗[t]))
+            # for i in 1:Nₓ
+            #     lee.Π̃[t][i,:]       .= Spline1D(n⃗ₒₗₐ, Π̃ₒₗₐ[i,:]; k=3, bc="extrapolate")(lee.n⃗[t])
+            # end
+            # lee.Π̃ⁱᵐᵖ[t]             = zeros(Nₓ, length(lee.n⃗[t]))
+
+            # J3. Store realised paths
+            # _, Y, S, M, A   = fAggregationAggregateUncertainty(params,lee.R⃗ᵥ[t],lee.∂R⃗ᵥ[t],lee.R⃗[t],lee.∂R⃗[t],lee.n⃗[t],pₜ)
+            # lee.q⃗ⁱᵐᵖ[t]     = qₜ
+            # lee.N⃗ⁱᵐᵖ[t]     = Nₜ
+            # simu.S⃗[t]       = S 
+            # simu.M⃗[t]       = M 
+            # simu.Y⃗[t]       = Y
+            # simu.A⃗[t]       = A
         end
 
-        #%% 3.3. Convergence check and damped update 
+        #%% J4. Convergence check and damped update 
         εᴿᵀᴹ            = maximum(abs.(lee.q⃗ .- lee.q⃗ⁱᵐᵖ))
         push!(ϵʰⁱˢᵗ, εᴿᵀᴹ)
         fnPlotConvergenceRTM(ϵʰⁱˢᵗ, lee, ss_endo, params)
@@ -261,10 +329,14 @@ function fnSolveAggregateRTM!(params, ss_endo, simu, lee; warm = true)
 
         # Print progress
         @printf "RTM Iteration: %4d | ε = %.6f \n" nᴿᵀᴹ εᴿᵀᴹ
+        if nᴿᵀᴹ % 5 == 0
+            @save "results/rtm_warm_start.jld2" warm_q=lee.q⃗ warm_N=lee.N⃗ warm_Pi=lee.Π̃ warm_n=lee.n⃗
+            println("  💾 Results saved for insurance at iteration $nᴿᵀᴹ")
+        end
         nᴿᵀᴹ           += 1
     end
 
-    #%% 4. Collect results into the simu structure 
+    #%% K. Collect results into the simu structure 
     simu.N⃗ .= lee.N⃗
     simu.q⃗ .= lee.q⃗
     simu.f⃗ .= fUpdatedJobFindingRate.(lee.q⃗, Ref(params))

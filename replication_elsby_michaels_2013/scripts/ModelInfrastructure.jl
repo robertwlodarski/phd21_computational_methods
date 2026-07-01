@@ -56,18 +56,18 @@
     ρₚ::Float64     = 0.9925                # Productivity persistence 
     σ̃ₚ::Float64     = 0.0275                # Unconditional variance 
     σₚ::Float64     = σ̃ₚ * sqrt(1-ρₚ^2)     # Productivity update variance 
-    Nₚ::Int         = 7                    # Number of Rouwenhorst grids
+    Nₚ::Int         = 7                     # Number of Rouwenhorst grids
     P::Matrix{Float64}                      # Transition probability 
     p⃗::Vector{Float64}                      # Productivity grid  
     Ñₙ::Int         = 7                     # Number of aggregate employment grids
     Ñₜ::Int         = 11                    # Number of aggregate theta grids 
 
     # F. RTM sensitivity settings 
-    δᴿᵀᴹ::Float64   = 5*1e-3                # RTM sensitivity 
+    δᴿᵀᴹ::Float64   = 5*1e-4                # RTM sensitivity 
     δᵍ::Float64     = 1e-5                  # Forward simulation sensitivity 
     ωᵍ::Float64     = 0.3                   # Updating parameter for the forward transition 
-    ωᴿᵀᴹ₁::Float64  = 0.2                   # RTM update: Job-finding rate 
-    ωᴿᵀᴹ₂::Float64  = 0.2                   # RTM update: Employment 
+    ωᴿᵀᴹ₁::Float64  = 0.5                   # RTM update: Job-finding rate 
+    ωᴿᵀᴹ₂::Float64  = 0.5                   # RTM update: Employment 
     ωᴿᵀᴹ₃::Float64  = 0.05                  # RTM update: Value function
 end
 
